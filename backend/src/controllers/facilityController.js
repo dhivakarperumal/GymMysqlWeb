@@ -1,12 +1,24 @@
 const db = require('../config/db');
 
+// Helper function to parse JSON fields
+const parseFacility = (facility) => {
+  if (!facility) return facility;
+  return {
+    ...facility,
+    equipments: typeof facility.equipments === 'string' ? JSON.parse(facility.equipments || '[]') : (facility.equipments || []),
+    workouts: typeof facility.workouts === 'string' ? JSON.parse(facility.workouts || '[]') : (facility.workouts || []),
+    facilities: typeof facility.facilities === 'string' ? JSON.parse(facility.facilities || '[]') : (facility.facilities || []),
+    gallery: typeof facility.gallery === 'string' ? JSON.parse(facility.gallery || '[]') : (facility.gallery || [])
+  };
+};
+
 async function getAllFacilities(req, res) {
   try {
     // ensure active column exists, fallback to true for older rows
     const [rows] = await db.query(
       'SELECT *, COALESCE(active, TRUE) AS active FROM gym_facilities ORDER BY created_at DESC'
     );
-    res.json(rows);
+    res.json(rows.map(parseFacility));
   } catch (err) {
     console.error('getAllFacilities error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -34,14 +46,7 @@ async function getFacilityById(req, res) {
       return res.status(404).json({ error: 'Facility not found' });
     }
     
-    const facility = rows[0];
-    // Parse JSON fields if they're strings
-    if (typeof facility.equipments === 'string') facility.equipments = JSON.parse(facility.equipments);
-    if (typeof facility.workouts === 'string') facility.workouts = JSON.parse(facility.workouts);
-    if (typeof facility.facilities === 'string') facility.facilities = JSON.parse(facility.facilities);
-    if (typeof facility.gallery === 'string') facility.gallery = JSON.parse(facility.gallery);
-    
-    res.json(facility);
+    res.json(parseFacility(rows[0]));
   } catch (err) {
     console.error('getFacilityById error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -114,7 +119,7 @@ async function createFacility(req, res) {
     // Fetch the created facility
     const [rows] = await db.query('SELECT * FROM gym_facilities WHERE id = ?', [result.insertId]);
     console.log('✅ Facility created successfully! ID:', rows[0].id);
-    res.json(rows[0]);
+    res.json(parseFacility(rows[0]));
 
   } catch (err) {
     console.error('❌ createFacility error:', err.message);
@@ -195,7 +200,7 @@ async function updateFacility(req, res) {
     }
 
     const [rows] = await db.query(fetchQuery, fetchParams);
-    res.json(rows[0]);
+    res.json(parseFacility(rows[0]));
 
   } catch (err) {
     console.error('updateFacility error', err);

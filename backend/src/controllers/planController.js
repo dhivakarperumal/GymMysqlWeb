@@ -1,9 +1,19 @@
 const db = require('../config/db');
 
+// Helper function to parse JSON fields
+const parsePlan = (plan) => {
+  if (!plan) return plan;
+  return {
+    ...plan,
+    facilities: typeof plan.facilities === 'string' ? JSON.parse(plan.facilities || '[]') : (plan.facilities || []),
+    diet_plans: typeof plan.diet_plans === 'string' ? JSON.parse(plan.diet_plans || '[]') : (plan.diet_plans || [])
+  };
+};
+
 async function getAllPlans(req, res) {
   try {
     const [rows] = await db.query('SELECT * FROM gym_plans ORDER BY created_at DESC');
-    res.json(rows);
+    res.json(rows.map(parsePlan));
   } catch (err) {
     console.error('getAllPlans error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -32,7 +42,7 @@ async function getPlanById(req, res) {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Plan not found' });
     }
-    res.json(rows[0]);
+    res.json(parsePlan(rows[0]));
   } catch (err) {
     console.error('getPlanById error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -75,7 +85,7 @@ async function createPlan(req, res) {
 
     // Fetch the created plan
     const [rows] = await db.query('SELECT * FROM gym_plans WHERE id = ?', [result.insertId]);
-    res.json(rows[0]);
+    res.json(parsePlan(rows[0]));
 
   } catch (err) {
     console.error('createPlan error:', err.message);
@@ -138,7 +148,7 @@ async function updatePlan(req, res) {
     }
 
     const [rows] = await db.query(fetchQuery, fetchParams);
-    res.json(rows[0]);
+    res.json(parsePlan(rows[0]));
 
   } catch (err) {
     console.error('updatePlan error', err);
