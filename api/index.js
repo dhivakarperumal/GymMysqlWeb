@@ -25,16 +25,80 @@ try {
 //   }
 // })();
 
-// Import routes
-const productRoutes = require("./backend/src/routes/productRoutes");
-const memberRoutes = require("./backend/src/routes/memberRoutes");
-const planRoutes = require("./backend/src/routes/planRoutes");
-const facilityRoutes = require("./backend/src/routes/facilityRoutes");
-const equipmentRoutes = require("./backend/src/routes/equipmentRoutes");
-const staffRoutes = require("./backend/src/routes/staffRoutes");
-const serviceRoutes = require("./backend/src/routes/serviceRoutes");
-const authRoutes = require("./backend/src/routes/authRoutes");
-const orderRoutes = require("./backend/src/routes/orderRoutes");
+// Import routes with error handling
+let productRoutes, memberRoutes, planRoutes, facilityRoutes, equipmentRoutes, staffRoutes, serviceRoutes, authRoutes, orderRoutes;
+
+try {
+  productRoutes = require("./backend/src/routes/productRoutes");
+  console.log("✓ productRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import productRoutes:", err.message);
+  productRoutes = (req, res) => res.status(500).json({ error: "productRoutes not available" });
+}
+
+try {
+  memberRoutes = require("./backend/src/routes/memberRoutes");
+  console.log("✓ memberRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import memberRoutes:", err.message);
+  memberRoutes = (req, res) => res.status(500).json({ error: "memberRoutes not available" });
+}
+
+try {
+  planRoutes = require("./backend/src/routes/planRoutes");
+  console.log("✓ planRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import planRoutes:", err.message);
+  planRoutes = (req, res) => res.status(500).json({ error: "planRoutes not available" });
+}
+
+try {
+  facilityRoutes = require("./backend/src/routes/facilityRoutes");
+  console.log("✓ facilityRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import facilityRoutes:", err.message);
+  facilityRoutes = (req, res) => res.status(500).json({ error: "facilityRoutes not available" });
+}
+
+try {
+  equipmentRoutes = require("./backend/src/routes/equipmentRoutes");
+  console.log("✓ equipmentRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import equipmentRoutes:", err.message);
+  equipmentRoutes = (req, res) => res.status(500).json({ error: "equipmentRoutes not available" });
+}
+
+try {
+  staffRoutes = require("./backend/src/routes/staffRoutes");
+  console.log("✓ staffRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import staffRoutes:", err.message);
+  staffRoutes = (req, res) => res.status(500).json({ error: "staffRoutes not available" });
+}
+
+try {
+  serviceRoutes = require("./backend/src/routes/serviceRoutes");
+  console.log("✓ serviceRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import serviceRoutes:", err.message);
+  serviceRoutes = (req, res) => res.status(500).json({ error: "serviceRoutes not available" });
+}
+
+try {
+  authRoutes = require("./backend/src/routes/authRoutes");
+  console.log("✓ authRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import authRoutes:", err.message);
+  authRoutes = (req, res) => res.status(500).json({ error: "authRoutes not available" });
+}
+
+try {
+  orderRoutes = require("./backend/src/routes/orderRoutes");
+  console.log("✓ orderRoutes imported");
+} catch (err) {
+  console.error("✗ Failed to import orderRoutes:", err.message);
+  orderRoutes = (req, res) => res.status(500).json({ error: "orderRoutes not available" });
+}
 
 const app = express();
 
@@ -166,7 +230,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
-console.log("API Handler setup complete");
+console.log("✓ API Handler setup complete");
+console.log("✓ Ready to accept requests");
+console.log("✓ Available endpoints:");
+console.log("  - GET /api/health");
+console.log("  - GET /api/db-status");
+console.log("  - POST /api/init-db");
+console.log("  - POST /api/auth/login");
+console.log("  - POST /api/auth/register");
+console.log("  - And all other routes...");
 
 // Export as handler for Vercel serverless
 module.exports = app;
