@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-const logger = require("./backend/src/config/logger");
+const logger = require("../backend/src/config/logger");
 
 logger.info("API Handler initializing...");
 logger.info("DATABASE_URL set: %s", !!process.env.DATABASE_URL);
@@ -11,7 +11,7 @@ logger.info("POSTGRES_PRISMA_URL set: %s", !!process.env.POSTGRES_PRISMA_URL);
 // Import and test database connection
 let db;
 try {
-  db = require("./backend/src/config/db");
+  db = require("../backend/src/config/db");
   logger.info("Database module imported successfully");
 } catch (err) {
   logger.error("CRITICAL: Failed to import database module: %s", err.message);
@@ -31,7 +31,7 @@ try {
 let productRoutes, memberRoutes, planRoutes, facilityRoutes, equipmentRoutes, staffRoutes, serviceRoutes, authRoutes, orderRoutes;
 
 try {
-  productRoutes = require("./backend/src/routes/productRoutes");
+  productRoutes = require("../backend/src/routes/productRoutes");
   logger.info("✓ productRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import productRoutes: %s", err.message);
@@ -39,7 +39,7 @@ try {
 }
 
 try {
-  memberRoutes = require("./backend/src/routes/memberRoutes");
+  memberRoutes = require("../backend/src/routes/memberRoutes");
   logger.info("✓ memberRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import memberRoutes: %s", err.message);
@@ -47,7 +47,7 @@ try {
 }
 
 try {
-  planRoutes = require("./backend/src/routes/planRoutes");
+  planRoutes = require("../backend/src/routes/planRoutes");
   logger.info("✓ planRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import planRoutes: %s", err.message);
@@ -55,7 +55,7 @@ try {
 }
 
 try {
-  facilityRoutes = require("./backend/src/routes/facilityRoutes");
+  facilityRoutes = require("../backend/src/routes/facilityRoutes");
   logger.info("✓ facilityRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import facilityRoutes: %s", err.message);
@@ -63,7 +63,7 @@ try {
 }
 
 try {
-  equipmentRoutes = require("./backend/src/routes/equipmentRoutes");
+  equipmentRoutes = require("../backend/src/routes/equipmentRoutes");
   logger.info("✓ equipmentRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import equipmentRoutes: %s", err.message);
@@ -71,7 +71,7 @@ try {
 }
 
 try {
-  staffRoutes = require("./backend/src/routes/staffRoutes");
+  staffRoutes = require("../backend/src/routes/staffRoutes");
   logger.info("✓ staffRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import staffRoutes: %s", err.message);
@@ -79,7 +79,7 @@ try {
 }
 
 try {
-  serviceRoutes = require("./backend/src/routes/serviceRoutes");
+  serviceRoutes = require("../backend/src/routes/serviceRoutes");
   logger.info("✓ serviceRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import serviceRoutes: %s", err.message);
@@ -87,7 +87,7 @@ try {
 }
 
 try {
-  authRoutes = require("./backend/src/routes/authRoutes");
+  authRoutes = require("../backend/src/routes/authRoutes");
   logger.info("✓ authRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import authRoutes: %s", err.message);
@@ -95,7 +95,7 @@ try {
 }
 
 try {
-  orderRoutes = require("./backend/src/routes/orderRoutes");
+  orderRoutes = require("../backend/src/routes/orderRoutes");
   logger.info("✓ orderRoutes imported");
 } catch (err) {
   logger.error("✗ Failed to import orderRoutes: %s", err.message);
