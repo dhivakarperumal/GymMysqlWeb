@@ -59,19 +59,19 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// API routes
-app.use("/products", productRoutes);
-app.use("/members", memberRoutes);
-app.use("/plans", planRoutes);
-app.use("/facilities", facilityRoutes);
-app.use("/equipment", equipmentRoutes);
-app.use("/staff", staffRoutes);
-app.use("/services", serviceRoutes);
-app.use("/auth", authRoutes);
-app.use("/orders", orderRoutes);
+// API routes with /api prefix
+app.use("/api/products", productRoutes);
+app.use("/api/members", memberRoutes);
+app.use("/api/plans", planRoutes);
+app.use("/api/facilities", facilityRoutes);
+app.use("/api/equipment", equipmentRoutes);
+app.use("/api/staff", staffRoutes);
+app.use("/api/services", serviceRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Health check
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
@@ -86,4 +86,5 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
+// Export as handler for Vercel serverless
 module.exports = app;
