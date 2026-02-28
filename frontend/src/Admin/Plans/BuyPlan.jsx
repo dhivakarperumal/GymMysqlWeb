@@ -64,9 +64,17 @@ const BuyPlanadmin = () => {
 
   // 🧮 AUTO CALCULATE END DATE
   useEffect(() => {
-    if (!selectedPlan) return;
+    if (!selectedPlan) {
+      setForm((prev) => ({
+        ...prev,
+        endDate: "",
+      }));
+      return;
+    }
 
-    const durationMonths = parseInt(selectedPlan.duration);
+    const durationMonths = parseInt(selectedPlan.duration, 10) || 0;
+    if (durationMonths <= 0) return;
+
     const start = new Date(today);
     const end = new Date(start);
     end.setMonth(start.getMonth() + durationMonths);
@@ -76,7 +84,7 @@ const BuyPlanadmin = () => {
       startDate: today,
       endDate: end.toISOString().split("T")[0],
     }));
-  }, [selectedPlan]);
+  }, [selectedPlan, today]);
 
   // 🎬 AOS
   useEffect(() => {
@@ -186,25 +194,42 @@ Thank you for joining 💪
 
           {/* 👤 SELECT MEMBER */}
           <select
-            className="w-full p-3 mb-4 bg-gray-900 rounded-lg"
+            className="w-full p-3 mb-4 bg-gray-900 rounded-lg text-white cursor-pointer"
+            defaultValue=""
             onChange={(e) => {
-              const user = members.find((m) => m.id === e.target.value);
-              setSelectedUser(user);
+              const selectedId = parseInt(e.target.value, 10);
+              if (!isNaN(selectedId)) {
+                const user = members.find((m) => m.id === selectedId);
+                setSelectedUser(user);
 
-              setForm((prev) => ({
-                ...prev,
-                phone: user?.phone || "",
-                email: user?.email || "",
-                address: user?.address || "",
-                height: user?.height || "",
-                weight: user?.weight || "",
-                bmi: user?.bmi || "",
-              }));
+                if (user) {
+                  setForm((prev) => ({
+                    ...prev,
+                    phone: user.phone || "",
+                    email: user.email || "",
+                    address: user.address || "",
+                    height: user.height || "",
+                    weight: user.weight || "",
+                    bmi: user.bmi || "",
+                  }));
+                }
+              } else {
+                setSelectedUser(null);
+                setForm((prev) => ({
+                  ...prev,
+                  phone: "",
+                  email: "",
+                  address: "",
+                  height: "",
+                  weight: "",
+                  bmi: "",
+                }));
+              }
             }}
           >
             <option value="">Select Member</option>
             {members.map((m) => (
-              <option key={m.id} value={m.id}>
+              <option key={m.id} value={String(m.id)}>
                 {m.name} ({m.phone})
               </option>
             ))}
@@ -307,17 +332,27 @@ Thank you for joining 💪
           <h2 className="text-xl font-semibold mb-4">Select Plan</h2>
 
           <select
-            className="w-full p-3 bg-gray-900 rounded-lg mb-4"
+            className="w-full p-3 bg-gray-900 rounded-lg mb-4 text-white cursor-pointer"
+            defaultValue=""
             onChange={(e) => {
-              const plan = plans.find((p) => p.id === e.target.value);
-              setSelectedPlan(plan);
+              const selectedId = parseInt(e.target.value, 10);
+              if (!isNaN(selectedId)) {
+                const plan = plans.find((p) => p.id === selectedId);
+                setSelectedPlan(plan);
+              } else {
+                setSelectedPlan(null);
+                setForm((prev) => ({
+                  ...prev,
+                  endDate: "",
+                }));
+              }
             }}
           >
             <option value="">Select Plan</option>
 
             {plans.map((plan) => (
-              <option key={plan.id} value={plan.id}>
-                {plan.name} – {plan.duration} – ₹{plan.finalPrice ?? plan.final_price}
+              <option key={plan.id} value={String(plan.id)}>
+                {plan.name} – {plan.duration} months – ₹{plan.finalPrice ?? plan.final_price}
               </option>
             ))}
           </select>

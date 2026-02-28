@@ -23,19 +23,9 @@ import {
   Legend,
 } from "recharts";
 
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  Timestamp,
-  orderBy,
-  limit,
-  collectionGroup,
-  getDocs,
-} from "firebase/firestore";
-import { db } from "../../firebase";
 import { useNavigate } from "react-router-dom";
+import api from "../../api";
+import toast from "react-hot-toast";
 
 
 
@@ -80,17 +70,6 @@ const StatCard = ({ title, value, icon, color }) => (
 
 /* -------------------- HELPERS -------------------- */
 
-const getTodayRange = () => {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  return {
-    start: Timestamp.fromDate(start),
-    end: Timestamp.fromDate(end),
-  };
-};
-
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /* -------------------- DASHBOARD -------------------- */
@@ -111,101 +90,43 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const { start, end } = getTodayRange();
-    const unsubs = [];
+    const fetchStats = async () => {
+      try {
+        const [membersRes, plansRes, ordersRes, staffRes, equipmentRes, productsRes] = await Promise.all([
+          api.get('/members'),
+          api.get('/plans'),
+          api.get('/orders'),
+          api.get('/staff'),
+          api.get('/equipment'),
+          api.get('/products'),
+        ]);
 
-    // 👥 MEMBERS
-    unsubs.push(
-      onSnapshot(collection(db, "gymMembers"), snap =>
-        setStats(p => ({ ...p, members: snap.size }))
-      )
-    );
+        const members = membersRes.data || [];
+        const plans = (plansRes.data || []).filter(p => p.active);
+        const orders = ordersRes.data || [];
+        const staff = (staffRes.data || []).filter(s => s.status === 'active');
+        const equipment = equipmentRes.data || [];
+        const products = productsRes.data || [];
 
-    // 📅 TODAY CHECK-INS
-
-
-    // 🏋️ ACTIVE PLANS
-    unsubs.push(
-      onSnapshot(
-        query(collection(db, "gym_plans"), where("active", "==", true)),
-        snap =>
-          setStats(p => ({ ...p, activePlans: snap.size }))
-      )
-    );
-
-    unsubs.push(
-      onSnapshot(
-        collection(db, "orders"),
-        (snap) =>
-          setStats((p) => ({
-            ...p,
-            totalOrders: snap.size,
-          }))
-      )
-    );
-
-    unsubs.push(
-      onSnapshot(
-        query(
-          collection(db, "orders"),
-          where("paymentMethod", "==", "Cash"),
-          where("paymentStatus", "==", "pending")
-        ),
-        (snap) =>
-          setStats((p) => ({
-            ...p,
-            pendingPayments: snap.size,
-          }))
-      )
-    );
-
-    unsubs.push(
-      onSnapshot(collection(db, "products"), (snap) =>
-        setStats((p) => ({
-          ...p,
-          totalProducts: snap.size,
-        }))
-      )
-    );
-    // 🧑‍🏫 TRAINERS
-    unsubs.push(
-      onSnapshot(
-        query(collection(db, "staff"), where("status", "==", "active")),
-        snap =>
-          setStats(p => ({ ...p, trainers: snap.size }))
-      )
-    );
-
-    // 🧰 EQUIPMENT
-    unsubs.push(
-      onSnapshot(collection(db, "gym_equipment"), snap =>
-        setStats(p => ({ ...p, equipmentDue: snap.size }))
-      )
-    );
-
-    return () => unsubs.forEach(u => u());
-  }, []);
-
-
-  useEffect(() => {
-    const today = dayjs().format("YYYY-MM-DD");
-
-    const unsub = onSnapshot(
-      collection(db, "attendance", today, "staff"),
-      (snap) => {
-        const presentCount = snap.docs.filter(
-          (doc) => doc.data().status === "Present"
-        ).length;
-
-        setStats((p) => ({
-          ...p,
-          checkinsToday: presentCount,
-        }));
+        setStats({
+          members: members.length,
+          checkinsToday: 0, // Will be calculated separately
+          activePlans: plans.length,
+          pendingPayments: orders.filter(o => o.status === 'pending').length,
+          trainers: staff.length,
+          equipmentDue: equipment.length,
+          totalOrders: orders.length,
+          totalProducts: products.length,
+        });
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+        toast.error('Failed to load dashboard stats');
       }
-    );
+    };
 
-    return () => unsub();
+    fetchStats();
   }, []);
+
 
   /* ---------- WEEKLY CHECK-IN CHART ---------- */
   const [checkinData, setCheckinData] = useState([]);
@@ -227,20 +148,20 @@ export default function Dashboard() {
         };
 
         try {
-          const snap = await getDocs(
-            collection(db, "attendance", dateStr, "staff")
-          );
+          // Fetch attendance for this date
+          const res = await api.get('/attendance', { params: { date: dateStr } });
+          const records = res.data || [];
 
-          snap.forEach((doc) => {
-            const status = doc.data().status;
+          records.forEach((record) => {
+            const status = record.status || '';
 
-            if (status === "Present") dayData.present++;
-            else if (status === "Absent") dayData.absent++;
-            else if (status === "Late") dayData.late++;
-            else if (status === "On Leave") dayData.leave++;
+            if (status === 'Present' || status === 'present') dayData.present++;
+            else if (status === 'Absent' || status === 'absent') dayData.absent++;
+            else if (status === 'Late' || status === 'late') dayData.late++;
+            else if (status === 'On Leave' || status === 'on_leave') dayData.leave++;
           });
         } catch (err) {
-          console.log("No folder for:", dateStr);
+          console.log("No attendance data for:", dateStr);
         }
 
         temp.push(dayData);
@@ -259,17 +180,12 @@ export default function Dashboard() {
   const [monthlyTotal, setMonthlyTotal] = useState(0);
 
   useEffect(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 1);
-    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    const fetchRevenue = async () => {
+      try {
+        const res = await api.get('/orders');
+        const orders = res.data || [];
 
-    const unsub = onSnapshot(
-      query(
-        collection(db, "orders"),
-        where("createdAt", ">=", Timestamp.fromDate(start)),
-        where("createdAt", "<=", Timestamp.fromDate(end))
-      ),
-      (snap) => {
+        const now = new Date();
         const months = Array.from({ length: 12 }, (_, i) => ({
           month: new Date(0, i).toLocaleString("en", { month: "short" }),
           revenue: 0,
@@ -277,14 +193,13 @@ export default function Dashboard() {
 
         let currentMonthTotal = 0;
 
-        snap.forEach((doc) => {
-          const d = doc.data();
+        orders.forEach((order) => {
+          // Only count paid orders
+          if (order.status !== 'delivered' && order.status !== 'completed') return;
 
-          // ✅ correct status check
-          if (d.paymentStatus !== "paid") return;
-
-          const monthIndex = d.createdAt.toDate().getMonth();
-          const amount = Number(d.subtotal || d.total || 0);
+          const orderDate = new Date(order.created_at || order.createdAt);
+          const monthIndex = orderDate.getMonth();
+          const amount = Number(order.total_amount || order.total_price || order.total || 0);
 
           months[monthIndex].revenue += amount;
 
@@ -295,10 +210,12 @@ export default function Dashboard() {
 
         setRevenueData(months);
         setMonthlyTotal(currentMonthTotal);
+      } catch (err) {
+        console.error('Error fetching revenue:', err);
       }
-    );
+    };
 
-    return () => unsub();
+    fetchRevenue();
   }, []);
 
 
@@ -306,65 +223,59 @@ export default function Dashboard() {
   const [todayOrders, setTodayOrders] = useState(0);
   const [todayOrderAmount, setTodayOrderAmount] = useState(0);
   const [todayOrdersList, setTodayOrdersList] = useState([]);
-  const PAGE_SIZE = 10;
 
   useEffect(() => {
-    // use Firestore Timestamps for accurate range queries
-    const startDate = dayjs().startOf("day").toDate();
-    const endDate = dayjs().endOf("day").toDate();
+    const fetchTodayOrders = async () => {
+      try {
+        const res = await api.get('/orders');
+        const allOrders = res.data || [];
 
-    const startTs = Timestamp.fromDate(startDate);
-    const endTs = Timestamp.fromDate(endDate);
+        const today = dayjs().format("YYYY-MM-DD");
+        const todayStart = new Date(today);
+        const todayEnd = new Date(today);
+        todayEnd.setHours(23, 59, 59, 999);
 
-    const q = query(
-  collection(db, "orders"),
-  where("createdAt", ">=", startTs),
-  where("createdAt", "<=", endTs),
-  orderBy("createdAt", "desc"),
-  limit(10)
-);
+        let total = 0;
 
-    console.log("[Dashboard] today's range:", startTs.toDate().toString(), endTs.toDate().toString());
+        const rows = allOrders
+          .filter(order => {
+            const orderDate = new Date(order.created_at || order.createdAt || '');
+            return orderDate >= todayStart && orderDate <= todayEnd;
+          })
+          .slice(0, 10)
+          .map((order, i) => {
+            const amount = Number(order.total_amount || order.total_price || order.total || 0);
+            total += amount;
 
-    const unsub = onSnapshot(q, (snap) => {
-  let total = 0;
+            const shipping = typeof order.shipping === 'string' 
+              ? JSON.parse(order.shipping || '{}')
+              : (order.shipping || {});
 
-  const rows = snap.docs
-    .map((doc, i) => {
-      const d = doc.data();
-      if (!d.createdAt) return null;
+            return {
+              id: order.id,
+              index: i + 1,
+              customer: shipping.name || "Walk-in",
+              phone: shipping.phone || "-",
+              city: shipping.city || "-",
+              amount,
+              method: order.payment_method || order.paymentMethod || "Cash",
+              status: order.status || "-",
+              time: new Date(order.created_at || order.createdAt || '').toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }) || "-",
+            };
+          });
 
-      const amount =
-        Number(d.total) ||
-        Number(d.subtotal) ||
-        d.items?.reduce((sum, item) => sum + Number(item.ProductTotal || 0), 0) ||
-        0;
+        setTodayOrders(rows.length);
+        setTodayOrderAmount(total);
+        setTodayOrdersList(rows);
+      } catch (err) {
+        console.error('Error fetching today\'s orders:', err);
+      }
+    };
 
-      total += amount;
-
-      return {
-        id: doc.id,
-        index: i + 1,
-        customer: d.shipping?.name || "Walk-in",
-        phone: d.shipping?.phone || "-",
-        city: d.shipping?.city || "-",
-        amount,
-        method: d.paymentMethod || "Cash",
-        status: d.status || "-",
-        time: d.createdAt?.toDate()?.toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }) || "-",
-      };
-    })
-    .filter(Boolean);
-
-  setTodayOrders(rows.length);
-  setTodayOrderAmount(total);
-  setTodayOrdersList(rows);
-});
-
-    return () => unsub();
+    fetchTodayOrders();
   }, []);
 
 

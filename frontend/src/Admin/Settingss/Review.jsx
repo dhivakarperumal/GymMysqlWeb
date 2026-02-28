@@ -10,18 +10,9 @@ import {
   FaEdit,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../../firebase";
 import toast from "react-hot-toast";
 import imageCompression from "browser-image-compression";
+import api from "../../api";
 
 /* ================= STYLES ================= */
 const glassCard =
@@ -47,8 +38,13 @@ const ReviewsSettings = () => {
 
   /* ================= FETCH ================= */
   const fetchReviews = async () => {
-    const snap = await getDocs(collection(db, "reviews"));
-    setReviews(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    try {
+      const res = await api.get('/reviews');
+      setReviews(res.data || []);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      toast.error('Failed to load reviews');
+    }
   };
 
   useEffect(() => {
@@ -87,18 +83,20 @@ const ReviewsSettings = () => {
 
     try {
       if (editId) {
-        await updateDoc(doc(db, "reviews", editId), {
-          ...form,
+        await api.put(`/reviews/${editId}`, {
+          name: form.name,
           rating: Number(form.rating),
-          updatedAt: serverTimestamp(),
+          message: form.message,
+          image: form.image,
         });
         toast.success("Review updated");
       } else {
-        await addDoc(collection(db, "reviews"), {
-          ...form,
+        await api.post('/reviews', {
+          name: form.name,
           rating: Number(form.rating),
-          status: false,
-          createdAt: serverTimestamp(),
+          message: form.message,
+          image: form.image,
+          status: 0,
         });
         toast.success("Review added");
       }
@@ -107,8 +105,9 @@ const ReviewsSettings = () => {
       setEditId(null);
       setShowModal(false);
       fetchReviews();
-    } catch {
-      toast.error("Something went wrong");
+    } catch (err) {
+      console.error('Error saving review:', err);
+      toast.error(err.response?.data?.error || "Something went wrong");
     }
   };
 
@@ -125,14 +124,24 @@ const ReviewsSettings = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this review?")) return;
-    await deleteDoc(doc(db, "reviews", id));
-    toast.success("Deleted");
-    fetchReviews();
+    try {
+      await api.delete(`/reviews/${id}`);
+      toast.success("Deleted");
+      fetchReviews();
+    } catch (err) {
+      console.error('Error deleting review:', err);
+      toast.error("Failed to delete review");
+    }
   };
 
   const toggleStatus = async (id, status) => {
-    await updateDoc(doc(db, "reviews", id), { status: !status });
-    fetchReviews();
+    try {
+      await api.put(`/reviews/${id}`, { status: !status });
+      fetchReviews();
+    } catch (err) {
+      console.error('Error updating review status:', err);
+      toast.error("Failed to update review status");
+    }
   };
 
   const filtered = reviews.filter(

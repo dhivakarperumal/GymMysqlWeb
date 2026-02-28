@@ -2,16 +2,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import BmiCalculator from "../Components/BmiCalculator";
-import TrainerSwiper from "../Components/TrainerSwiper";
-import About from "../Components/About";
-// import AOS from "aos";
-// import "aos/dist/aos.css";
-// import { useEffect } from "react";
-// import FacilitiesSwiper from "../Components/FacilitiesSwiper";
-// import PricingSwiper from "../Components/PricingSwiper";
-// import ProductSwiper from "../Components/ProductSwiper";
-// import ServiceSwiper from "../Components/ServicesSwiper";
+
+
 import { useNavigate } from "react-router-dom";
 
 
@@ -120,9 +112,7 @@ export default function Home() {
           ))}
         </Swiper>
       </div>
-      <div>
-        <About />
-      </div>
+    
       {/* <div>
         <FacilitiesSwiper />
       </div>

@@ -50,7 +50,7 @@ async function createEquipment(req, res) {
 
     const [result] = await db.query(
       `INSERT INTO gym_equipment 
-       (name, category, purchase_date, condition, status, service_due_month, under_warranty, under_maintenance)
+       (name, category, purchase_date, \`condition\`, status, service_due_month, under_warranty, under_maintenance)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [name, category, purchaseDate, condition || 'Good', status || 'available', serviceDueMonth || null, underWarranty ? 1 : 0, underMaintenance ? 1 : 0]
     );
@@ -82,7 +82,7 @@ async function updateEquipment(req, res) {
 
     const [result] = await db.query(
       `UPDATE gym_equipment 
-       SET name = ?, category = ?, purchase_date = ?, condition = ?, 
+       SET name = ?, category = ?, purchase_date = ?, \`condition\` = ?, 
            status = ?, service_due_month = ?, under_warranty = ?, 
            under_maintenance = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,

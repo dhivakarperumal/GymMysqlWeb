@@ -10,23 +10,7 @@ import PrivateRoute from "./PrivateRouter/PrivateRouter.jsx";
 import { Toaster, toast } from "react-hot-toast";
 import Login from "./Components/Login.jsx";
 import Register from "./Components/Register.jsx";
-import TrainerDetails from "./Components/TrainersDetails.jsx";
-import Trainers from "./Components/Trainers.jsx";
-import Facilities from "./Components/Facilities.jsx";
-import FacilityDetail from "./Components/FacilityDetail.jsx";
-import Pricing from "./Components/Pricing.jsx";
 
-import BuyPlan from "./Components/BuyPlan.jsx";
-import Products from "./Components/Products.jsx";
-import Services from "./Components/Services.jsx";
-import ServicesDetails from "./Components/ServicesDetails.jsx";
-import ProductDetails from "./Components/ProductDetails.jsx";
-import Cart from "./Components/Cart.jsx";
-import ClassesTable from "./Components/ClassesTable.jsx";
-import Contact from "./Components/Contact.jsx";
-
-import Account from "./Components/Account.jsx";
-import Checkout from "./Components/Checkout.jsx";
 
 // // Admin
 import AdminPanel from "./Admin/AdminPanel.jsx";
@@ -97,21 +81,6 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { path: "/", element: <Home /> },
-      { path: "/trainers", element: <Trainers /> },
-      { path:"trainersdetails/:id", element: <TrainerDetails /> },
-      { path:"facilities", element: <Facilities /> },
-      { path:"account", element: <Account /> },
-      { path:"facilities/:slug", element: <FacilityDetail /> },
-      { path:"pricing", element: <Pricing /> },
-      { path:"buy-plan", element: <BuyPlan /> },
-      { path: "products", element: <Products /> },
-      { path: "/cart", element: <Cart /> },
-      { path: "/checkout", element: <Checkout /> },
-      { path: "/products/:id", element: <ProductDetails /> },
-      { path:"/services", element: <Services /> },
-      { path:"/services/:slug", element: <ServicesDetails /> },
-      { path:"/calendar", element: <ClassesTable /> },
-      { path:"/contact", element: <Contact /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
 ]},
