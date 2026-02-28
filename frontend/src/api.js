@@ -1,7 +1,9 @@
 import axios from "axios";
 
 /* ✅ VITE ENV (NO process.env) */
-const API_URL = import.meta.env.VITE_API_URL;
+// prefer explicit env var, fall back to same‑origin relative path
+const API_URL = import.meta.env.VITE_API_URL || "/api";
+console.log("API base URL:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
