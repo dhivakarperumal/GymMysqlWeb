@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Marcellus&display=swap');
+
+body {
+  font-family: "Marcellus", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+@import "tailwindcss";
+
+/* REMOVE CHROME AUTOFILL BACKGROUND + TEXT COLOR */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0f1117 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Hide scrollbar but allow scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE & Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* Hide scrollbar but allow scroll */
+.hide-scrollbar {
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE & Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;               /* Chrome, Safari */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.small-caps {
+  font-variant: small-caps;
+}
+/* Admin area: ensure interactive elements show pointer */
+.admin-root button,
+.admin-root a,
+.admin-root [role="button"],
+.admin-root select,
+.admin-root select option,
+.admin-root [role="option"] {
+  cursor: pointer;
+}
+
+/* Trainer area: ensure interactive elements show pointer */
+.trainer-root button,
+.trainer-root a,
+.trainer-root [role="button"],
+.trainer-root select,
+.trainer-root select option,
+.trainer-root [role="option"] {
+  cursor: pointer;
+}
+
+/* Make select dropdowns and options dark (gray-900) in admin & trainer areas */
+.admin-root select,
+.admin-root select option,
+.admin-root [role="option"],
+.trainer-root select,
+.trainer-root select option,
+.trainer-root [role="option"] {
+  background-color: #111827; /* gray-900 */
+  color: #ffffff;
+}
+
+.admin-root select option:hover,
+.admin-root select option:checked,
+.trainer-root select option:hover,
+.trainer-root select option:checked {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+/* Responsive page title utility used across admin pages */
+.page-title {
+  font-weight: 700;
+  line-height: 1.1;
+  font-size: 1.25rem; /* 20px mobile */
+}
+
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 1.75rem; /* 28px small screens and up */
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-title {
+    font-size: 2rem; /* 32px desktop */
+  }
+}

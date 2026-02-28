@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <!-- single Content Security Policy covering both development and production -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://checkout.razorpay.com https://apis.google.com https://cdn.jsdelivr.net https://img1.wsimg.com https://www.googletagmanager.com https://www.google-analytics.com;
+    worker-src 'self' blob:;
+    connect-src 'self' http://localhost:5000 http://localhost:5173 https://api.razorpay.com https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com;
+    frame-src https://checkout.razorpay.com https://api.razorpay.com https://*.firebaseapp.com;
+    img-src 'self' data: blob: https:;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src https://fonts.gstatic.com;
+  " />
+  <link rel="icon" type="image/png" href="/images/logo-dark.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arnold Gym</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</body>
+
+</html>

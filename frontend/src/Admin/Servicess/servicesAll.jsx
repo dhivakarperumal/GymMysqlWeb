@@ -1,0 +1,156 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import api from "../../api";
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+} from "react-icons/fi";
+
+/* ================= STYLES ================= */
+const thClass = "px-4 py-3 text-left text-sm text-gray-300";
+const tdClass = "px-4 py-3 text-sm text-gray-200";
+
+const ServicesList = () => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  /* ================= FETCH SERVICES ================= */
+  const fetchServices = async () => {
+    try {
+      const res = await api.get('/services');
+      const rows = res.data || [];
+      const list = rows.map((r) => ({
+        id: r.id,
+        serviceId: r.service_id,
+        title: r.title,
+        slug: r.slug,
+        heroImage: r.hero_image,
+        shortDesc: r.short_desc,
+        description: r.description,
+        points: Array.isArray(r.points) ? r.points : [],
+      }));
+
+      setServices(list);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load services");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  /* ================= DELETE ================= */
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this service?")) return;
+
+    try {
+      await api.delete(`/services/${id}`);
+      toast.success("Service deleted");
+      setServices((p) => p.filter((s) => s.id !== id));
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Delete failed");
+    }
+  };
+
+  /* ================= UI ================= */
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl text-white font-semibold">
+          
+        </h2>
+
+        <button
+          onClick={() => navigate("/admin/addservice")}
+          className="px-5 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold"
+        >
+          + Add Service
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="text-gray-300">Loading...</p>
+      ) : services.length === 0 ? (
+        <p className="text-gray-400">No services found</p>
+      ) : (
+        <div className="overflow-x-auto bg-white/5 border border-white/10 rounded-2xl">
+          <table className="w-full border-collapse">
+            <thead className="bg-white/5">
+              <tr>
+                <th className={thClass}>Service ID</th>
+                <th className={thClass}>Image</th>
+                <th className={thClass}>Title</th>
+                <th className={thClass}>Slug</th>
+                <th className={thClass}>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {services.map((s) => (
+                <tr
+                  key={s.id}
+                  className="border-t border-white/10 hover:bg-white/5"
+                >
+                  <td className={tdClass}>
+                    {s.serviceId}
+                  </td>
+
+                  <td className={tdClass}>
+                    {s.heroImage ? (
+                      <img
+                        src={s.heroImage}
+                        alt={s.title}
+                        className="h-12 w-16 rounded-lg object-cover border border-white/20"
+                      />
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
+                  </td>
+
+                  <td className={tdClass}>
+                    {s.title}
+                  </td>
+
+                  <td className={tdClass}>
+                    {s.slug}
+                  </td>
+
+                  <td className={tdClass}>
+  <div className="flex gap-2">
+    <button
+      onClick={() => navigate(`/admin/addservice/${s.id}`)}
+      className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+      title="Edit"
+    >
+      <FiEdit size={16} />
+    </button>
+
+    <button
+      onClick={() => handleDelete(s.id)}
+      className="p-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+      title="Delete"
+    >
+      <FiTrash2 size={16} />
+    </button>
+  </div>
+</td>
+
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ServicesList;
