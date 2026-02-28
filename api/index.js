@@ -125,6 +125,35 @@ app.get("/api/db-status", async (req, res) => {
   }
 });
 
+// Database initialization endpoint (creates all tables)
+app.post("/api/init-db", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ 
+        status: "error",
+        message: "Database module not initialized"
+      });
+    }
+
+    // Try to run initialization
+    const { runMigrations } = require("./backend/src/config/migrate");
+    await runMigrations();
+    
+    res.json({ 
+      status: "success",
+      message: "Database tables initialized successfully",
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Database init error:", err.message);
+    res.status(500).json({ 
+      status: "error",
+      message: err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   console.log("404 - Route not found:", req.method, req.path);
