@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../config/logger');
 
 // register a new user
 async function register(req, res) {
@@ -26,7 +27,7 @@ async function register(req, res) {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
-    console.error('register error', err.message || err);
+    logger.error('register error: %O', err);
     return res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 }
@@ -39,6 +40,7 @@ async function login(req, res) {
   }
 
   try {
+    logger.info('login attempt for identifier: %s', identifier);
     const q = await pool.query(
       'SELECT * FROM users WHERE email = $1 OR username = $1',
       [identifier]
@@ -64,7 +66,7 @@ async function login(req, res) {
     const { password_hash, ...userData } = user;
     res.json({ token, user: userData });
   } catch (err) {
-    console.error('login error', err.message || err);
+    logger.error('login error: %O', err);
     res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 }
