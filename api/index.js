@@ -6,6 +6,15 @@ console.log("API Handler initializing...");
 console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
 console.log("POSTGRES_PRISMA_URL set:", !!process.env.POSTGRES_PRISMA_URL);
 
+// Import and test database connection
+let db;
+try {
+  db = require("./backend/src/config/db");
+  console.log("Database module imported successfully");
+} catch (err) {
+  console.error("CRITICAL: Failed to import database module:", err.message);
+}
+
 // optionally run migrations on startup (commented out to avoid delays)
 // (async () => {
 //   try {
@@ -81,6 +90,39 @@ app.use("/api/orders", orderRoutes);
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Database status check
+app.get("/api/db-status", async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(500).json({ 
+        status: "disconnected", 
+        message: "Database module not initialized",
+        hasEnvVars: {
+          DATABASE_URL: !!process.env.DATABASE_URL,
+          POSTGRES_PRISMA_URL: !!process.env.POSTGRES_PRISMA_URL
+        }
+      });
+    }
+    
+    const result = await db.query("SELECT NOW()");
+    res.json({ 
+      status: "connected", 
+      timestamp: new Date().toISOString(),
+      dbTime: result.rows[0]?.now
+    });
+  } catch (err) {
+    console.error("Database health check error:", err.message);
+    res.status(500).json({ 
+      status: "error", 
+      message: err.message,
+      hasEnvVars: {
+        DATABASE_URL: !!process.env.DATABASE_URL,
+        POSTGRES_PRISMA_URL: !!process.env.POSTGRES_PRISMA_URL
+      }
+    });
+  }
 });
 
 // 404 handler

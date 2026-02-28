@@ -26,8 +26,8 @@ async function register(req, res) {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
-    console.error('register error', err);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('register error', err.message || err);
+    return res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 }
 
@@ -64,8 +64,8 @@ async function login(req, res) {
     const { password_hash, ...userData } = user;
     res.json({ token, user: userData });
   } catch (err) {
-    console.error('login error', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('login error', err.message || err);
+    res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 }
 
