@@ -2,17 +2,19 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-console.log("API Handler initializing...");
-console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
-console.log("POSTGRES_PRISMA_URL set:", !!process.env.POSTGRES_PRISMA_URL);
+const logger = require("./backend/src/config/logger");
+
+logger.info("API Handler initializing...");
+logger.info("DATABASE_URL set: %s", !!process.env.DATABASE_URL);
+logger.info("POSTGRES_PRISMA_URL set: %s", !!process.env.POSTGRES_PRISMA_URL);
 
 // Import and test database connection
 let db;
 try {
   db = require("./backend/src/config/db");
-  console.log("Database module imported successfully");
+  logger.info("Database module imported successfully");
 } catch (err) {
-  console.error("CRITICAL: Failed to import database module:", err.message);
+  logger.error("CRITICAL: Failed to import database module: %s", err.message);
 }
 
 // optionally run migrations on startup (commented out to avoid delays)
@@ -30,79 +32,79 @@ let productRoutes, memberRoutes, planRoutes, facilityRoutes, equipmentRoutes, st
 
 try {
   productRoutes = require("./backend/src/routes/productRoutes");
-  console.log("✓ productRoutes imported");
+  logger.info("✓ productRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import productRoutes:", err.message);
+  logger.error("✗ Failed to import productRoutes: %s", err.message);
   productRoutes = (req, res) => res.status(500).json({ error: "productRoutes not available" });
 }
 
 try {
   memberRoutes = require("./backend/src/routes/memberRoutes");
-  console.log("✓ memberRoutes imported");
+  logger.info("✓ memberRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import memberRoutes:", err.message);
+  logger.error("✗ Failed to import memberRoutes: %s", err.message);
   memberRoutes = (req, res) => res.status(500).json({ error: "memberRoutes not available" });
 }
 
 try {
   planRoutes = require("./backend/src/routes/planRoutes");
-  console.log("✓ planRoutes imported");
+  logger.info("✓ planRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import planRoutes:", err.message);
+  logger.error("✗ Failed to import planRoutes: %s", err.message);
   planRoutes = (req, res) => res.status(500).json({ error: "planRoutes not available" });
 }
 
 try {
   facilityRoutes = require("./backend/src/routes/facilityRoutes");
-  console.log("✓ facilityRoutes imported");
+  logger.info("✓ facilityRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import facilityRoutes:", err.message);
+  logger.error("✗ Failed to import facilityRoutes: %s", err.message);
   facilityRoutes = (req, res) => res.status(500).json({ error: "facilityRoutes not available" });
 }
 
 try {
   equipmentRoutes = require("./backend/src/routes/equipmentRoutes");
-  console.log("✓ equipmentRoutes imported");
+  logger.info("✓ equipmentRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import equipmentRoutes:", err.message);
+  logger.error("✗ Failed to import equipmentRoutes: %s", err.message);
   equipmentRoutes = (req, res) => res.status(500).json({ error: "equipmentRoutes not available" });
 }
 
 try {
   staffRoutes = require("./backend/src/routes/staffRoutes");
-  console.log("✓ staffRoutes imported");
+  logger.info("✓ staffRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import staffRoutes:", err.message);
+  logger.error("✗ Failed to import staffRoutes: %s", err.message);
   staffRoutes = (req, res) => res.status(500).json({ error: "staffRoutes not available" });
 }
 
 try {
   serviceRoutes = require("./backend/src/routes/serviceRoutes");
-  console.log("✓ serviceRoutes imported");
+  logger.info("✓ serviceRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import serviceRoutes:", err.message);
+  logger.error("✗ Failed to import serviceRoutes: %s", err.message);
   serviceRoutes = (req, res) => res.status(500).json({ error: "serviceRoutes not available" });
 }
 
 try {
   authRoutes = require("./backend/src/routes/authRoutes");
-  console.log("✓ authRoutes imported");
+  logger.info("✓ authRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import authRoutes:", err.message);
+  logger.error("✗ Failed to import authRoutes: %s", err.message);
   authRoutes = (req, res) => res.status(500).json({ error: "authRoutes not available" });
 }
 
 try {
   orderRoutes = require("./backend/src/routes/orderRoutes");
-  console.log("✓ orderRoutes imported");
+  logger.info("✓ orderRoutes imported");
 } catch (err) {
-  console.error("✗ Failed to import orderRoutes:", err.message);
+  logger.error("✗ Failed to import orderRoutes: %s", err.message);
   orderRoutes = (req, res) => res.status(500).json({ error: "orderRoutes not available" });
 }
 
 const app = express();
 
-console.log("Routes imported successfully");
+logger.info("Routes imported successfully");
 
 /* ✅ CORS - Allow multiple ports */
 app.use(
@@ -131,7 +133,7 @@ app.use(
       if (allowed.includes(origin)) {
         return callback(null, true);
       }
-      console.log("CORS rejected origin:", origin);
+      logger.warn("CORS rejected origin: %s", origin);
       return callback(new Error("Not allowed by CORS"));
     },
   })
@@ -177,7 +179,7 @@ app.get("/api/db-status", async (req, res) => {
       dbTime: result.rows[0]?.now
     });
   } catch (err) {
-    console.error("Database health check error:", err.message);
+    logger.error("Database health check error: %s", err.message);
     res.status(500).json({ 
       status: "error", 
       message: err.message,
@@ -191,54 +193,54 @@ app.get("/api/db-status", async (req, res) => {
 
 // Database initialization endpoint (creates all tables)
 app.post("/api/init-db", async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(500).json({ 
+    try {
+      if (!db) {
+        return res.status(500).json({ 
+          status: "error",
+          message: "Database module not initialized"
+        });
+      }
+
+      // Try to run initialization
+      const { runMigrations } = require("./backend/src/config/migrate");
+      await runMigrations();
+      
+      res.json({ 
+        status: "success",
+        message: "Database tables initialized successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      logger.error("Database init error: %s", err.message);
+      res.status(500).json({ 
         status: "error",
-        message: "Database module not initialized"
+        message: err.message,
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
       });
     }
-
-    // Try to run initialization
-    const { runMigrations } = require("./backend/src/config/migrate");
-    await runMigrations();
-    
-    res.json({ 
-      status: "success",
-      message: "Database tables initialized successfully",
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("Database init error:", err.message);
-    res.status(500).json({ 
-      status: "error",
-      message: err.message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
 });
 
 // 404 handler
 app.use((req, res) => {
-  console.log("404 - Route not found:", req.method, req.path);
+  logger.warn("404 - Route not found: %s %s", req.method, req.path);
   res.status(404).json({ error: "Not Found", path: req.path, method: req.method });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error("Express error:", err);
+  logger.error("Express error: %O", err);
   res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
-console.log("✓ API Handler setup complete");
-console.log("✓ Ready to accept requests");
-console.log("✓ Available endpoints:");
-console.log("  - GET /api/health");
-console.log("  - GET /api/db-status");
-console.log("  - POST /api/init-db");
-console.log("  - POST /api/auth/login");
-console.log("  - POST /api/auth/register");
-console.log("  - And all other routes...");
+logger.info("✓ API Handler setup complete");
+logger.info("✓ Ready to accept requests");
+logger.info("✓ Available endpoints:");
+logger.info("  - GET /api/health");
+logger.info("  - GET /api/db-status");
+logger.info("  - POST /api/init-db");
+logger.info("  - POST /api/auth/login");
+logger.info("  - POST /api/auth/register");
+logger.info("  - And all other routes...");
 
 // Export as handler for Vercel serverless
 module.exports = app;
