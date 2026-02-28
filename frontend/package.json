@@ -34,18 +34,18 @@
     "slick-carousel": "^1.8.1",
     "swiper": "^12.1.0",
     "tailwindcss": "^4.1.18",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "vite": "npm:rolldown-vite@7.2.5",
+    "@vitejs/plugin-react": "^5.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "vite": "npm:rolldown-vite@7.2.5"
+    "globals": "^16.5.0"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.2.5"
