@@ -2,15 +2,19 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-// optionally run migrations on start, helps when launching dev server
-(async () => {
-  try {
-    const { runMigrations } = require("./backend/src/config/migrate");
-    await runMigrations();
-  } catch (err) {
-    console.error("migration startup error:", err.message);
-  }
-})();
+console.log("API Handler initializing...");
+console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
+console.log("POSTGRES_PRISMA_URL set:", !!process.env.POSTGRES_PRISMA_URL);
+
+// optionally run migrations on startup (commented out to avoid delays)
+// (async () => {
+//   try {
+//     const { runMigrations } = require("./backend/src/config/migrate");
+//     await runMigrations();
+//   } catch (err) {
+//     console.error("migration startup error:", err.message);
+//   }
+// })();
 
 // Import routes
 const productRoutes = require("./backend/src/routes/productRoutes");
@@ -24,6 +28,8 @@ const authRoutes = require("./backend/src/routes/authRoutes");
 const orderRoutes = require("./backend/src/routes/orderRoutes");
 
 const app = express();
+
+console.log("Routes imported successfully");
 
 /* ✅ CORS - Allow multiple ports */
 app.use(
@@ -47,10 +53,12 @@ app.use(
         "http://localhost:3000",
         "http://localhost:5000",
         "http://localhost:5173",
+        "https://dhiva-deva-new-my-gym-2hs3.vercel.app",
       ];
       if (allowed.includes(origin)) {
         return callback(null, true);
       }
+      console.log("CORS rejected origin:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
   })
@@ -77,14 +85,18 @@ app.get("/api/health", (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: "Not Found", path: req.path });
+  console.log("404 - Route not found:", req.method, req.path);
+  res.status(404).json({ error: "Not Found", path: req.path, method: req.method });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error("Express error:", err);
   res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
+console.log("API Handler setup complete");
+
 // Export as handler for Vercel serverless
 module.exports = app;
+
