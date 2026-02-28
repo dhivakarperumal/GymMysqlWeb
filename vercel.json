@@ -1,23 +1,23 @@
 {
-    "builds": [
-        {
-            "src": "frontend/package.json",
-            "use": "@vercel/static-build",
-            "config": { "distDir": "dist" }
-        },
-        {
-            "src": "backend/package.json",
-            "use": "@vercel/node"
+    "buildCommand": "npm run build:frontend",
+    "outputDirectory": "frontend/dist",
+    "env": {
+        "NODE_ENV": "production"
+    },
+    "functions": {
+        "backend/api/index.js": {
+            "memory": 1024,
+            "maxDuration": 60
         }
-    ],
-    "routes": [
+    },
+    "rewrites": [
         {
-            "src": "/api/(.*)",
-            "dest": "/backend/src/server.js"
+            "source": "/api/:path*",
+            "destination": "/backend/api"
         },
         {
-            "src": "/(.*)",
-            "dest": "/frontend/dist/$1"
+            "source": "/:path((?!api).*)",
+            "destination": "/index.html"
         }
     ]
 }
