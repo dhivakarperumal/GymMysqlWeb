@@ -1,66 +1,71 @@
 -- Migration 0001: create initial database tables
 
 CREATE TABLE IF NOT EXISTS branches (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   location TEXT,
   phone VARCHAR(20),
   email VARCHAR(100),
   manager_name VARCHAR(100),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- insert default branch if none exists (idempotent)
-INSERT INTO branches (name, location, phone, email, manager_name)
-SELECT 'Main Branch', 'City Center', '+91-XXX-XXX-XXXX', 'main@gym.com', 'Manager Name'
-WHERE NOT EXISTS (SELECT 1 FROM branches); 
+INSERT IGNORE INTO branches (name, location, phone, email, manager_name)
+VALUES ('Main Branch', 'City Center', '+91-XXX-XXX-XXXX', 'main@gym.com', 'Manager Name');
 
 CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS members (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  branch_id INTEGER REFERENCES branches(id),
-  membership_plan_id INTEGER,
-  join_date DATE DEFAULT CURRENT_DATE,
-  is_active BOOLEAN DEFAULT TRUE
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  branch_id INT,
+  membership_plan_id INT,
+  join_date DATE DEFAULT CURDATE(),
+  is_active TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (branch_id) REFERENCES branches(id)
 );
 
 CREATE TABLE IF NOT EXISTS trainers (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  branch_id INTEGER REFERENCES branches(id),
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  branch_id INT,
   specialization TEXT,
-  hire_date DATE DEFAULT CURRENT_DATE
+  hire_date DATE DEFAULT CURDATE(),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (branch_id) REFERENCES branches(id)
 );
 
 CREATE TABLE IF NOT EXISTS plans (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   description TEXT,
-  price NUMERIC(10,2) NOT NULL,
-  duration_days INTEGER
+  price DECIMAL(10,2) NOT NULL,
+  duration_days INT
 );
 
 CREATE TABLE IF NOT EXISTS attendance (
-  id SERIAL PRIMARY KEY,
-  member_id INTEGER REFERENCES members(id),
-  check_in TIMESTAMP DEFAULT NOW(),
-  check_out TIMESTAMP
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT,
+  check_in TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  check_out TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (member_id) REFERENCES members(id)
 );
 
 CREATE TABLE IF NOT EXISTS payments (
-  id SERIAL PRIMARY KEY,
-  member_id INTEGER REFERENCES members(id),
-  amount NUMERIC(10,2) NOT NULL,
-  payment_date TIMESTAMP DEFAULT NOW(),
-  method VARCHAR(50)
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  method VARCHAR(50),
+  FOREIGN KEY (member_id) REFERENCES members(id)
 );

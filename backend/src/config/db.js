@@ -1,36 +1,26 @@
 require("dotenv").config();
-const { Pool } = require("pg");
+const mysql = require("mysql2/promise");
 
 let config;
 
-// Priority: DATABASE_URL > POSTGRES_PRISMA_URL > individual env vars
+// Priority: DATABASE_URL > individual env vars
 if (process.env.DATABASE_URL) {
   console.log("Using DATABASE_URL for connection");
+  // Parse MySQL connection string
   config = {
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-  };
-} else if (process.env.POSTGRES_PRISMA_URL) {
-  console.log("Using POSTGRES_PRISMA_URL for connection");
-  config = {
-    connectionString: process.env.POSTGRES_PRISMA_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    uri: process.env.DATABASE_URL,
   };
 } else {
   // Fallback to individual env vars for local development
   console.log("Using individual DB env vars for connection");
   config = {
     host: String(process.env.DB_HOST || "localhost"),
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    port: parseInt(process.env.DB_PORT, 10) || 3306,
     database: String(process.env.DB_NAME || "gymwebsite_db"),
-    user: String(process.env.DB_USER || "postgres"),
+    user: String(process.env.DB_USER || "root"),
   };
 
-  // only add password if one is provided so pg doesn't send an empty string
+  // only add password if one is provided
   if (process.env.DB_PASSWORD != null && process.env.DB_PASSWORD !== "") {
     config.password = String(process.env.DB_PASSWORD);
   }
@@ -46,7 +36,7 @@ if (process.env.DATABASE_URL) {
   });
 }
 
-const pool = new Pool(config);
+const pool = mysql.createPool(config);
 
 pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);

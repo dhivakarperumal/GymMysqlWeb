@@ -1,13 +1,13 @@
 require("dotenv").config();
-const { Pool } = require("pg");
+const mysql = require("mysql2/promise");
 const fs = require("fs");
 const path = require("path");
 
 // Create a connection pool without specifying the database first
-const adminPool = new Pool({
+const adminPool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER || "postgres",
+  port: parseInt(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
 });
 
@@ -21,10 +21,10 @@ async function initializeDatabase() {
     // First, create the database if it doesn't exist
     try {
       console.log(`Creating database ${dbName}...`);
-      await adminPool.query(`CREATE DATABASE "${dbName}"`);
+      await adminPool.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
       console.log(`✅ Database ${dbName} created!`);
     } catch (err) {
-      if (err.code === "42P04") {
+      if (err.code === "ER_DB_CREATE_EXISTS") {
         console.log(`✅ Database ${dbName} already exists`);
       } else {
         throw err;
@@ -59,10 +59,10 @@ async function initializeDatabase() {
     }
 
     // Create a default branch if none exists
-    const branchResult = await db.query("SELECT COUNT(*) FROM branches");
-    if (branchResult.rows[0].count === 0) {
+    const [branchResult] = await db.query("SELECT COUNT(*) as count FROM branches");
+    if (branchResult[0].count === 0) {
       await db.query(
-        "INSERT INTO branches (name, location, phone, email, manager_name) VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO branches (name, location, phone, email, manager_name) VALUES (?, ?, ?, ?, ?)",
         ["Main Branch", "City Center", "+91-XXX-XXX-XXXX", "main@gym.com", "Manager Name"]
       );
       console.log("✅ Default branch created!");

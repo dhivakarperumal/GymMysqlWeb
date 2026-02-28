@@ -3,10 +3,10 @@ const db = require('../config/db');
 async function getAllFacilities(req, res) {
   try {
     // ensure active column exists, fallback to true for older rows
-    const result = await db.query(
-      'SELECT *, COALESCE(active, true) AS active FROM gym_facilities ORDER BY created_at DESC'
+    const [rows] = await db.query(
+      'SELECT *, COALESCE(active, TRUE) AS active FROM gym_facilities ORDER BY created_at DESC'
     );
-    res.json(result.rows);
+    res.json(rows);
   } catch (err) {
     console.error('getAllFacilities error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -19,15 +19,22 @@ async function getFacilityById(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    const result = await db.query(
-      `SELECT *, COALESCE(active, true) AS active FROM gym_facilities WHERE ${isNum ? 'id = $1' : 'slug = $1'}`,
-      [isNum ? idNum : id]
-    );
-    if (result.rows.length === 0) {
+    let query;
+    let params;
+    if (isNum) {
+      query = `SELECT *, COALESCE(active, TRUE) AS active FROM gym_facilities WHERE id = ?`;
+      params = [idNum];
+    } else {
+      query = `SELECT *, COALESCE(active, TRUE) AS active FROM gym_facilities WHERE slug = ?`;
+      params = [id];
+    }
+    
+    const [rows] = await db.query(query, params);
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Facility not found' });
     }
     
-    const facility = result.rows[0];
+    const facility = rows[0];
     // Parse JSON fields if they're strings
     if (typeof facility.equipments === 'string') facility.equipments = JSON.parse(facility.equipments);
     if (typeof facility.workouts === 'string') facility.workouts = JSON.parse(facility.workouts);
@@ -85,12 +92,11 @@ async function createFacility(req, res) {
       galleryJsonLength: galleryJson.length
     });
 
-    const result = await db.query(
+    const [result] = await db.query(
       `INSERT INTO gym_facilities
       (title, slug, short_description, description, hero_image, 
        equipments, workouts, facilities, gallery, active)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      RETURNING *`,
+      VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [
         title, 
         facilitySlug, 
@@ -101,12 +107,14 @@ async function createFacility(req, res) {
         workoutsJson,
         facilitiesJson,
         galleryJson,
-        active === false ? false : true // default true
+        active === false ? 0 : 1
       ]
     );
 
-    console.log('✅ Facility created successfully! ID:', result.rows[0].id);
-    res.json(result.rows[0]);
+    // Fetch the created facility
+    const [rows] = await db.query('SELECT * FROM gym_facilities WHERE id = ?', [result.insertId]);
+    console.log('✅ Facility created successfully! ID:', rows[0].id);
+    res.json(rows[0]);
 
   } catch (err) {
     console.error('❌ createFacility error:', err.message);
@@ -137,32 +145,57 @@ async function updateFacility(req, res) {
   try {
     const facilitySlug = slug || title.toLowerCase().replace(/\s+/g, "-");
 
-    const result = await db.query(
-      `UPDATE gym_facilities SET
-        title=$1, slug=$2, short_description=$3, description=$4,
-        hero_image=$5, equipments=$6, workouts=$7, facilities=$8,
-        gallery=$9, active=$10, updated_at=NOW()
-       WHERE ${isNum ? 'id=$11' : 'slug=$11'} RETURNING *`,
-      [
-        title, 
-        facilitySlug, 
-        shortDesc, 
-        description || null, 
-        heroImage || null,
-        JSON.stringify(Array.isArray(equipments) ? equipments : []),
-        JSON.stringify(Array.isArray(workouts) ? workouts : []),
-        JSON.stringify(Array.isArray(facilities) ? facilities : []),
-        JSON.stringify(Array.isArray(gallery) ? gallery : []),
-        active === false ? false : true,
-        isNum ? idNum : id
-      ]
-    );
+    let query;
+    let params;
+    
+    const baseParams = [
+      title, 
+      facilitySlug, 
+      shortDesc, 
+      description || null, 
+      heroImage || null,
+      JSON.stringify(Array.isArray(equipments) ? equipments : []),
+      JSON.stringify(Array.isArray(workouts) ? workouts : []),
+      JSON.stringify(Array.isArray(facilities) ? facilities : []),
+      JSON.stringify(Array.isArray(gallery) ? gallery : []),
+      active === false ? 0 : 1
+    ];
 
-    if (result.rows.length === 0) {
+    if (isNum) {
+      query = `UPDATE gym_facilities SET
+        title=?, slug=?, short_description=?, description=?,
+        hero_image=?, equipments=?, workouts=?, facilities=?,
+        gallery=?, active=?, updated_at=CURRENT_TIMESTAMP
+       WHERE id=?`;
+      params = [...baseParams, idNum];
+    } else {
+      query = `UPDATE gym_facilities SET
+        title=?, slug=?, short_description=?, description=?,
+        hero_image=?, equipments=?, workouts=?, facilities=?,
+        gallery=?, active=?, updated_at=CURRENT_TIMESTAMP
+       WHERE slug=?`;
+      params = [...baseParams, id];
+    }
+
+    const [result] = await db.query(query, params);
+
+    if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Facility not found' });
     }
 
-    res.json(result.rows[0]);
+    // Fetch the updated facility
+    let fetchQuery;
+    let fetchParams;
+    if (isNum) {
+      fetchQuery = 'SELECT * FROM gym_facilities WHERE id = ?';
+      fetchParams = [idNum];
+    } else {
+      fetchQuery = 'SELECT * FROM gym_facilities WHERE slug = ?';
+      fetchParams = [id];
+    }
+
+    const [rows] = await db.query(fetchQuery, fetchParams);
+    res.json(rows[0]);
 
   } catch (err) {
     console.error('updateFacility error', err);
@@ -176,11 +209,18 @@ async function deleteFacility(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    const result = await db.query(
-      `DELETE FROM gym_facilities WHERE ${isNum ? 'id = $1' : 'slug = $1'} RETURNING id`,
-      [isNum ? idNum : id]
-    );
-    if (result.rows.length === 0) {
+    let query;
+    let params;
+    if (isNum) {
+      query = `DELETE FROM gym_facilities WHERE id = ?`;
+      params = [idNum];
+    } else {
+      query = `DELETE FROM gym_facilities WHERE slug = ?`;
+      params = [id];
+    }
+
+    const [result] = await db.query(query, params);
+    if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Facility not found' });
     }
     res.json({ success: true, message: 'Facility deleted successfully' });
@@ -197,14 +237,34 @@ async function toggleFacilityActive(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    const result = await db.query(
-      `UPDATE gym_facilities SET active = NOT COALESCE(active, true) WHERE ${isNum ? 'id = $1' : 'slug = $1'} RETURNING active`,
-      [isNum ? idNum : id]
-    );
-    if (result.rows.length === 0) {
+    let query;
+    let params;
+    if (isNum) {
+      query = `UPDATE gym_facilities SET active = IF(active, 0, 1), updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+      params = [idNum];
+    } else {
+      query = `UPDATE gym_facilities SET active = IF(active, 0, 1), updated_at = CURRENT_TIMESTAMP WHERE slug = ?`;
+      params = [id];
+    }
+
+    const [result] = await db.query(query, params);
+    if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Facility not found' });
     }
-    res.json(result.rows[0]);
+
+    // Fetch the updated active status
+    let fetchQuery;
+    let fetchParams;
+    if (isNum) {
+      fetchQuery = 'SELECT active FROM gym_facilities WHERE id = ?';
+      fetchParams = [idNum];
+    } else {
+      fetchQuery = 'SELECT active FROM gym_facilities WHERE slug = ?';
+      fetchParams = [id];
+    }
+
+    const [rows] = await db.query(fetchQuery, fetchParams);
+    res.json(rows[0]);
   } catch (err) {
     console.error('toggleFacilityActive error', err);
     res.status(500).json({ error: 'Update failed' });

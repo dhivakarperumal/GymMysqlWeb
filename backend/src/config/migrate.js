@@ -9,23 +9,31 @@ const migrationsDir = path.join(__dirname, 'migrations');
 async function ensureMigrationTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS ${MIGRATION_TABLE} (
-      id SERIAL PRIMARY KEY,
-      filename TEXT NOT NULL UNIQUE,
-      applied_at TIMESTAMP DEFAULT NOW()
-    );
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      filename VARCHAR(255) NOT NULL UNIQUE,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
   `);
 }
 
 async function getAppliedMigrations() {
-  const result = await db.query(`SELECT filename FROM ${MIGRATION_TABLE}`);
-  return result.rows.map(r => r.filename);
+  const [result] = await db.query(`SELECT filename FROM ${MIGRATION_TABLE}`);
+  return result.map(r => r.filename);
 }
 
 async function applyMigration(file) {
   console.log(`👉 applying ${file}`);
   const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
-  await db.query(sql);
-  await db.query(`INSERT INTO ${MIGRATION_TABLE} (filename) VALUES ($1)`, [file]);
+  
+  // Split by semicolon and execute each statement
+  const statements = sql.split(';').filter(stmt => stmt.trim());
+  for (const stmt of statements) {
+    if (stmt.trim()) {
+      await db.query(stmt.trim());
+    }
+  }
+  
+  await db.query(`INSERT INTO ${MIGRATION_TABLE} (filename) VALUES (?)`, [file]);
 }
 
 async function runMigrations() {
@@ -39,7 +47,7 @@ async function runMigrations() {
     try {
       await ensureMigrationTable();
     } catch (err) {
-      if (err.code === '3D000') { // undefined_database
+      if (err.code === 'ER_NO_DB_ERROR') { // database does not exist
         console.warn('⚠️ Database does not exist, creating it now...');
         const initDb = require('./init');
         // init.js exits after running so spawn a separate process instead

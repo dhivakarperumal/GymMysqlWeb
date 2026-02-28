@@ -11,34 +11,35 @@ const safeParsePoints = (pointsStr) => {
 };
 
 async function generateServiceId(req, res) {
-  const client = await db.connect();
+  const connection = await db.getConnection();
   try {
-    await client.query('BEGIN');
-    const select = await client.query("SELECT current FROM counters WHERE name = 'services' FOR UPDATE");
-    if (select.rows.length === 0) {
-      await client.query("INSERT INTO counters(name, current) VALUES ('services', 1)");
-      await client.query('COMMIT');
+    await connection.beginTransaction();
+    const [select] = await connection.query("SELECT current FROM counters WHERE name = ? FOR UPDATE", ['services']);
+    
+    if (select.length === 0) {
+      await connection.query("INSERT INTO counters(name, current) VALUES (?, ?)", ['services', 1]);
+      await connection.commit();
       return res.json({ serviceId: `SE${String(1).padStart(3, '0')}` });
     }
 
-    const current = select.rows[0].current || 0;
+    const current = select[0].current || 0;
     const next = current + 1;
-    await client.query('UPDATE counters SET current = $1 WHERE name = $2', [next, 'services']);
-    await client.query('COMMIT');
+    await connection.query('UPDATE counters SET current = ? WHERE name = ?', [next, 'services']);
+    await connection.commit();
     return res.json({ serviceId: `SE${String(next).padStart(3, '0')}` });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await connection.rollback();
     console.error('generateServiceId error', err);
     res.status(500).json({ error: 'Failed to generate service id' });
   } finally {
-    client.release();
+    connection.release();
   }
 }
 
 async function getAllServices(req, res) {
   try {
-    const result = await db.query('SELECT * FROM services ORDER BY created_at DESC');
-    const rows = result.rows.map(r => ({
+    const [rows] = await db.query('SELECT * FROM services ORDER BY created_at DESC');
+    const services = rows.map(r => ({
       id: r.id,
       service_id: r.service_id,
       title: r.title,
@@ -50,7 +51,7 @@ async function getAllServices(req, res) {
       created_at: r.created_at,
       updated_at: r.updated_at
     }));
-    res.json(rows);
+    res.json(services);
   } catch (err) {
     console.error('getAllServices error:', err.message);
     res.status(500).json({ error: 'Query failed: ' + err.message });
@@ -65,16 +66,23 @@ async function getServiceById(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    const result = await db.query(
-      `SELECT * FROM services WHERE ${isNum ? 'id = $1' : 'service_id = $1 OR slug = $1'}`,
-      isNum ? [idNum] : [id, id]
-    );
+    let query;
+    let params;
+    if (isNum) {
+      query = `SELECT * FROM services WHERE id = ?`;
+      params = [idNum];
+    } else {
+      query = `SELECT * FROM services WHERE service_id = ? OR slug = ?`;
+      params = [id, id];
+    }
     
-    if (result.rows.length === 0) {
+    const [rows] = await db.query(query, params);
+    
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Service not found' });
     }
     
-    const row = result.rows[0];
+    const row = rows[0];
     const service = {
       id: row.id,
       service_id: row.service_id,
@@ -100,16 +108,17 @@ async function createService(req, res) {
     const body = req.body;
     const pointsJson = JSON.stringify(body.points || []);
 
-    const result = await db.query(
+    const [result] = await db.query(
       `INSERT INTO services (service_id, title, slug, short_desc, description, hero_image, points)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [body.service_id || null, body.title, body.slug, body.short_desc, body.description || null, body.hero_image || null, pointsJson]
     );
 
-    if (result.rows.length === 0) return res.status(500).json({ error: 'Failed to create service' });
+    // Fetch the created service
+    const [rows] = await db.query('SELECT * FROM services WHERE id = ?', [result.insertId]);
+    if (rows.length === 0) return res.status(500).json({ error: 'Failed to create service' });
     
-    const row = result.rows[0];
+    const row = rows[0];
     const service = {
       id: row.id,
       service_id: row.service_id,
@@ -140,16 +149,36 @@ async function updateService(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
 
-    const result = await db.query(
-      `UPDATE services SET title = $1, slug = $2, short_desc = $3, description = $4, hero_image = $5, points = $6, updated_at = NOW()
-       WHERE ${isNum ? 'id = $7' : 'service_id = $7'}
-       RETURNING *`,
-      [body.title, body.slug, body.short_desc, body.description || null, body.hero_image || null, pointsJson, isNum ? idNum : id]
-    );
+    let query;
+    let params;
+    if (isNum) {
+      query = `UPDATE services SET title = ?, slug = ?, short_desc = ?, description = ?, hero_image = ?, points = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`;
+      params = [body.title, body.slug, body.short_desc, body.description || null, body.hero_image || null, pointsJson, idNum];
+    } else {
+      query = `UPDATE services SET title = ?, slug = ?, short_desc = ?, description = ?, hero_image = ?, points = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE service_id = ?`;
+      params = [body.title, body.slug, body.short_desc, body.description || null, body.hero_image || null, pointsJson, id];
+    }
 
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
+    const [result] = await db.query(query, params);
+
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Service not found' });
+
+    // Fetch the updated service
+    let fetchQuery;
+    let fetchParams;
+    if (isNum) {
+      fetchQuery = 'SELECT * FROM services WHERE id = ?';
+      fetchParams = [idNum];
+    } else {
+      fetchQuery = 'SELECT * FROM services WHERE service_id = ?';
+      fetchParams = [id];
+    }
+
+    const [rows] = await db.query(fetchQuery, fetchParams);
     
-    const row = result.rows[0];
+    const row = rows[0];
     const service = {
       id: row.id,
       service_id: row.service_id,
@@ -178,11 +207,18 @@ async function deleteService(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    const result = await db.query(
-      `DELETE FROM services WHERE ${isNum ? 'id = $1' : 'service_id = $1'}`,
-      [isNum ? idNum : id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
+    let query;
+    let params;
+    if (isNum) {
+      query = `DELETE FROM services WHERE id = ?`;
+      params = [idNum];
+    } else {
+      query = `DELETE FROM services WHERE service_id = ?`;
+      params = [id];
+    }
+
+    const [result] = await db.query(query, params);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Service not found' });
     res.json({ message: 'Service deleted' });
   } catch (err) {
     console.error('deleteService error:', err.message);

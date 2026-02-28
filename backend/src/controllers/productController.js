@@ -7,19 +7,21 @@ async function createProduct(req, res) {
       weight, size, gender, mrp, offer, offerPrice, stock, images
     } = req.body;
 
-    const result = await db.query(
+    const [result] = await db.query(
       `INSERT INTO products
       (name, category, subcategory, description, ratings, weight, size, gender,
        mrp, offer, offer_price, stock, images)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       RETURNING *`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         name, category, subcategory, description, ratings,
-        weight, size, gender, mrp, offer, offerPrice, stock, images
+        JSON.stringify(weight || []), JSON.stringify(size || []), JSON.stringify(gender || []), 
+        mrp, offer, offerPrice, JSON.stringify(stock || {}), JSON.stringify(images || [])
       ]
     );
 
-    res.json(result.rows[0]);
+    // Fetch the created product
+    const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [result.insertId]);
+    res.json(rows[0]);
   } catch (err) {
     console.error('createProduct error', err);
     res.status(500).json({ error: 'Insert failed' });
@@ -28,8 +30,8 @@ async function createProduct(req, res) {
 
 async function listProducts(req, res) {
   try {
-    const result = await db.query('SELECT * FROM products ORDER BY id DESC');
-    res.json(result.rows);
+    const [rows] = await db.query('SELECT * FROM products ORDER BY id DESC');
+    res.json(rows);
   } catch (err) {
     console.error('listProducts error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -40,13 +42,12 @@ async function getProduct(req, res) {
   try {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
-    const isNum = !isNaN(idNum);
     
-    const result = await db.query('SELECT * FROM products WHERE id = $1', [isNum ? idNum : id]);
-    if (result.rows.length === 0) {
+    const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [idNum]);
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Not found' });
     }
-    res.json(result.rows[0]);
+    res.json(rows[0]);
   } catch (err) {
     console.error('getProduct error', err);
     res.status(500).json({ error: 'Query failed' });
@@ -57,9 +58,8 @@ async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
-    const isNum = !isNaN(idNum);
     
-    await db.query('DELETE FROM products WHERE id = $1', [isNum ? idNum : id]);
+    await db.query('DELETE FROM products WHERE id = ?', [idNum]);
     res.json({ success: true });
   } catch (err) {
     console.error('deleteProduct error', err);
@@ -71,23 +71,31 @@ async function updateProduct(req, res) {
   try {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
-    const isNum = !isNaN(idNum);
     
     const data = req.body;
-    // simple partial update, using jsonb for stock requires conversion if array
     const fields = [];
     const values = [];
-    let idx = 1;
+    
     for (const key in data) {
-      fields.push(`${key} = $${idx}`);
-      values.push(data[key]);
-      idx++;
+      // For JSON fields, stringify them
+      if (['weight', 'size', 'gender', 'images', 'stock'].includes(key)) {
+        fields.push(`${key} = ?`);
+        values.push(JSON.stringify(data[key] || {}));
+      } else {
+        fields.push(`${key} = ?`);
+        values.push(data[key]);
+      }
     }
+    
     if (!fields.length) return res.status(400).json({ error: 'No data' });
-    values.push(isNum ? idNum : id);
-    const query = `UPDATE products SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
-    const result = await db.query(query, values);
-    res.json(result.rows[0]);
+    
+    values.push(idNum);
+    const query = `UPDATE products SET ${fields.join(', ')} WHERE id = ?`;
+    const [result] = await db.query(query, values);
+    
+    // Fetch the updated product
+    const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [idNum]);
+    res.json(rows[0]);
   } catch (err) {
     console.error('updateProduct error', err);
     res.status(500).json({ error: 'Update failed' });

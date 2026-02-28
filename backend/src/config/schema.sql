@@ -3,67 +3,67 @@
 
 -- branches table
 CREATE TABLE IF NOT EXISTS branches (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   location TEXT,
   phone VARCHAR(20),
   email VARCHAR(100),
   manager_name VARCHAR(100),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- users table
 CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- members table
 CREATE TABLE IF NOT EXISTS members (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  branch_id INTEGER REFERENCES branches(id),
-  membership_plan_id INTEGER,
-  join_date DATE DEFAULT CURRENT_DATE,
-  is_active BOOLEAN DEFAULT TRUE
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  branch_id INT REFERENCES branches(id),
+  membership_plan_id INT,
+  join_date DATE DEFAULT CURDATE(),
+  is_active TINYINT(1) DEFAULT TRUE
 );
 
 -- trainers table
 CREATE TABLE IF NOT EXISTS trainers (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  branch_id INTEGER REFERENCES branches(id),
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  branch_id INT REFERENCES branches(id),
   specialization TEXT,
-  hire_date DATE DEFAULT CURRENT_DATE
+  hire_date DATE DEFAULT CURDATE()
 );
 
 -- plans table
 CREATE TABLE IF NOT EXISTS plans (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   description TEXT,
-  price NUMERIC(10,2) NOT NULL,
-  duration_days INTEGER
+  price DECIMAL(10,2) NOT NULL,
+  duration_days INT
 );
 
 -- attendance table
 CREATE TABLE IF NOT EXISTS attendance (
-  id SERIAL PRIMARY KEY,
-  member_id INTEGER REFERENCES members(id),
-  check_in TIMESTAMP DEFAULT NOW(),
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT REFERENCES members(id),
+  check_in TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   check_out TIMESTAMP
 );
 
 -- payments table
 CREATE TABLE IF NOT EXISTS payments (
-  id SERIAL PRIMARY KEY,
-  member_id INTEGER REFERENCES members(id),
-  amount NUMERIC(10,2) NOT NULL,
-  payment_date TIMESTAMP DEFAULT NOW(),
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  member_id INT REFERENCES members(id),
+  amount DECIMAL(10,2) NOT NULL,
+  payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   method VARCHAR(50)
 );

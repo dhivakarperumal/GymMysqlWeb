@@ -2,12 +2,12 @@
 
 CREATE TABLE IF NOT EXISTS counters (
   name VARCHAR(100) PRIMARY KEY,
-  current INTEGER DEFAULT 0
+  current INT DEFAULT 0
 );
 
 -- staff table
 CREATE TABLE IF NOT EXISTS staff (
-  id SERIAL PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   employee_id VARCHAR(50) UNIQUE,
   username VARCHAR(100),
   name VARCHAR(255) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS staff (
   qualification TEXT,
   experience TEXT,
   shift VARCHAR(100),
-  salary NUMERIC(12,2),
+  salary DECIMAL(12,2),
   address TEXT,
   emergency_name VARCHAR(255),
   emergency_phone VARCHAR(50),
@@ -33,9 +33,9 @@ CREATE TABLE IF NOT EXISTS staff (
   aadhar_doc TEXT,
   id_doc TEXT,
   certificate_doc TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_staff_employee_id ON staff(employee_id);
-CREATE INDEX IF NOT EXISTS idx_staff_role ON staff(role);
+CREATE INDEX idx_staff_employee_id ON staff(employee_id);
+CREATE INDEX idx_staff_role ON staff(role);

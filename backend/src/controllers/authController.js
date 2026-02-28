@@ -12,18 +12,23 @@ async function register(req, res) {
 
   try {
     const hashed = await bcrypt.hash(password, 10);
-    const result = await pool.query(
+    const [result] = await pool.query(
       `INSERT INTO users (email, password_hash, role, username, mobile)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, email, role, username, mobile`,
+         VALUES (?, ?, ?, ?, ?)`,
       [email, hashed, 'user', username || null, mobile || null]
     );
 
-    const user = result.rows[0];
+    const user = {
+      id: result.insertId,
+      email,
+      role: 'user',
+      username: username || null,
+      mobile: mobile || null
+    };
     return res.status(201).json({ user });
   } catch (err) {
-    // unique violation (23505) covers both email and username uniquely constrained
-    if (err.code === '23505') {
+    // unique violation (ER_DUP_ENTRY) covers both email and username uniquely constrained
+    if (err.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
@@ -41,16 +46,16 @@ async function login(req, res) {
 
   try {
     logger.info('login attempt for identifier: %s', identifier);
-    const q = await pool.query(
-      'SELECT * FROM users WHERE email = $1 OR username = $1',
-      [identifier]
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE email = ? OR username = ?',
+      [identifier, identifier]
     );
 
-    if (q.rows.length === 0) {
+    if (rows.length === 0) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const user = q.rows[0];
+    const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return res.status(400).json({ message: 'Invalid credentials' });
