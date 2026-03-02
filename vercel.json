@@ -6,7 +6,7 @@
         "NODE_ENV": "production"
     },
     "functions": {
-        "backend/api/index.js": {
+        "api/index.js": {
             "memory": 1024,
             "maxDuration": 60
         }
@@ -14,7 +14,7 @@
     "routes": [
         {
             "src": "/api/(.*)",
-            "dest": "backend/api/index.js"
+            "dest": "api/index.js"
         },
         {
             "src": "/.*\\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|eot|ttf|otf|json|webp|avif)$",
