@@ -82,7 +82,12 @@ async function runMigrations() {
     console.log('✅ all migrations executed');
   } catch (err) {
     console.error('migration error:', err.message);
-    process.exit(1);
+    // don't call process.exit here so that the server process isn't killed
+    // migrations are a convenience; if they fail the app can still start
+    // and continue running, albeit without updated schema.
+    // Rethrow so caller can optionally handle it (the startup IIFE already
+    // logs errors).
+    throw err;
   } finally {
     // no exit, let caller decide
   }

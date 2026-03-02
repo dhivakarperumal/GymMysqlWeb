@@ -71,6 +71,17 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
+// simple database connectivity check (useful during development)
+app.get("/api/db-check", async (req, res) => {
+  try {
+    const db = require("./config/db");
+    const [rows] = await db.query("SELECT 1 AS ok");
+    res.json({ ok: true, rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
 
 app.use("/api/products", productRoutes);
 app.use("/api/members", memberRoutes);
