@@ -10,6 +10,9 @@ import PrivateRoute from "./PrivateRouter/PrivateRouter.jsx";
 import { Toaster, toast } from "react-hot-toast";
 import Login from "./Components/Login.jsx";
 import Register from "./Components/Register.jsx";
+import Products from "./Pages/Products.jsx";
+import ProductDetails from "./Components/ProductDetails.jsx";
+import Cart from "./Components/Cart.jsx";
 
 
 // // Admin
@@ -83,7 +86,13 @@ const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
-]},
+      { path: "/products", element: <Products /> },
+      { path: "/products/:id", element: <ProductDetails /> },
+      { path: "/cart", element: <Cart /> },
+    ],
+},
+
+
 
 
   {

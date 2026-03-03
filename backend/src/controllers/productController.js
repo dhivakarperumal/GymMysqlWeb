@@ -86,32 +86,46 @@ async function updateProduct(req, res) {
     const idNum = parseInt(id, 10);
     
     const data = req.body;
+    const allowedFields = ['name', 'category', 'subcategory', 'description', 'ratings', 'weight', 'size', 'gender', 'mrp', 'offer', 'offer_price', 'offerPrice', 'stock', 'images'];
     const fields = [];
     const values = [];
     
     for (const key in data) {
+      if (!allowedFields.includes(key)) {
+        console.warn(`updateProduct: ignoring disallowed field '${key}'`);
+        continue;
+      }
+      
+      // Normalize offerPrice -> offer_price for DB
+      const dbKey = key === 'offerPrice' ? 'offer_price' : key;
+      
       // For JSON fields, stringify them
-      if (['weight', 'size', 'gender', 'images', 'stock'].includes(key)) {
-        fields.push(`${key} = ?`);
+      if (['weight', 'size', 'gender', 'images', 'stock'].includes(dbKey)) {
+        fields.push(`\`${dbKey}\` = ?`);
         values.push(JSON.stringify(data[key] || {}));
       } else {
-        fields.push(`${key} = ?`);
+        fields.push(`\`${dbKey}\` = ?`);
         values.push(data[key]);
       }
     }
     
-    if (!fields.length) return res.status(400).json({ error: 'No data' });
+    if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
     
     values.push(idNum);
     const query = `UPDATE products SET ${fields.join(', ')} WHERE id = ?`;
+    console.log('updateProduct query:', query, 'values:', values);
+    
     const [result] = await db.query(query, values);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
     
     // Fetch the updated product
     const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [idNum]);
     res.json(parseProduct(rows[0]));
   } catch (err) {
-    console.error('updateProduct error', err);
-    res.status(500).json({ error: 'Update failed' });
+    console.error('updateProduct error', err, 'body:', req.body);
+    res.status(500).json({ error: 'Update failed', detail: err.message });
   }
 }
 

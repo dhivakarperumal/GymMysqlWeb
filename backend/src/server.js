@@ -97,6 +97,7 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/cart", require("./routes/cartRoutes"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
