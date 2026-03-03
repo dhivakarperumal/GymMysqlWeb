@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-  serverTimestamp,query,where
-} from "firebase/firestore";
-import { db } from "../../firebase";
+import api from "../../api"; // backend HTTP client
 import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search } from "lucide-react";
 
 const AssingnedTrainers = () => {
@@ -26,26 +19,29 @@ const AssingnedTrainers = () => {
     const fetchMembers = async () => {
       setLoading(true);
       try {
-        const usersSnap = await getDocs(collection(db, "users"));
-
-        // Fetch all plans in parallel
-        const memberPromises = usersSnap.docs.map((userDoc) =>
-          getDocs(collection(db, "users", userDoc.id, "plans"))
-            .then((plansSnap) => ({
-              uid: userDoc.id,
-              ...userDoc.data(),
-              plans: plansSnap.docs.map((p) => ({
-                id: p.id,
-                ...p.data(),
-              })),
-            }))
-            .catch(() => null)
-        );
-
-        const allData = await Promise.all(memberPromises);
-        const usersData = allData.filter(
-          (item) => item !== null && item.plans.length > 0
-        );
+        const res = await api.get("/members");
+        // backend returns a flat list of gym_members; each member only has one plan
+        const data = Array.isArray(res.data) ? res.data : [];
+        const usersData = data
+          .map((m) => {
+            const plans = [
+              {
+                id: m.id ? m.id.toString() : "",
+                planName: m.plan || "",
+                duration: m.duration || "",
+                startDate: m.join_date || "",
+                endDate: m.expiry_date || "",
+                pricePaid: m.price || 0,
+              },
+            ];
+            return {
+              uid: m.id ? m.id.toString() : "",
+              username: m.name,
+              email: m.email,
+              plans,
+            };
+          })
+          .filter((item) => item.plans.length > 0);
 
         setMembers(usersData);
       } catch (error) {
@@ -62,42 +58,15 @@ const AssingnedTrainers = () => {
   useEffect(() => {
     const fetchTrainers = async () => {
       try {
-        // Fetch from both sources in parallel
-        const usersQuery = query(
-          collection(db, "users"),
-          where("role", "==", "trainer")
-        );
-        const staffQuery = query(
-          collection(db, "staff"),
-          where("role", "==", "trainer")
-        );
-
-        const [usersSnap, staffSnap] = await Promise.all([
-          getDocs(usersQuery),
-          getDocs(staffQuery),
-        ]);
-
-        const userTrainers = usersSnap.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.username || data.displayName || data.email || "Trainer",
-            email: data.email || "",
-            source: "users",
-          };
-        });
-
-        const staffTrainers = staffSnap.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name || "Trainer",
-            email: data.email || "",
-            source: "staff",
-          };
-        });
-
-        setTrainers([...userTrainers, ...staffTrainers]);
+        const res = await api.get("/staff", { params: { role: "trainer" } });
+        const trainers = Array.isArray(res.data) ? res.data : [];
+        const normalized = trainers.map((t) => ({
+          id: t.id.toString(),
+          name: t.name || t.username || "Trainer",
+          email: t.email || "",
+          source: "staff",
+        }));
+        setTrainers(normalized);
       } catch (err) {
         console.error("Error fetching trainers:", err);
       }
@@ -110,21 +79,13 @@ const AssingnedTrainers = () => {
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
-        const assignSnap = await getDocs(collection(db, "trainerAssignments"));
+        const res = await api.get("/assignments");
         const assignData = {};
-
-        assignSnap.docs.forEach((doc) => {
-          const data = doc.data();
-          const userId = data.userId;
-          if (!assignData[userId]) {
-            assignData[userId] = [];
-          }
-          assignData[userId].push({
-            id: doc.id,
-            ...data,
-          });
+        (Array.isArray(res.data) ? res.data : []).forEach((a) => {
+          const userId = a.userId?.toString();
+          if (!assignData[userId]) assignData[userId] = [];
+          assignData[userId].push(a);
         });
-
         setAssignments(assignData);
       } catch (error) {
         console.error("Error fetching assignments:", error);
@@ -149,58 +110,52 @@ const AssingnedTrainers = () => {
   }
 
   const trainer = trainers.find((t) => t.id === selectedTrainer);
-
   if (!trainer) {
     alert("Trainer not found");
     return;
   }
 
-  // ✅ SAFE NAME (NEVER undefined)
-  const safeTrainerName =
-    trainer.name ||
-    trainer.username ||
-    trainer.displayName ||
-    trainer.email ||
-    "Trainer";
+  const safeTrainerName = trainer.name || trainer.username || trainer.email || "Trainer";
 
   setAssigning(true);
   try {
-    for (const member of members.filter((m) =>
-      selectedUsers.includes(m.uid)
-    )) {
+    const payload = [];
+    for (const member of members.filter((m) => selectedUsers.includes(m.uid))) {
       for (const plan of member.plans) {
-        const assignmentId = `${member.uid}_${plan.id}`;
-
-        await setDoc(
-          doc(db, "trainerAssignments", assignmentId),
-          {
-            userId: member.uid,
-            username: member.username || "No Name",
-            userEmail: member.email || "",
-            planId: plan.id,
-            planName: plan.planName,
-            planDuration: plan.duration,
-            planStartDate: plan.startDate,
-            planEndDate: plan.endDate,
-            planPrice: plan.pricePaid,
-
-            trainerId: trainer.id,
-            trainerName: safeTrainerName, // ✅ FIXED
-            trainerSource: trainer.source || "unknown",
-
-            status: "active",
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        payload.push({
+          userId: member.uid,
+          username: member.username || "No Name",
+          userEmail: member.email || "",
+          planId: plan.id,
+          planName: plan.planName,
+          planDuration: plan.duration,
+          planStartDate: plan.startDate,
+          planEndDate: plan.endDate,
+          planPrice: plan.pricePaid,
+          trainerId: trainer.id,
+          trainerName: safeTrainerName,
+          trainerSource: trainer.source || "staff",
+          status: "active",
+        });
       }
     }
 
-    alert("Trainer assigned / reassigned successfully");
+    await api.post("/assignments", { assignments: payload });
 
+    alert("Trainer assigned / reassigned successfully");
     setShowAssignModal(false);
     setSelectedUsers([]);
     setSelectedTrainer("");
+
+    // refresh assignments list
+    const res = await api.get("/assignments");
+    const assignData = {};
+    (Array.isArray(res.data) ? res.data : []).forEach((a) => {
+      const userId = a.userId?.toString();
+      if (!assignData[userId]) assignData[userId] = [];
+      assignData[userId].push(a);
+    });
+    setAssignments(assignData);
   } catch (err) {
     console.error(err);
     alert("Assignment failed");

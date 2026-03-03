@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "../../firebase";
+import api from "../../api";
 import toast from "react-hot-toast";
 import {
   FaUsers,
@@ -38,16 +32,20 @@ const UserManagement = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(collection(db, "users"));
+      const res = await api.get("/users");
+      const data = Array.isArray(res.data) ? res.data : [];
       setUsers(
-        snap.docs.map((d) => ({
-          id: d.id,
+        data.map((u) => ({
+          id: u.id,
+          username: u.username || u.email || "Unknown",
+          email: u.email,
+          mobile: u.mobile,
           active: true,
-          role: "member",
-          ...d.data(),
+          role: u.role || "member",
         }))
       );
     } catch (err) {
+      console.error("Failed to load users:", err);
       toast.error("Failed to load users");
     } finally {
       setLoading(false);
@@ -55,15 +53,20 @@ const UserManagement = () => {
   };
 
   const updateRole = async (id, role) => {
-    await updateDoc(doc(db, "users", id), { role });
-    toast.success("Role updated");
-    loadUsers();
+    try {
+      await api.put(`/users/${id}`, { role });
+      toast.success("Role updated");
+      loadUsers();
+    } catch (err) {
+      console.error("Failed to update role:", err);
+      toast.error("Failed to update role");
+    }
   };
 
   const toggleStatus = async (id, active) => {
-    await updateDoc(doc(db, "users", id), { active: !active });
-    toast.success("User status updated");
-    loadUsers();
+    // Users table does not have active/status field
+    // Status is implicitly 'active' for all users
+    toast.info("User status cannot be toggled (all users are active)");
   };
 
   const totalUsers = users.length;

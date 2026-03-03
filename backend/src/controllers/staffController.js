@@ -196,7 +196,15 @@ async function updateStaff(req, res) {
 
 async function getAllStaff(req, res) {
   try {
-    const [rows] = await db.query('SELECT * FROM staff ORDER BY created_at DESC');
+    const { role } = req.query;
+    let sql = 'SELECT * FROM staff';
+    const params = [];
+    if (role) {
+      sql += ' WHERE role = ?';
+      params.push(role);
+    }
+    sql += ' ORDER BY created_at DESC';
+    const [rows] = await db.query(sql, params);
     res.json(rows);
   } catch (err) {
     console.error('getAllStaff error', err);

@@ -1,0 +1,111 @@
+const db = require('../config/db');
+
+// simple helper to convert sql row into the shape frontend was using
+function normalizeAssignment(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    username: row.username,
+    userEmail: row.user_email,
+    planId: row.plan_id,
+    planName: row.plan_name,
+    planDuration: row.plan_duration,
+    planStartDate: row.plan_start_date,
+    planEndDate: row.plan_end_date,
+    planPrice: row.plan_price,
+    trainerId: row.trainer_id,
+    trainerName: row.trainer_name,
+    trainerSource: row.trainer_source,
+    status: row.status,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function getAllAssignments(req, res) {
+  try {
+    const [rows] = await db.query(`
+      SELECT a.*, m.name as username, m.email as user_email,
+             s.name as trainer_name, s.role as trainer_source
+      FROM trainer_assignments a
+      LEFT JOIN gym_members m ON m.id = a.user_id
+      LEFT JOIN staff s ON s.id = a.trainer_id
+      ORDER BY a.updated_at DESC
+    `);
+    res.json(rows.map(normalizeAssignment));
+  } catch (err) {
+    console.error('getAllAssignments error', err);
+    res.status(500).json({ error: 'Query failed' });
+  }
+}
+
+// accepts { assignments: [ {userId, planId, planName,..., trainerId, trainerName, trainerSource, status} ] }
+async function upsertAssignments(req, res) {
+  try {
+    const { assignments } = req.body;
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return res.status(400).json({ error: 'No assignments provided' });
+    }
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      for (const a of assignments) {
+        // simple upsert using unique(user_id, plan_id)
+        const params = [
+          a.userId,
+          a.username || null,
+          a.userEmail || null,
+          a.planId || null,
+          a.planName || null,
+          a.planDuration || null,
+          a.planStartDate || null,
+          a.planEndDate || null,
+          a.planPrice || null,
+          a.trainerId,
+          a.trainerName || null,
+          a.trainerSource || 'unknown',
+          a.status || 'active',
+        ];
+
+        const sql = `
+          INSERT INTO trainer_assignments
+          (user_id, username, user_email, plan_id, plan_name, plan_duration, plan_start_date, plan_end_date, plan_price, trainer_id, trainer_name, trainer_source, status)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+          ON DUPLICATE KEY UPDATE
+            username=VALUES(username),
+            user_email=VALUES(user_email),
+            plan_name=VALUES(plan_name),
+            plan_duration=VALUES(plan_duration),
+            plan_start_date=VALUES(plan_start_date),
+            plan_end_date=VALUES(plan_end_date),
+            plan_price=VALUES(plan_price),
+            trainer_id=VALUES(trainer_id),
+            trainer_name=VALUES(trainer_name),
+            trainer_source=VALUES(trainer_source),
+            status=VALUES(status),
+            updated_at=CURRENT_TIMESTAMP
+        `;
+
+        await connection.query(sql, params);
+      }
+
+      await connection.commit();
+      res.json({ success: true });
+    } catch (err) {
+      await connection.rollback();
+      console.error('upsertAssignments error', err);
+      res.status(500).json({ error: 'Failed to save assignments' });
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error('upsertAssignments outer error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+module.exports = {
+  getAllAssignments,
+  upsertAssignments,
+};
