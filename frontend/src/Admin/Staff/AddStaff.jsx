@@ -466,10 +466,13 @@ const AddEditStaff = () => {
         {/* PASSWORD (ADD ONLY) */}
         {!isEdit && (
           <div>
-            <label className="text-sm font-medium">Password (Auto from Phone)</label>
+            <label className="text-sm font-medium">
+              Password <span className="text-xs text-gray-300">(set equal to phone number)</span>
+            </label>
             <input type="password" name="password" value={form.password}
               onChange={handleChange} placeholder="Auto-populated from phone"
               className={`${inputClass} ${errors.password ? "border-red-500 focus:ring-red-500" : ""}`} disabled readOnly />
+            <p className="text-xs text-gray-400 mt-1">Login credentials for the staff account will use this value.</p>
             <ErrorText field="password" />
           </div>
         )}

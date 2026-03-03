@@ -51,8 +51,14 @@ async function getStaffById(req, res) {
   }
 }
 
+const bcrypt = require('bcryptjs');
+
 async function createStaff(req, res) {
+  // create staff record and also add a user entry for login (trainer role)
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
     const body = req.body;
 
     const query = `INSERT INTO staff
@@ -92,8 +98,32 @@ async function createStaff(req, res) {
       new Date(),
     ];
 
-    const [result] = await db.query(query, params);
-    
+    const [result] = await connection.query(query, params);
+
+    // create corresponding user entry (trainer role)
+    try {
+      const passwordToHash = body.password || body.phone || '';
+      const hashed = passwordToHash ? await bcrypt.hash(passwordToHash, 10) : null;
+      const userRole = 'trainer';
+      await connection.query(
+        `INSERT INTO users (email, password_hash, role, username, mobile)
+           VALUES (?, ?, ?, ?, ?)`,
+        [body.email || null, hashed, userRole, body.username || null, body.phone || null]
+      );
+    } catch (userErr) {
+      // duplicate user entries should not block staff creation,
+      // just log warning and continue
+      if (userErr.code === 'ER_DUP_ENTRY') {
+        console.warn('createStaff: user already exists, skipping user insert');
+      } else {
+        console.error('createStaff user insert error', userErr);
+        // rollback entire transaction because something unexpected happened
+        throw userErr;
+      }
+    }
+
+    await connection.commit();
+
     // Fetch the created staff record
     let fetchQuery;
     let fetchParams;
@@ -104,17 +134,23 @@ async function createStaff(req, res) {
       fetchQuery = `SELECT * FROM staff WHERE id = ?`;
       fetchParams = [result.insertId];
     }
-    
+
     const [rows] = await db.query(fetchQuery, fetchParams);
     res.status(201).json(rows[0]);
   } catch (err) {
+    await connection.rollback();
     console.error('createStaff error', err);
     res.status(500).json({ error: 'Failed to create staff' });
+  } finally {
+    connection.release();
   }
 }
 
 async function updateStaff(req, res) {
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
     const { id } = req.params;
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
@@ -172,9 +208,52 @@ async function updateStaff(req, res) {
       params = [...baseParams, id];
     }
 
-    const [result] = await db.query(query, params);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Staff not found' });
-    
+    const [result] = await connection.query(query, params);
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Staff not found' });
+    }
+
+    // try to update user entry if it exists
+    try {
+      const userUpdateFields = [];
+      const userParams = [];
+      if (body.email !== undefined) {
+        userUpdateFields.push('email = ?');
+        userParams.push(body.email);
+      }
+      if (body.username !== undefined) {
+        userUpdateFields.push('username = ?');
+        userParams.push(body.username);
+      }
+      if (body.phone !== undefined) {
+        userUpdateFields.push('mobile = ?');
+        userParams.push(body.phone);
+      }
+      // we do not update role here; users created from staff are always trainers
+      if (userUpdateFields.length > 0) {
+        // identify user by email or username before update
+        // we cannot guarantee unique id, so use existing email/username from body
+        const whereClause = [];
+        const whereParams = [];
+        if (body.email) {
+          whereClause.push('email = ?');
+          whereParams.push(body.email);
+        }
+        if (body.username) {
+          whereClause.push('username = ?');
+          whereParams.push(body.username);
+        }
+        if (whereClause.length > 0) {
+          const updateSql = `UPDATE users SET ${userUpdateFields.join(', ')} WHERE ${whereClause.join(' OR ')}`;
+          await connection.query(updateSql, [...userParams, ...whereParams]);
+        }
+      }
+    } catch (userErr) {
+      console.warn('updateStaff: failed to sync user record', userErr.message);
+      // not fatal; continue
+    }
+
     // Fetch the updated staff record
     let fetchQuery;
     let fetchParams;
@@ -187,10 +266,15 @@ async function updateStaff(req, res) {
     }
     
     const [rows] = await db.query(fetchQuery, fetchParams);
+
+    await connection.commit();
     res.json(rows[0]);
   } catch (err) {
+    await connection.rollback();
     console.error('updateStaff error', err);
     res.status(500).json({ error: 'Failed to update staff' });
+  } finally {
+    connection.release();
   }
 }
 
