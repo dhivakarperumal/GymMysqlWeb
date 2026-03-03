@@ -12,8 +12,10 @@ const AddMember = () => {
 
   const [form, setForm] = useState({
     name: "",
+    username: "",
     phone: "",
     email: "",
+    password: "",
     gender: "",
     height: "",
     weight: "",
@@ -43,6 +45,8 @@ const AddMember = () => {
 
         setForm({
           ...data,
+          username: data.email ? data.email.split('@')[0] : '',
+          password: '', // don't prefill
           height: data.height || "",
           weight: data.weight || "",
           bmi: data.bmi || "",
@@ -85,7 +89,15 @@ const AddMember = () => {
   }, [form.joinDate, form.duration]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'email') {
+      const uname = value.split('@')[0];
+      setForm(prev => ({ ...prev, email: value, username: uname }));
+    } else if (name === 'phone') {
+      setForm(prev => ({ ...prev, phone: value, password: value }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   // 🖼 IMAGE COMPRESS
@@ -122,6 +134,8 @@ const AddMember = () => {
         weight: form.weight ? Number(form.weight) : null,
         bmi: form.bmi ? Number(form.bmi) : null,
         duration: form.duration ? Number(form.duration) : null,
+        // send password only when creating
+        password: !isEdit ? form.password : undefined,
       };
 
       console.log('Submitting payload:', payload);
@@ -173,8 +187,22 @@ const AddMember = () => {
           <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-5">
 
             <input name="name" value={form.name} onChange={handleChange} placeholder="Name" className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" required />
+            {/* username auto from email */}
+            <input name="username" value={form.username} placeholder="Username" readOnly disabled className="mt-1 w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 text-white placeholder-gray-400" />
             <input name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
             <input name="email" value={form.email} onChange={handleChange} placeholder="Email" className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" required />
+            {/* password auto from phone, displayed only when adding */}
+            {!isEdit && (
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                readOnly
+                disabled
+                placeholder="Password (same as phone)"
+                className="mt-1 w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 text-white placeholder-gray-400" 
+              />
+            )}
 
             <select name="gender" value={form.gender} onChange={handleChange} className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500">
               <option value="">Gender</option>

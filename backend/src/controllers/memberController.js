@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const bcrypt = require('bcryptjs');
 
 async function getAllMembers(req, res) {
   try {
@@ -41,36 +42,42 @@ async function createMember(req, res) {
   const {
     name, phone, email, gender, height, weight, bmi,
     plan, duration, joinDate, expiryDate, status,
-    photo, notes, address
+    photo, notes, address,
+    username, password
   } = req.body;
 
-  console.log('createMember received:', { name, phone, email, gender, height, weight, bmi, plan, duration, joinDate, expiryDate, status, photo: photo ? 'base64...' : null, notes, address });
+  console.log('createMember received:', { name, phone, email, gender, height, weight, bmi, plan, duration, joinDate, expiryDate, status, photo: photo ? 'base64...' : null, notes, address, username });
 
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
     // Validate required fields
     if (!name || !phone) {
+      await connection.rollback();
       return res.status(400).json({ message: "Name and phone are required" });
     }
 
     // duplicate phone check
-    const [existing] = await db.query(
+    const [existing] = await connection.query(
       "SELECT * FROM gym_members WHERE phone = ?",
       [phone]
     );
 
     if (existing.length > 0) {
+      await connection.rollback();
       return res.status(400).json({ message: "Phone already exists" });
     }
 
     // generate member_id
-    const [countResult] = await db.query("SELECT COUNT(*) as count FROM gym_members");
+    const [countResult] = await connection.query("SELECT COUNT(*) as count FROM gym_members");
     const nextNumber = Number(countResult[0].count) + 1;
     const memberId = `MB${String(nextNumber).padStart(3, "0")}`;
 
     // Parse numeric fields
     const numDuration = duration ? Number(duration) : null;
 
-    const [result] = await db.query(
+    const [result] = await connection.query(
       `INSERT INTO gym_members
       (member_id, name, phone, email, gender, height, weight, bmi, plan, duration,
        join_date, expiry_date, status, photo, notes, address)
@@ -81,6 +88,26 @@ async function createMember(req, res) {
       ]
     );
 
+    // create user account for member
+    try {
+      const pwd = password || phone || '';
+      const hashed = pwd ? await bcrypt.hash(pwd, 10) : null;
+      await connection.query(
+        `INSERT INTO users (email, password_hash, role, username, mobile)
+           VALUES (?, ?, ?, ?, ?)`,
+        [email || null, hashed, 'user', username || null, phone || null]
+      );
+    } catch (userErr) {
+      if (userErr.code === 'ER_DUP_ENTRY') {
+        console.warn('createMember: user already exists, skipping user insert');
+      } else {
+        console.error('createMember user insert error', userErr);
+        throw userErr;
+      }
+    }
+
+    await connection.commit();
+
     const member = {
       id: result.insertId,
       member_id: memberId,
@@ -89,26 +116,31 @@ async function createMember(req, res) {
     };
 
     res.json(member);
-
   } catch (err) {
+    await connection.rollback();
     console.error('createMember error:', err.message);
     console.error('Full error:', err);
     res.status(500).json({ message: "Server error", error: err.message });
+  } finally {
+    connection.release();
   }
 }
 
 async function updateMember(req, res) {
-  const { id } = req.params;
-  const idNum = parseInt(id, 10);
-  const isNum = !isNaN(idNum);
-  
-  const { name, phone, email, gender, height, weight, bmi,
-          plan, duration, joinDate, expiryDate, status,
-          photo, notes, address } = req.body;
-  // ensure numeric values are correctly typed
-  const numDuration = duration != null ? Number(duration) : null;
-
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const idNum = parseInt(id, 10);
+    const isNum = !isNaN(idNum);
+    
+    const { name, phone, email, gender, height, weight, bmi,
+            plan, duration, joinDate, expiryDate, status,
+            photo, notes, address, username } = req.body;
+    // ensure numeric values are correctly typed
+    const numDuration = duration != null ? Number(duration) : null;
+
     // Check for duplicate phone if phone is being updated
     if (phone) {
       let dupQuery;
@@ -121,8 +153,9 @@ async function updateMember(req, res) {
         dupParams = [phone, id];
       }
       
-      const [existing] = await db.query(dupQuery, dupParams);
+      const [existing] = await connection.query(dupQuery, dupParams);
       if (existing.length > 0) {
+        await connection.rollback();
         return res.status(400).json({ message: "Phone already exists" });
       }
     }
@@ -157,10 +190,49 @@ async function updateMember(req, res) {
       ];
     }
 
-    const [result] = await db.query(updateQuery, updateParams);
+    const [result] = await connection.query(updateQuery, updateParams);
 
     if (result.affectedRows === 0) {
+      await connection.rollback();
       return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // sync user info (email / mobile / username)
+    try {
+      const userFields = [];
+      const userParams = [];
+      if (email !== undefined) {
+        userFields.push('email = ?');
+        userParams.push(email);
+      }
+      if (phone !== undefined) {
+        userFields.push('mobile = ?');
+        userParams.push(phone);
+      }
+      if (username !== undefined) {
+        userFields.push('username = ?');
+        userParams.push(username);
+      }
+      if (userFields.length > 0) {
+        const whereClause = [];
+        const whereParams = [];
+        // identify user by old email or mobile
+        if (email) {
+          whereClause.push('email = ?');
+          whereParams.push(email);
+        }
+        if (phone) {
+          whereClause.push('mobile = ?');
+          whereParams.push(phone);
+        }
+        if (whereClause.length) {
+          const updateSql = `UPDATE users SET ${userFields.join(', ')} WHERE ${whereClause.join(' OR ')}`;
+          await connection.query(updateSql, [...userParams, ...whereParams]);
+        }
+      }
+    } catch (userErr) {
+      console.warn('updateMember: failed to sync user', userErr.message);
+      // continue without fatal error
     }
 
     // Fetch the updated member
@@ -174,12 +246,16 @@ async function updateMember(req, res) {
       fetchParams = [id];
     }
 
-    const [rows] = await db.query(fetchQuery, fetchParams);
+    const [rows] = await connection.query(fetchQuery, fetchParams);
+    await connection.commit();
     res.json(rows[0]);
 
   } catch (err) {
+    await connection.rollback();
     console.error('updateMember error', err);
     res.status(500).json({ message: "Server error" });
+  } finally {
+    connection.release();
   }
 }
 
