@@ -17,7 +17,7 @@ const StatCard = ({ title, value, icon, color }) => (
       <p className="text-xs uppercase tracking-widest text-gray-300">
         {title}
       </p>
-      <h2 className="text-3xl font-bold text-white mt-2">{value}</h2>
+      <h2 className="text-3xl font-bold text-white mt-2">{value !== undefined ? value : 0}</h2>
     </div>
 
     <div
@@ -45,74 +45,154 @@ const TrainerDashboard = () => {
 
   /* ---------------- LOAD DASHBOARD DATA ---------------- */
   useEffect(() => {
-    if (!trainerId) return;
+    if (!trainerId || !user) return;
 
     const loadDashboard = async () => {
       try {
         setLoading(true);
 
-        /* MEMBERS */
+        /* FETCH ASSIGNMENTS */
         const memberRes = await fetch(
-          `${API_BASE}/assignments?trainerId=${trainerId}`
+          `${API_BASE}/assignments`
         );
 
         const memberData = await memberRes.json();
 
         const membersRaw = Array.isArray(memberData)
           ? memberData
-          : memberData.data || [];
+          : memberData.data || memberData.assignments || [];
+
+        // Filter by current trainer only
+        const filteredByTrainer = membersRaw.filter((a) => {
+          let include = false;
+          
+          // Match by trainer ID
+          if (user?.id) {
+            const assignTrainerId = Number(a.trainerId || a.trainer_id);
+            const currentTrainerId = Number(user.id);
+            if (!isNaN(assignTrainerId) && assignTrainerId === currentTrainerId) {
+              include = true;
+            }
+          }
+          
+          // Match by trainer name
+          if (!include && user?.username && (a.trainerName || a.trainer_name)) {
+            if ((a.trainerName || a.trainer_name).toLowerCase() === user.username.toLowerCase()) {
+              include = true;
+            }
+          }
+          
+          // Match by trainer email
+          if (!include && user?.email && (a.trainerEmail || a.trainer_email)) {
+            if ((a.trainerEmail || a.trainer_email).toLowerCase() === user.email.toLowerCase()) {
+              include = true;
+            }
+          }
+          
+          return include;
+        });
+
+        console.log("📊 Filtered by trainer:", filteredByTrainer.length);
 
         /* show only ACTIVE members */
-        const activeMembers = membersRaw.filter(
+        const activeMembers = filteredByTrainer.filter(
           (m) => (m.status || "").toLowerCase() === "active"
         );
 
-        /* remove duplicates */
+        /* remove duplicates by userId */
         const uniqueMembers = Array.from(
           new Map(
-            activeMembers.map((m) => [m.userId || m.id, m])
+            activeMembers.map((m) => [m.userId || m.user_id, m])
           ).values()
         );
 
         setAssignedMembers(uniqueMembers);
 
-        /* TODAY CHECKINS */
-        const checkinRes = await fetch(
-          `${API_BASE}/checkins/today?trainerId=${trainerId}`
-        );
-        const checkinData = await checkinRes.json();
+        const assignedMemberIds = uniqueMembers.map(m => String(m.userId || m.user_id));
+        console.log("👥 Assigned members:", assignedMemberIds);
 
-        /* WORKOUT PLANS */
-        const workoutRes = await fetch(
-          `${API_BASE}/workout-programs?trainerId=${trainerId}`
-        );
-        const workoutData = await workoutRes.json();
+        let workoutCount = 0;
+        let dietCount = 0;
+        let checkinCount = 0;
 
-        /* DIET PLANS */
-        const dietRes = await fetch(
-          `${API_BASE}/diet-plans?trainerId=${trainerId}`
-        );
-        const dietData = await dietRes.json();
+        try {
+          /* WORKOUT PLANS for assigned members only */
+          const workoutRes = await fetch(
+            `${API_BASE}/workouts`
+          );
+          if (workoutRes.ok) {
+            const workoutData = await workoutRes.json();
+            const workoutsRaw = Array.isArray(workoutData) ? workoutData : workoutData?.data || [];
+            const userWorkouts = workoutsRaw.filter(w => 
+              assignedMemberIds.includes(String(w.member_id || w.memberId))
+            );
+            workoutCount = userWorkouts.length;
+            console.log("💪 Workouts:", workoutCount);
+          }
+        } catch (e) {
+          console.error("Workout fetch error:", e);
+        }
+
+        try {
+          /* DIET PLANS for assigned members only */
+          const dietRes = await fetch(
+            `${API_BASE}/diet-plans`
+          );
+          if (dietRes.ok) {
+            const dietData = await dietRes.json();
+            const dietsRaw = Array.isArray(dietData) ? dietData : dietData?.data || [];
+            const userDiets = dietsRaw.filter(d => 
+              assignedMemberIds.includes(String(d.member_id || d.memberId))
+            );
+            dietCount = userDiets.length;
+            console.log("🥗 Diets:", dietCount);
+          }
+        } catch (e) {
+          console.error("Diet fetch error:", e);
+        }
+
+        try {
+          /* TODAY CHECKINS */
+          const checkinRes = await fetch(
+            `${API_BASE}/checkins/today?trainerId=${trainerId}`
+          );
+          if (checkinRes.ok) {
+            const checkinData = await checkinRes.json();
+            checkinCount = checkinData?.count || checkinData?.length || 0;
+            console.log("📅 Checkins:", checkinCount);
+          }
+        } catch (e) {
+          console.error("Checkin fetch error:", e);
+        }
 
         setStats({
           members: uniqueMembers.length,
-          todayCheckins: checkinData?.count || 0,
-          workoutPlans: Array.isArray(workoutData)
-            ? workoutData.length
-            : workoutData?.data?.length || 0,
-          dietPlans: Array.isArray(dietData)
-            ? dietData.length
-            : dietData?.data?.length || 0,
+          todayCheckins: checkinCount,
+          workoutPlans: workoutCount,
+          dietPlans: dietCount,
+        });
+
+        console.log("📈 Final stats:", {
+          members: uniqueMembers.length,
+          todayCheckins: checkinCount,
+          workoutPlans: workoutCount,
+          dietPlans: dietCount,
         });
       } catch (err) {
         console.error("Dashboard error:", err);
+        setStats({
+          members: 0,
+          todayCheckins: 0,
+          workoutPlans: 0,
+          dietPlans: 0,
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadDashboard();
-  }, [trainerId]);
+  }, [trainerId, user]);
 
   /* ---------------- LOADING ---------------- */
   if (loading || !trainerId) {
@@ -178,6 +258,7 @@ const TrainerDashboard = () => {
                     <th className="px-4 py-4 text-left">S No</th>
                     <th className="px-4 py-4 text-left">Member</th>
                     <th className="px-4 py-4 text-left">Email</th>
+                    <th className="px-4 py-4 text-left">Mobile</th>
                     <th className="px-4 py-4 text-left">Plan</th>
                     <th className="px-4 py-4 text-left">Status</th>
                   </tr>
@@ -186,7 +267,7 @@ const TrainerDashboard = () => {
                 <tbody>
                   {assignedMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-6 text-gray-400">
+                      <td colSpan="6" className="text-center py-6 text-gray-400">
                         No members assigned
                       </td>
                     </tr>
@@ -200,20 +281,24 @@ const TrainerDashboard = () => {
                         <td className="px-4 py-4">{ind + 1}</td>
 
                         <td className="px-4 py-4">
-                          {m.username || "No Name"}
+                          {m.username || m.user_name || "No Name"}
                         </td>
 
                         <td className="px-4 py-4">
-                          {m.userEmail || "-"}
+                          {m.userEmail || m.user_email || "-"}
                         </td>
 
                         <td className="px-4 py-4">
-                          {m.planName || "-"}
+                          {m.userMobile || m.user_mobile || "-"}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {m.planName || m.plan_name || "-"}
                         </td>
 
                         <td className="px-4 py-4">
                           <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                            {m.status}
+                            {m.status || "Active"}
                           </span>
                         </td>
 
@@ -244,22 +329,26 @@ const TrainerDashboard = () => {
 
                       <div>
                         <p className="font-semibold">
-                          {m.username || "No Name"}
+                          {m.username || m.user_name || "No Name"}
                         </p>
 
                         <p className="text-xs text-gray-400">
-                          {m.userEmail || "-"}
+                          {m.userEmail || m.user_email || "-"}
+                        </p>
+
+                        <p className="text-xs text-gray-400">
+                          {m.userMobile || m.user_mobile || "-"}
                         </p>
 
                         <p className="text-xs text-gray-400 mt-1">
-                          Plan: {m.planName || "-"}
+                          Plan: {m.planName || m.plan_name || "-"}
                         </p>
                       </div>
 
                       <div className="text-right">
 
                         <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">
-                          {m.status}
+                          {m.status || "Active"}
                         </span>
 
                         <div className="text-xs text-gray-400 mt-2">
