@@ -6,8 +6,7 @@ import {
   FaEye,
   FaTimes,
 } from "react-icons/fa";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase";
+import api from "../../api";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -20,8 +19,11 @@ import * as XLSX from "xlsx";
 const groupByMonth = (data, dateKey = "createdAt") => {
   const map = {};
   data.forEach(item => {
-    if (!item[dateKey]) return;
-    const month = dayjs(item[dateKey].toDate()).format("YYYY-MM");
+    const val = item[dateKey] || item.createdAt || item.date || item.check_in || item.payment_date;
+    if (!val) return;
+    // support Firestore Timestamp (.toDate), Date objects, and strings
+    const d = (typeof val === 'object' && typeof val.toDate === 'function') ? val.toDate() : new Date(val);
+    const month = dayjs(d).format("YYYY-MM");
     if (!map[month]) map[month] = [];
     map[month].push(item);
   });
@@ -52,7 +54,7 @@ const getDownloadRows = (report) => {
         Patient: t.patientSnapshot?.name,
         Doctor: t.assignedDoctor,
         Cost: t.totalVariantCost,
-        Date: dayjs(t.createdAt?.toDate()).format("DD MMM YYYY"),
+        Date: dayjs(t.createdAt).format("DD MMM YYYY"),
       }));
     default:
       return [];
@@ -91,19 +93,22 @@ const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
 
   /* ========================
-     FIRESTORE
+     LOAD FROM BACKEND API
   ======================== */
   useEffect(() => {
-    const u1 = onSnapshot(collection(db, "appointments"), s =>
-      setAppointments(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    const u2 = onSnapshot(collection(db, "inventory"), s =>
-      setInventory(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    const u3 = onSnapshot(collection(db, "treatments"), s =>
-      setTreatments(s.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    return () => { u1(); u2(); u3(); };
+    let mounted = true;
+    api.get('/reports').then(res => {
+      if (!mounted) return;
+      const { appointments = [], inventory = [], treatments = [] } = res.data || {};
+
+      // normalize createdAt for frontend
+      setAppointments(appointments.map(a => ({ id: a.id || a.ID || a.id, ...a, createdAt: a.createdAt || a.check_in || a.created_at || a.payment_date })));
+      setInventory(inventory.map(i => ({ id: i.id || i.ID, ...i, createdAt: i.createdAt || i.created_at || i.updated_at })));
+      setTreatments(treatments.map(t => ({ id: t.id || t.ID, ...t, createdAt: t.createdAt || t.payment_date || t.created_at })));
+    }).catch(err => {
+      console.error('reports fetch error', err);
+    });
+    return () => { mounted = false; };
   }, []);
 
   /* ========================
@@ -343,7 +348,7 @@ const Reports = () => {
                     <tr key={idx} className="border-b border-white/10">
                       <td className="px-4 py-3">{idx + 1}</td>
                       <td className="px-4 py-3">
-                        {dayjs(i.createdAt?.toDate()).format("DD MMM YYYY")}
+                        {dayjs(i.createdAt).format("DD MMM YYYY")}
                       </td>
                       <td className="px-4 py-3">
                         {i.patientName || i.itemName || i.name}

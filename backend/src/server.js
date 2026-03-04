@@ -28,6 +28,7 @@ const userRoutes = require("./routes/userRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const dietRoutes = require("./routes/dietRoutes");
 const addressRoutes = require("./routes/addressRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 // other routes can be added later
 
@@ -105,6 +106,7 @@ app.use("/api/workouts", workoutRoutes);
 app.use("/api/diet-plans", dietRoutes);
 app.use("/api/cart", require("./routes/cartRoutes"));
 app.use("/api/address", addressRoutes);
+app.use("/api/reports", reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
