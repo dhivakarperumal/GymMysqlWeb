@@ -71,6 +71,7 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/workouts", require("../src/routes/workoutRoutes"));
 
 // Health check
 app.get("/api/health", (req, res) => {

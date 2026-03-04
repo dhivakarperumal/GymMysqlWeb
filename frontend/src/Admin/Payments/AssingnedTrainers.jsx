@@ -136,6 +136,7 @@ const AssingnedTrainers = () => {
           trainerName: safeTrainerName,
           trainerSource: trainer.source || "staff",
           status: "active",
+          updatedAt: new Date().toISOString(),
         });
       }
     }
@@ -308,7 +309,8 @@ const AssingnedTrainers = () => {
                       key={assign.id}
                       className="bg-white/5 border border-green-400/30 rounded-xl p-4 space-y-3"
                     >
-                      <div className="flex items-center gap-3">
+                      {/* TRAINER INFO */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-white/10">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center flex-shrink-0">
                           <Dumbbell size={18} className="text-white" />
                         </div>
@@ -318,41 +320,69 @@ const AssingnedTrainers = () => {
                             {assign.trainerSource === "users" ? "User System" : "Staff"}
                           </p>
                         </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">Trainer ID</p>
+                          <p className="text-xs font-mono text-cyan-300 whitespace-nowrap">{assign.trainerId}</p>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      {/* PLAN DETAILS GRID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                         <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-400/20">
-                          <p className="text-gray-400 text-xs">Plan</p>
-                          <p className="font-semibold">{assign.planName}</p>
+                          <p className="text-gray-400 text-xs mb-1">Plan Name</p>
+                          <p className="font-semibold text-blue-300">{assign.planName}</p>
                         </div>
                         <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-400/20">
-                          <p className="text-gray-400 text-xs">Duration</p>
-                          <p className="font-semibold">{assign.planDuration}</p>
+                          <p className="text-gray-400 text-xs mb-1">Duration</p>
+                          <p className="font-semibold text-purple-300">{assign.planDuration}</p>
                         </div>
                         <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-400/20">
-                          <p className="text-gray-400 text-xs">Price</p>
+                          <p className="text-gray-400 text-xs mb-1">Price</p>
                           <p className="font-semibold text-cyan-300">₹ {assign.planPrice}</p>
                         </div>
                         <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-400/20">
-                          <p className="text-gray-400 text-xs">Status</p>
+                          <p className="text-gray-400 text-xs mb-1">Status</p>
                           <p className="font-semibold text-yellow-300 capitalize">{assign.status || "Active"}</p>
+                        </div>
+                        <div className="bg-green-500/10 rounded-lg p-3 border border-green-400/20">
+                          <p className="text-gray-400 text-xs mb-1">Plan ID</p>
+                          <p className="text-xs font-mono text-green-300 truncate">{assign.planId}</p>
+                        </div>
+                        <div className="bg-orange-500/10 rounded-lg p-3 border border-orange-400/20">
+                          <p className="text-gray-400 text-xs mb-1">Member Email</p>
+                          <p className="text-xs font-mono text-orange-300 truncate">{assign.userEmail}</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                      {/* DATE DETAILS */}
+                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10">
                         <div>
-                          <p className="text-gray-400 text-xs">Start Date</p>
+                          <p className="text-gray-400 text-xs mb-1">Start Date</p>
                           <div className="flex items-center gap-1 text-sm font-medium">
                             <Calendar size={14} />
-                            {assign.planStartDate || "N/A"}
+                            <span>{assign.planStartDate ? new Date(assign.planStartDate).toLocaleDateString() : "N/A"}</span>
                           </div>
                         </div>
                         <div>
-                          <p className="text-gray-400 text-xs">End Date</p>
+                          <p className="text-gray-400 text-xs mb-1">End Date</p>
                           <div className="flex items-center gap-1 text-sm font-medium">
                             <Calendar size={14} />
-                            {assign.planEndDate || "N/A"}
+                            <span>{assign.planEndDate ? new Date(assign.planEndDate).toLocaleDateString() : "N/A"}</span>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* MEMBER & UPDATE INFO */}
+                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-xs">
+                        <div>
+                          <p className="text-gray-400 mb-1">Member</p>
+                          <p className="font-mono text-gray-300">{assign.username}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 mb-1">Last Updated</p>
+                          <p className="font-mono text-gray-300">
+                            {assign.updatedAt ? new Date(assign.updatedAt).toLocaleDateString() : "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>

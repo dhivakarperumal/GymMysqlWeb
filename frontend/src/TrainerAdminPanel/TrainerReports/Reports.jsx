@@ -7,14 +7,7 @@ import {
   FaEye,
   FaTimes,
 } from "react-icons/fa";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "../../firebase";
-import { getAuth } from "firebase/auth";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -34,8 +27,8 @@ const groupByMonth = (data, dateKey = "createdAt") => {
 };
 
 const Reports = () => {
-  const auth = getAuth();
-  const trainerId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const trainerId = user?.id;
 
   const [attendance, setAttendance] = useState([]);
   const [dietPlans, setDietPlans] = useState([]);
@@ -50,75 +43,35 @@ const Reports = () => {
  useEffect(() => {
   if (!trainerId) return;
 
-  const unsubs = [];
+  // load members via assignments
+  fetch("/api/assignments")
+    .then((res) => res.json())
+    .then((data) => {
+      setMembers(
+        data.filter(
+          (a) => a.trainerId === trainerId && a.status === "active"
+        )
+      );
+    })
+    .catch((err) => console.error("failed to fetch members", err));
 
-  /* ================= ASSIGNED MEMBERS ================= */
-  const memberUnsub = onSnapshot(
-    query(
-      collection(db, "trainerAssignments"),
-      where("trainerId", "==", trainerId),
-      where("status", "==", "active")
-    ),
-    (snap) => {
-      setMembers(snap.docs.map((d) => d.data()));
-    }
-  );
+  // diets still fire-based for now (migration not implemented)
+  // workouts from our new mysql endpoint
+  fetch(`/api/workouts?trainerId=${trainerId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      const normalized = data.map((w) => ({
+        ...w,
+        memberName: w.member_name,
+        name: w.member_name, // reports sometimes uses name
+        status: w.level || w.status,
+        createdAt: w.created_at,
+      }));
+      setWorkouts(normalized);
+    })
+    .catch((err) => console.error("failed to fetch workouts", err));
 
-  unsubs.push(memberUnsub);
-
-  /* ================= DIET PLANS ================= */
-  const dietUnsub = onSnapshot(
-    query(
-      collection(db, "dietPlans"),
-      where("trainerId", "==", trainerId)
-    ),
-    (snap) => {
-      setDietPlans(snap.docs.map((d) => d.data()));
-    }
-  );
-
-  unsubs.push(dietUnsub);
-
-  /* ================= WORKOUT PROGRAMS ================= */
-  const workoutUnsub = onSnapshot(
-    query(
-      collection(db, "workoutPrograms"),
-      where("trainerId", "==", trainerId)
-    ),
-    (snap) => {
-      setWorkouts(snap.docs.map((d) => d.data()));
-    }
-  );
-
-  unsubs.push(workoutUnsub);
-
-  /* ================= ATTENDANCE (ALL DATES) ================= */
-  const attendanceUnsub = onSnapshot(
-    collection(db, "attendance"),
-    async (dateSnap) => {
-      const allAttendance = [];
-
-      for (const dateDoc of dateSnap.docs) {
-        const staffSnap = await dateDoc.ref
-          .collection("staff")
-          .where("trainerId", "==", trainerId)
-          .get();
-
-        staffSnap.forEach((d) => {
-          allAttendance.push({
-            ...d.data(),
-            createdAt: d.data().createdAt,
-          });
-        });
-      }
-
-      setAttendance(allAttendance);
-    }
-  );
-
-  unsubs.push(attendanceUnsub);
-
-  return () => unsubs.forEach((u) => u());
+  // attendance left unchanged until backend endpoint exists
 }, [trainerId]);
 
 

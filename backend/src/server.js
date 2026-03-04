@@ -25,6 +25,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const userRoutes = require("./routes/userRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 // other routes can be added later
 
 const app = express();
@@ -97,6 +98,7 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/workouts", workoutRoutes);
 app.use("/api/cart", require("./routes/cartRoutes"));
 
 const PORT = process.env.PORT || 5000;

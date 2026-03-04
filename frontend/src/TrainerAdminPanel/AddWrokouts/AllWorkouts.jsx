@@ -1,17 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { db } from "../../firebase";
 import toast from "react-hot-toast";
 import { Edit2, Eye, Trash2, X, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 
 const weekDays = [
   "MONDAY",
@@ -30,8 +21,8 @@ const timeSlots = [
 ];
 
 const AllWorkouts = () => {
-  const auth = getAuth();
-  const trainerId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const trainerId = user ? Number(user.id) : undefined;
 
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,30 +50,35 @@ const AllWorkouts = () => {
   /* ---------------- FETCH WORKOUT PROGRAMS ---------------- */
   useEffect(() => {
     if (!trainerId) return;
+    setLoading(true);
 
-    const q = query(
-      collection(db, "workoutPrograms"),
-      where("trainerId", "==", trainerId)
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setWorkouts(
-          snap.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
-        );
-        setLoading(false);
-      },
-      (err) => {
+    fetch(`/api/workouts?trainerId=${encodeURIComponent(trainerId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        // convert snake_case database fields to camelCase; keep legacy shape
+        const normalized = data.map((w) => ({
+          id: w.id,
+          trainerId: w.trainer_id,
+          trainerName: w.trainer_name,
+          trainerSource: w.trainer_source,
+          memberId: w.member_id,
+          memberName: w.member_name,
+          category: w.category,
+          level: w.level,
+          goal: w.goal,
+          durationWeeks: w.duration_weeks,
+          days: w.days,
+          status: w.status,
+          createdAt: w.created_at,
+          updatedAt: w.updated_at,
+        }));
+        setWorkouts(normalized);
+      })
+      .catch((err) => {
         console.error(err);
         toast.error("Failed to load workouts");
-      }
-    );
-
-    return () => unsub();
+      })
+      .finally(() => setLoading(false));
   }, [trainerId]);
 
   /* ---------------- DELETE ---------------- */
@@ -90,8 +86,10 @@ const AllWorkouts = () => {
     if (!window.confirm("Delete this workout program?")) return;
 
     try {
-      await deleteDoc(doc(db, "workoutPrograms", id));
+      await fetch(`/api/workouts/${id}`, { method: "DELETE" });
       toast.success("Workout deleted");
+      // refresh list after deletion
+      setWorkouts((w) => w.filter((item) => item.id !== id));
     } catch (err) {
       console.error(err);
       toast.error("Delete failed");
