@@ -26,7 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
-import AddressForm from "../Address";
+// import AddressForm from "../Address";
 
 
 
@@ -468,7 +468,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-<AddressForm/>
+{/* <AddressForm/> */}
     </div>
   );
 }

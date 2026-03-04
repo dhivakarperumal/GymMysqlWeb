@@ -44,21 +44,22 @@ const Billing = () => {
   }, []);
 
   /* ================= GENERATE ORDER NUMBER ================= */
-  const generateOrderNumber = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/orders/generate-order-id`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Failed to generate order number");
-      const data = await res.json();
-      return data.order_id;
-    } catch (err) {
-      console.error(err);
-      // Fallback: generate locally if backend doesn't have endpoint
-      const timestamp = Date.now();
-      return `ORD${String(timestamp).slice(-6)}`;
-    }
-  };
+const generateOrderNumber = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/orders/generate-order-id`, {
+      method: "POST",
+    });
+
+    const data = await res.json();
+
+    return data.order_id;
+
+  } catch (err) {
+    console.error(err);
+    const timestamp = Date.now();
+    return `ORD${String(timestamp).slice(-6)}`;
+  }
+};
 
   /* ================= ADD TO CART ================= */
   const addToCart = () => {
@@ -70,13 +71,23 @@ const Billing = () => {
     if (!variantData || qty > variantData.qty)
       return toast.error("Insufficient stock");
 
+    // Determine price: use offer_price if available and > 0, otherwise use mrp
     let price = 0;
-
-    if (product.category === "Food") {
-      price = Number(variantData.offerPrice || 0);
-    } else {
-      price = Number(product.offerPrice || 0);
+    
+    if (product.offer_price && Number(product.offer_price) > 0) {
+      price = Number(product.offer_price);
+    } else if (product.mrp && Number(product.mrp) > 0) {
+      price = Number(product.mrp);
+    } else if (product.offerPrice && Number(product.offerPrice) > 0) {
+      // Fallback to camelCase in case API returns it
+      price = Number(product.offerPrice);
+    } else if (product.mrp && Number(product.mrp) > 0) {
+      price = Number(product.mrp);
     }
+
+    // Get product image
+    const images = product.images ? (Array.isArray(product.images) ? product.images : JSON.parse(product.images)) : [];
+    const image = images.length > 0 ? images[0] : null;
 
     setCart((prev) => [
       ...prev,
@@ -88,6 +99,7 @@ const Billing = () => {
         price,
         quantity: qty,
         total: price * qty,
+        image: image,
       },
     ]);
 
@@ -105,90 +117,124 @@ const Billing = () => {
 
   /* ================= SAVE BILL ================= */
   const saveBill = async () => {
-    if (!cart.length) return toast.error("Cart empty");
+  if (!cart.length) return toast.error("Cart empty");
 
-    for (const key in shipping) {
-      if (!shipping[key]) return toast.error(`Fill ${key} field`);
-    }
+  for (const key in shipping) {
+    if (!shipping[key]) return toast.error(`Fill ${key} field`);
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      /* 1️⃣ GET ORDER NUMBER */
-      const orderId = await generateOrderNumber();
+    /* 1️⃣ GET ORDER NUMBER */
+    const orderId = await generateOrderNumber();
 
-      /* 2️⃣ UPDATE PRODUCT STOCK */
-      for (const item of cart) {
-        const product = products.find((p) => p.id === item.productId);
-        if (!product) {
-          throw new Error(`Product ${item.productId} not found`);
-        }
+    /* 2️⃣ UPDATE PRODUCT STOCK */
+    for (const item of cart) {
+      const productData = products.find((p) => p.id === item.productId);
 
-        const updatedStock = { ...product.stock };
-        updatedStock[item.variant] = {
-          ...updatedStock[item.variant],
-          qty: updatedStock[item.variant].qty - item.quantity,
-        };
-
-        const updateRes = await fetch(`${API_BASE}/products/${item.productId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stock: updatedStock }),
-        });
-
-        if (!updateRes.ok) {
-          throw new Error(`Failed to update stock for ${product.name}`);
-        }
+      if (!productData) {
+        throw new Error(`Product ${item.productId} not found`);
       }
 
-      /* 3️⃣ CREATE ORDER */
-      const orderPayload = {
-        order_id: orderId,
-        user_id: null, // Can be set if user is logged in
-        status: "orderPlaced",
-        payment_status: orderType === "ONLINE" ? "pending" : "paid",
-        total: subtotal,
-        order_type: orderType,
-        shipping: shipping,
-        pickup: null,
-        order_track: [
-          {
-            status: "orderPlaced",
-            time: new Date().toISOString(),
-          },
-        ],
+      const updatedStock = { ...productData.stock };
+
+      if (!updatedStock[item.variant]) {
+        throw new Error(`Variant not found for ${productData.name}`);
+      }
+
+      const newQty = updatedStock[item.variant].qty - item.quantity;
+
+      if (newQty < 0) {
+        throw new Error(`Insufficient stock for ${productData.name}`);
+      }
+
+      updatedStock[item.variant] = {
+        ...updatedStock[item.variant],
+        qty: newQty,
       };
 
-      const orderRes = await fetch(`${API_BASE}/orders`, {
-        method: "POST",
+      const updateRes = await fetch(`${API_BASE}/products/${item.productId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
+        body: JSON.stringify({ stock: updatedStock }),
       });
 
-      if (!orderRes.ok) {
-        const errData = await orderRes.json();
-        throw new Error(errData.message || "Failed to create order");
+      if (!updateRes.ok) {
+        throw new Error(`Failed to update stock for ${productData.name}`);
       }
-
-      toast.success("Order placed successfully ✅");
-      setCart([]);
-      setShipping({
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-        city: "",
-        state: "",
-        zip: "",
-        country: "India",
-      });
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Billing failed");
-    } finally {
-      setLoading(false);
     }
-  };
+
+    /* 3️⃣ CREATE ORDER WITH ITEMS */
+    const orderPayload = {
+      order_id: orderId,
+      user_id: null,
+      status: "orderPlaced",
+      payment_status: orderType === "ONLINE" ? "pending" : "paid",
+      total: subtotal,
+      order_type: orderType,
+      shipping: shipping,
+      pickup: null,
+
+      order_track: [
+        {
+          status: "orderPlaced",
+          time: new Date().toISOString(),
+        },
+      ],
+
+      /* ✅ ADD ORDER ITEMS */
+      items: cart.map((item) => {
+        // Parse variant to extract size and color (e.g., "XS-Male" -> size: "XS", color: "Male")
+        const variantParts = item.variant ? item.variant.split('-') : [];
+        const size = variantParts[0] || null;
+        const color = variantParts.slice(1).join('-') || null;
+        
+        return {
+          product_id: item.productId,
+          product_name: item.name,
+          price: item.price,
+          qty: item.quantity,
+          size: size,
+          color: color,
+          image: item.image
+        };
+      }),
+    };
+
+    const orderRes = await fetch(`${API_BASE}/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
+    });
+
+    if (!orderRes.ok) {
+      const errData = await orderRes.json();
+      throw new Error(errData.message || "Failed to create order");
+    }
+
+    toast.success("Order placed successfully ✅");
+
+    setCart([]);
+
+    setShipping({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      zip: "",
+      country: "India",
+    });
+
+  } catch (err) {
+    console.error(err);
+    toast.error(err.message || "Billing failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* ================= UI ================= */
   return (

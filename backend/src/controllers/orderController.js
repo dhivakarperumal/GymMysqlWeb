@@ -27,16 +27,31 @@ async function getAllOrders(req, res) {
 // fetch single order by order_id
 async function getOrder(req, res) {
   const { id } = req.params;
+
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM orders WHERE order_id = ?',
+
+    const [order] = await pool.query(
+      "SELECT * FROM orders WHERE order_id = ?",
       [id]
     );
-    if (rows.length === 0) return res.status(404).json({ message: 'Order not found' });
-    return res.json(parseOrder(rows[0]));
+
+    if (order.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const [items] = await pool.query(
+      "SELECT * FROM order_items WHERE order_id = ?",
+      [id]
+    );
+
+    res.json({
+      ...order[0],
+      items
+    });
+
   } catch (err) {
-    console.error('getOrder error', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -80,33 +95,96 @@ async function updateOrderStatus(req, res) {
 // create new order
 async function createOrder(req, res) {
   const data = req.body;
+
   if (!data.order_id) {
-    return res.status(400).json({ message: 'order_id is required' });
+    return res.status(400).json({ message: "order_id required" });
   }
+
+  const connection = await pool.getConnection();
+
   try {
-    const [result] = await pool.query(
-      `INSERT INTO orders (order_id, user_id, status, payment_status, total, order_type, shipping, pickup, order_track)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
+    await connection.beginTransaction();
+
+    // Insert order
+    await connection.query(
+      `INSERT INTO orders 
+      (order_id,user_id,status,payment_status,total,order_type,shipping,pickup,order_track)
+      VALUES (?,?,?,?,?,?,?,?,?)`,
       [
         data.order_id,
         data.user_id || null,
-        data.status || 'orderPlaced',
-        data.payment_status || 'pending',
+        data.status || "orderPlaced",
+        data.payment_status || "pending",
         data.total || 0,
         data.order_type || null,
         data.shipping ? JSON.stringify(data.shipping) : null,
         data.pickup ? JSON.stringify(data.pickup) : null,
-        data.order_track ? JSON.stringify(data.order_track) : JSON.stringify([]),
+        JSON.stringify(data.order_track || [])
       ]
     );
 
-    // Fetch the created order
-    const [rows] = await pool.query('SELECT * FROM orders WHERE id = ?', [result.insertId]);
-    res.status(201).json(parseOrder(rows[0]));
+    // Insert order items
+    if (data.items && data.items.length > 0) {
+      for (const item of data.items) {
+        await connection.query(
+          `INSERT INTO order_items
+          (order_id,product_id,product_name,price,qty,size,color,image)
+          VALUES (?,?,?,?,?,?,?,?)`,
+          [
+            data.order_id,
+            item.product_id,
+            item.product_name,
+            item.price,
+            item.qty,
+            item.size,
+            item.color,
+            item.image
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully"
+    });
+
   } catch (err) {
-    console.error('createOrder error', err);
-    res.status(500).json({ message: 'Server error' });
+    await connection.rollback();
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+
+  } finally {
+    connection.release();
   }
 }
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, createOrder };
+
+async function generateOrderId(req, res) {
+  try {
+
+    const [rows] = await pool.query(
+      "SELECT order_id FROM orders ORDER BY id DESC LIMIT 1"
+    );
+
+    let nextNumber = 1;
+
+    if (rows.length > 0 && rows[0].order_id) {
+      const lastOrderId = rows[0].order_id; // ORD001
+      const number = parseInt(lastOrderId.replace("ORD", ""));
+      nextNumber = number + 1;
+    }
+
+    const order_id = `ORD${String(nextNumber).padStart(3, "0")}`;
+
+    res.json({ order_id });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+module.exports = { getAllOrders, getOrder, updateOrderStatus, createOrder, generateOrderId };
