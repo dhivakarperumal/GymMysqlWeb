@@ -194,6 +194,9 @@ const AssingnedTrainers = () => {
 
   /* ================= FILTER & SEARCH LOGIC ================= */
   const filteredMembers = members.filter((m) => {
+    // Only show members with plans
+    if (!m.plans || m.plans.length === 0) return false;
+
     // Search filter
     const searchLower = search.toLowerCase();
     const matchesSearch =
@@ -217,7 +220,7 @@ const AssingnedTrainers = () => {
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Assign Trainers</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage trainer assignments for members</p>
+          <p className="text-gray-400 text-sm mt-1">Manage trainer assignments for members with active plans</p>
         </div>
 
         <button
@@ -453,12 +456,14 @@ const AssingnedTrainers = () => {
 
             {/* 🔹 MEMBER SELECT */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Select Members:</label>
+              <label className="block text-sm font-semibold text-gray-300 mb-3">Select Members (Only members with active plans):</label>
               <div className="max-h-56 overflow-y-auto space-y-2 pr-1 bg-black/20 rounded-xl p-3 border border-white/10">
-                {members.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">No members found</p>
+                {members.filter((m) => (m.plans?.length || 0) > 0).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No members with plans found</p>
                 ) : (
-                  members.map((m) => (
+                  members
+                    .filter((m) => (m.plans?.length || 0) > 0)
+                    .map((m) => (
                     <label
                       key={m.uid}
                       className="flex items-start gap-3 bg-white/5 p-3 rounded-lg cursor-pointer hover:bg-white/10 transition border border-white/10"
@@ -466,7 +471,7 @@ const AssingnedTrainers = () => {
                       <input
                         type="checkbox"
                         className="accent-orange-500 mt-1 shrink-0"
-                        disabled={assigning || (m.plans?.length || 0) === 0}
+                        disabled={assigning}
                         checked={selectedUsers.includes(m.uid)}
                         onChange={(e) => {
                           setSelectedUsers((prev) =>
