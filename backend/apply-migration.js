@@ -5,19 +5,43 @@ const path = require('path');
 
 async function applyMigration() {
   try {
-    const migrationFile = path.join(__dirname, 'src/config/migrations/0005_add_gym_facilities_table.sql');
-    const sql = fs.readFileSync(migrationFile, 'utf-8');
-    
-    console.log('Applying migration 0005_add_gym_facilities_table.sql...');
-    await db.query(sql);
-    
-    // Record the migration as applied
+    const migrationsDir = path.join(__dirname, 'src/config/migrations');
+    const files = fs
+      .readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+
+    // ensure table exists to track applied migrations
     await db.query(
-      `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
-      ['0005_add_gym_facilities_table.sql']
+      `CREATE TABLE IF NOT EXISTS schema_migrations (
+         filename VARCHAR(255) PRIMARY KEY,
+         applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       )`
     );
-    
-    console.log('✅ Migration applied successfully!');
+
+    for (const file of files) {
+      const [existing] = await db.query(
+        'SELECT filename FROM schema_migrations WHERE filename = ?',
+        [file]
+      );
+      if (existing.length > 0) {
+        console.log(`Skipping already applied migration: ${file}`);
+        continue;
+      }
+
+      const migrationFile = path.join(migrationsDir, file);
+      const sql = fs.readFileSync(migrationFile, 'utf-8');
+      console.log(`Applying migration ${file}...`);
+      await db.query(sql);
+
+      await db.query(
+        `INSERT INTO schema_migrations (filename) VALUES (?)`,
+        [file]
+      );
+      console.log(`✅ ${file} applied`);
+    }
+
+    console.log('All migrations processed.');
     process.exit(0);
   } catch (err) {
     console.error('❌ Migration failed:', err.message);

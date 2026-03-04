@@ -1,17 +1,11 @@
+
 import React, { useEffect, useState, useMemo } from "react";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { db } from "../../firebase";
 import toast from "react-hot-toast";
-import { Eye, Trash2,Edit2, Plus } from "lucide-react";
+import { Eye, Trash2, Edit2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../PrivateRouter/AuthContext";
+
+const API_BASE = "/api";
 
 
 const weekDays = [
@@ -33,8 +27,8 @@ const timeSlots = [
 ];
 
 const AllDietPlans = () => {
-  const auth = getAuth();
-  const trainerId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const trainerId = user?.id;
 
   const [dietPlans, setDietPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,29 +56,41 @@ const AllDietPlans = () => {
   useEffect(() => {
     if (!trainerId) return;
 
-    const q = query(
-      collection(db, "dietPlans"),
-      where("trainerId", "==", trainerId)
-    );
+    const fetchPlans = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/diet-plans?trainerId=${trainerId}`);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        // normalize snake_case to camelCase for frontend convenience
+        const normalized = data.map((p) => ({
+          ...p,
+          memberName: p.member_name || p.memberName || "",
+          calories: p.total_calories || p.totalCalories || 0,
+          duration: p.duration,
+          title: p.title || "",
+        }));
+        setDietPlans(normalized);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load diet plans");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const unsub = onSnapshot(q, (snap) => {
-      setDietPlans(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-      );
-      setLoading(false);
-    });
-
-    return () => unsub();
+    fetchPlans();
   }, [trainerId]);
 
   /* ---------------- DELETE ---------------- */
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this diet plan?")) return;
-
     try {
-      await deleteDoc(doc(db, "dietPlans", id));
+      const res = await fetch(`${API_BASE}/diet-plans/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("delete failed");
       toast.success("Diet plan deleted");
-    } catch {
+      setDietPlans((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error(err);
       toast.error("Delete failed");
     }
   };

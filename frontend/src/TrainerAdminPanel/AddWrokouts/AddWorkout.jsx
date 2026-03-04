@@ -295,37 +295,8 @@ const AddWorkout = () => {
 
   return (
     <div className="min-h-screen p-6 text-white">
-      {/* DEBUG PANEL */}
-      <div className="max-w-6xl mx-auto mb-4 bg-blue-900/40 border border-blue-500 rounded-lg p-4">
-        <details className="cursor-pointer">
-          <summary className="font-semibold text-blue-300">🔍 Debug Info (Click to expand)</summary>
-          <div className="mt-3 space-y-2 text-sm font-mono bg-black/40 p-3 rounded">
-            <p>👤 Logged-in: <span className="text-green-400">{user?.username}</span></p>
-            <p>🔑 User ID: <span className="text-yellow-400">{user?.id}</span></p>
-            <p>📧 Email: <span className="text-cyan-400">{user?.email || "N/A"}</span></p>
-            <p>👔 Role: <span className="text-cyan-400">{user?.role || "unknown"}</span></p>
-            <p>📦 Members Found: <span className={members.length > 0 ? "text-green-400" : "text-red-400"}>{members.length}</span></p>
-            {members.length > 0 && (
-              <div className="mt-2 border-t border-blue-500 pt-2">
-                <p className="text-green-400">✅ Available Members:</p>
-                {members.map((m, i) => (
-                  <p key={i} className="text-xs text-gray-300 ml-2">• {m.name} (ID: {m.id}, Plan: {m.planName})</p>
-                ))}
-              </div>
-            )}
-            {allAssignments.length > 0 && (
-              <div className="mt-2 border-t border-blue-500 pt-2">
-                <p className="text-yellow-400">⚠️ ALL Assignments in DB (for reference):</p>
-                {allAssignments.map((a, i) => (
-                  <p key={i} className="text-xs text-gray-400 ml-2">
-                    • Trainer: {a.trainerName || a.trainer_name} (ID: {a.trainerId || a.trainer_id}) → Member: {a.username} 
-                  </p>
-                ))}
-              </div>
-            )}
-          </div>
-        </details>
-      </div>
+      
+      
 
       <div className="max-w-6xl mx-auto bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-6">
 
