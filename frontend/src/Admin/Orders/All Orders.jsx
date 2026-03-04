@@ -15,6 +15,13 @@ import { useNavigate } from "react-router-dom";
 
 /* ================= HELPERS ================= */
 
+// format order ID with prefix and padding
+const formatOrderId = (id) => {
+  if (!id) return "";
+  const num = parseInt(String(id).replace(/[^0-9]/g, ""), 10) || 0;
+  return `ORD${String(num).padStart(3, "0")}`;
+};
+
 const normalizeKey = (s) =>
   String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -285,54 +292,70 @@ const AllOrders = () => {
       {/* ================= TABLE VIEW ================= */}
       {view === "table" && (
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden">
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/20">
-              <tr>
-                <th className="px-4 py-4 text-left">Order ID</th>
-                <th className="px-4 py-4 text-left">Member</th>
-                <th className="px-4 py-4 text-left">Amount</th>
-                <th className="px-4 py-4 text-left">Payment</th>
-                <th className="px-4 py-4 text-left">Status</th>
-                <th className="px-4 py-4 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedOrders.map((o) => (
-                <tr key={o.order_id} className="border-b border-white/10">
-                  <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-2">{o.order_id}</td>
-                  <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-2">
-                    {o.shipping?.name || o.pickup?.name || "-"}
-                  </td>
-                  <td className="px-4 py-2">
-                    ₹ {Number(o.total).toLocaleString("en-IN")}
-                  </td>
-                  <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-2">{o.paymentStatus}</td>
-                  <td className="px-4 py-2">{statusBadge(o.status)}</td>
-                  <td className="px-4 py-2 flex gap-2">
-                    <select
-                      value={normalizeKey(o.status)}
-                      onChange={(e) => updateStatus(o.order_id, e.target.value)}
-                      className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs"
-                    >
-                      <option value="orderplaced">Order Placed</option>
-                      <option value="processing">Processing</option>
-                      <option value="packing">Packing</option>
-                      <option value="outfordelivery">Out for Delivery</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-
-                    <button
-                      onClick={() => printOrder(o)}
-                      className="px-2 py-1 bg-gray-700 rounded-lg text-xs flex items-center gap-1"
-                    >
-                      <FaPrint /> Print
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/20">
+                <tr>
+                  
+                  <th className="px-4 py-4 text-left">Order ID</th>
+                  <th className="px-4 py-4 text-left">Member</th>
+                  <th className="px-4 py-4 text-left">Amount</th>
+                  <th className="px-4 py-4 text-left">Payment</th>
+                  <th className="px-4 py-4 text-left">Status</th>
+                  <th className="px-4 py-4 text-left">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedOrders.map((o) => (
+                  <tr key={o.order_id} className="border-b border-white/10 hover:bg-white/5">
+                   
+                    <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3 cursor-pointer hover:text-orange-400">{formatOrderId(o.order_id)}</td>
+                    <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3">
+                      {o.shipping?.name || o.pickup?.name || "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      ₹{Number(o.total).toLocaleString("en-IN")}
+                    </td>
+                    <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        normalizeKey(o.paymentStatus) === "paid" 
+                          ? "bg-green-500/20 text-green-300" 
+                          : "bg-amber-500/20 text-amber-300"
+                      }`}>
+                        {o.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusBadge(o.status)}`}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <select
+                        value={normalizeKey(o.status)}
+                        onChange={(e) => updateStatus(o.order_id, e.target.value)}
+                        className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs"
+                      >
+                        <option value="orderplaced">Order Placed</option>
+                        <option value="processing">Processing</option>
+                        <option value="packing">Packing</option>
+                        <option value="outfordelivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+
+                      <button
+                        onClick={() => printOrder(o)}
+                        className="px-2 py-1 bg-gray-700 rounded-lg text-xs flex items-center gap-1"
+                      >
+                        <FaPrint /> Print
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -345,7 +368,7 @@ const AllOrders = () => {
               className="bg-white/10 border border-white/20 rounded-2xl p-4 space-y-2"
             >
               <div onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="flex justify-between">
-                <h3 className="font-bold">{o.orderId}</h3>
+                <h3 className="font-bold">{formatOrderId(o.orderId)}</h3>
                 {statusBadge(o.status)}
               </div>
 

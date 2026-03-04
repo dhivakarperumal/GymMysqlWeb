@@ -85,9 +85,12 @@ const generateOrderNumber = async () => {
       price = Number(product.mrp);
     }
 
-    // Get product image
+    // Get product image and normalize URL
     const images = product.images ? (Array.isArray(product.images) ? product.images : JSON.parse(product.images)) : [];
-    const image = images.length > 0 ? images[0] : null;
+    let image = images.length > 0 ? images[0] : null;
+    if (image && !image.match(/^https?:\/\//)) {
+      image = `${API_BASE}/${image.replace(/^\//,"")}`;
+    }
 
     setCart((prev) => [
       ...prev,

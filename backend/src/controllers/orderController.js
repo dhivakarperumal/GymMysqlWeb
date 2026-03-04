@@ -100,6 +100,12 @@ async function createOrder(req, res) {
     return res.status(400).json({ message: "order_id required" });
   }
 
+  // normalize order_id formatting (ensure ORD### pattern)
+  if (typeof data.order_id === 'string') {
+    const num = parseInt(data.order_id.replace(/[^0-9]/g, ''), 10) || 0;
+    data.order_id = `ORD${String(num).padStart(3, '0')}`;
+  }
+
   const connection = await pool.getConnection();
 
   try {

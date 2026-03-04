@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../../api";
 import { useParams, useNavigate } from "react-router-dom";
+
+// base url used when appending relative image paths
+const API_BASE = "http://localhost:5000/api";
 import {
   FaArrowLeft,
   FaUser,
@@ -17,6 +20,13 @@ import {
 } from "react-icons/fa";
 
 /* ================= STATUS BADGE ================= */
+// format order ID with prefix and zero padding
+const formatOrderId = (id) => {
+  if (!id) return "";
+  const num = parseInt(String(id).replace(/[^0-9]/g, ""), 10) || 0;
+  return `ORD${String(num).padStart(3, "0")}`;
+};
+
 const statusBadge = (status) => {
   switch (status) {
     case "delivered":
@@ -106,12 +116,55 @@ const OrderDetails = () => {
         const res = await api.get(`/orders/${id}`);
         const o = res.data;
         if (o) {
+          // Parse JSON fields that may come as strings
+          let shipping = o.shipping;
+          let pickup = o.pickup;
+          let orderTrack = o.order_track;
+
+          if (typeof shipping === "string") {
+            try {
+              shipping = JSON.parse(shipping);
+            } catch (e) {
+              shipping = {};
+            }
+          }
+
+          if (typeof pickup === "string") {
+            try {
+              pickup = JSON.parse(pickup);
+            } catch (e) {
+              pickup = {};
+            }
+          }
+
+          if (typeof orderTrack === "string") {
+            try {
+              orderTrack = JSON.parse(orderTrack);
+            } catch (e) {
+              orderTrack = [];
+            }
+          }
+
           setOrder({
             ...o,
             orderId: o.order_id,
             paymentStatus: o.payment_status,
             orderType: o.order_type,
             createdAt: o.created_at,
+            shipping: shipping || {},
+            pickup: pickup || {},
+            orderTrack: orderTrack || [],
+            items: (o.items || []).map((item) => ({
+              name: item.product_name,
+              productId: item.product_id,
+              variant: item.size && item.color ? `${item.size}-${item.color}` : (item.size || item.color || "-"),
+              quantity: item.qty,
+              price: Number(item.price) || 0,
+              total: (Number(item.price) || 0) * (item.qty || 0),
+              size: item.size,
+              color: item.color,
+              image: item.image,
+            })),
           });
         }
       } catch (err) {
@@ -137,7 +190,7 @@ const OrderDetails = () => {
           <FaArrowLeft />
         </button>
         <div>
-          <h2 className="text-2xl font-bold page-title">{order.orderId}</h2>
+          <h2 className="text-2xl font-bold page-title">{formatOrderId(order.orderId)}</h2>
           <p className="text-sm text-gray-300">
             {order.createdAt ? new Date(order.createdAt).toLocaleString("en-IN") : ""}
           </p>
@@ -181,7 +234,7 @@ const OrderDetails = () => {
               const currentIndex = stepKeys.indexOf(currentKey);
 
               return stepKeys.map((stepKey, idx, arr) => {
-                const entry = order.orderTrack?.find(
+                const entry = (order.orderTrack || []).find(
                   (t) => normalizeKey(t.status) === stepKey
                 );
 
@@ -245,40 +298,38 @@ const OrderDetails = () => {
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <FaUser /> Customer
           </h3>
-          <p>
-  {order.pickup?.name || order.shipping?.name || "-"}
-</p>
+          <p className="font-semibold">
+            {order.pickup?.name || order.shipping?.name || "-"}
+          </p>
 
-<p className="text-sm text-gray-300 flex items-center gap-2 mt-1">
-  <FaPhone />
-  {order.pickup?.phone || order.shipping?.phone || "-"}
-</p>
+          <p className="text-sm text-gray-300 flex items-center gap-2 mt-1">
+            <FaPhone />
+            {order.pickup?.phone || order.shipping?.phone || "-"}
+          </p>
 
-<p className="text-sm text-gray-300 flex items-center gap-2 mt-1">
-  <FaEnvelope />
-  {order.pickup?.email || order.shipping?.email || "-"}
-</p>
-
+          <p className="text-sm text-gray-300 flex items-center gap-2 mt-1">
+            <FaEnvelope />
+            {order.pickup?.email || order.shipping?.email || "-"}
+          </p>
         </div>
 
         <div className="bg-white/10 border border-white/20 rounded-2xl p-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <FaMapMarkerAlt /> Shipping Address
           </h3>
-         {order.orderType === "pickup" ? (
-  <p className="text-sm text-gray-400">Store Pickup (No Shipping Address)</p>
-) : (
-  <>
-    <p>{order.shipping?.address || "-"}</p>
-    <p>
-      {order.shipping?.city || "-"}, {order.shipping?.state || "-"}
-    </p>
-    <p>
-      {order.shipping?.zip || "-"}, {order.shipping?.country || "-"}
-    </p>
-  </>
-)}
-
+          {normalizeKey(order.orderType) === "pickup" ? (
+            <p className="text-sm text-gray-400">Store Pickup (No Shipping Address)</p>
+          ) : (
+            <>
+              <p>{order.shipping?.address || "-"}</p>
+              <p>
+                {order.shipping?.city || "-"}, {order.shipping?.state || "-"}
+              </p>
+              <p>
+                {order.shipping?.zip || "-"}, {order.shipping?.country || "-"}
+              </p>
+            </>
+          )}
         </div>
 
       </div>
@@ -287,26 +338,40 @@ const OrderDetails = () => {
       <div className="bg-white/10 border border-white/20 rounded-2xl">
         <div className="overflow-x-auto">
           <table className="min-w-[640px] w-full text-sm">
-          <thead className="bg-white/20">
-            <tr>
-              <th className="px-4 py-3 text-left">Product</th>
-              <th className="px-4 py-3 text-center">Variant</th>
-              <th className="px-4 py-3 text-center">Qty</th>
-              <th className="px-4 py-3 text-right">Price</th>
-              <th className="px-4 py-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items?.map((i, idx) => (
-              <tr key={idx} className="border-t border-white/10">
-                <td className="px-4 py-3">{i.name}</td>
-                <td className="px-4 py-3 text-center">{i.variant}</td>
-                <td className="px-4 py-3 text-center">{i.quantity}</td>
-                <td className="px-4 py-3 text-right">₹ {i.price}</td>
-                <td className="px-4 py-3 text-right">₹ {i.total}</td>
+            <thead className="bg-white/20">
+              <tr>
+                <th className="px-4 py-3 text-left">Image</th>
+                <th className="px-4 py-3 text-left">Product</th>
+                <th className="px-4 py-3 text-center">Variant</th>
+                <th className="px-4 py-3 text-center">Qty</th>
+                <th className="px-4 py-3 text-right">Price</th>
+                <th className="px-4 py-3 text-right">Total</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody>
+              {order.items?.map((i, idx) => (
+                <tr key={idx} className="border-t border-white/10">
+                  <td className="px-4 py-3">
+                    {i.image ? (
+                      <img 
+                        src={i.image.startsWith('http') ? i.image : `${API_BASE}/${i.image.replace(/^\//,"")}`}
+                        alt={i.name}
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center text-gray-400">
+                        No Image
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{i.name || "-"}</td>
+                  <td className="px-4 py-3 text-center">{i.variant || "-"}</td>
+                  <td className="px-4 py-3 text-center">{i.quantity || 0}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(i.price).toFixed(2) || "0.00"}</td>
+                  <td className="px-4 py-3 text-right">₹{Number(i.total).toFixed(2) || "0.00"}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </div>
@@ -316,11 +381,11 @@ const OrderDetails = () => {
         <div className="bg-white/10 border border-white/20 rounded-2xl p-6 w-full md:w-1/3">
           <div className="flex justify-between mb-2">
             <span>Subtotal</span>
-            <span>₹ {order.subtotal}</span>
+            <span>₹{Number(order.total || 0).toFixed(2)}</span>
           </div>
-          <div className="flex justify-between font-bold text-lg">
+          <div className="flex justify-between font-bold text-lg border-t border-white/20 pt-3">
             <span>Total</span>
-            <span>₹ {order.total}</span>
+            <span>₹{Number(order.total || 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
