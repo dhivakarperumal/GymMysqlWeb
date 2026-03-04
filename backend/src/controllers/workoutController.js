@@ -52,6 +52,8 @@ async function createWorkout(req, res) {
       trainerSource,
       memberId,
       memberName,
+      memberEmail,
+      memberMobile,
       category,
       level,
       goal,
@@ -63,21 +65,25 @@ async function createWorkout(req, res) {
     const [result] = await db.query(
       `INSERT INTO workout_programs
       (trainer_id, trainer_name, trainer_source,
-       member_id, member_name, category, level, goal,
-       duration_weeks, days, status)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+       member_id, member_name, member_email, member_mobile,
+       category, level, goal,
+       duration_weeks, days, status, user_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         trainerId,
         trainerName || null,
         trainerSource || null,
         memberId,
         memberName || null,
+        memberEmail || null,
+        memberMobile || null,
         category || null,
         level || null,
         goal || null,
         durationWeeks ? Number(durationWeeks) : null,
         JSON.stringify(days || {}),
         status || 'active',
+        memberId || null,
       ]
     );
 
@@ -98,6 +104,8 @@ async function updateWorkout(req, res) {
       trainerSource,
       memberId,
       memberName,
+      memberEmail,
+      memberMobile,
       category,
       level,
       goal,
@@ -109,8 +117,9 @@ async function updateWorkout(req, res) {
     const [result] = await db.query(
       `UPDATE workout_programs SET
         trainer_id=?, trainer_name=?, trainer_source=?,
-        member_id=?, member_name=?, category=?, level=?, goal=?,
-        duration_weeks=?, days=?, status=?,
+        member_id=?, member_name=?, member_email=?, member_mobile=?,
+        category=?, level=?, goal=?,
+        duration_weeks=?, days=?, status=?, user_id=?,
         updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
       [
@@ -119,12 +128,15 @@ async function updateWorkout(req, res) {
         trainerSource || null,
         memberId,
         memberName || null,
+        memberEmail || null,
+        memberMobile || null,
         category || null,
         level || null,
         goal || null,
         durationWeeks ? Number(durationWeeks) : null,
         JSON.stringify(days || {}),
         status || 'active',
+        memberId || null,
         id,
       ]
     );

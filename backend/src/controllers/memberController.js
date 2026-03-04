@@ -3,7 +3,18 @@ const bcrypt = require('bcryptjs');
 
 async function getAllMembers(req, res) {
   try {
-    const [rows] = await db.query('SELECT * FROM gym_members ORDER BY created_at DESC');
+    // join with users to pull the email stored in accounts, and also
+    // compute how many workouts / diet plans each member has.
+    const sql = `
+      SELECT gm.*,
+             u.email AS user_email,
+             (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+             (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+      FROM gym_members gm
+      LEFT JOIN users u ON u.email = gm.email
+      ORDER BY gm.created_at DESC
+    `;
+    const [rows] = await db.query(sql);
     res.json(rows);
   } catch (err) {
     console.error('getAllMembers error', err);
@@ -17,17 +28,33 @@ async function getMemberById(req, res) {
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
     
-    let query;
+    let sql;
     let params;
     if (isNum) {
-      query = `SELECT * FROM gym_members WHERE id = ?`;
+      sql = `
+        SELECT gm.*,
+               u.email AS user_email,
+               (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+               (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+        FROM gym_members gm
+        LEFT JOIN users u ON u.email = gm.email
+        WHERE gm.id = ?
+      `;
       params = [idNum];
     } else {
-      query = `SELECT * FROM gym_members WHERE member_id = ?`;
+      sql = `
+        SELECT gm.*,
+               u.email AS user_email,
+               (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+               (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+        FROM gym_members gm
+        LEFT JOIN users u ON u.email = gm.email
+        WHERE gm.member_id = ?
+      `;
       params = [id];
     }
     
-    const [rows] = await db.query(query, params);
+    const [rows] = await db.query(sql, params);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Member not found' });
     }
@@ -108,7 +135,20 @@ async function createMember(req, res) {
 
     await connection.commit();
 
-    const member = {
+    // fetch back using the richer query so the client sees counts / user_email
+    const [fetched] = await connection.query(
+      `
+      SELECT gm.*,
+             u.email AS user_email,
+             0 AS workout_count,
+             0 AS diet_count
+      FROM gym_members gm
+      LEFT JOIN users u ON u.email = gm.email
+      WHERE gm.id = ?
+      `,
+      [result.insertId]
+    );
+    const member = fetched[0] || {
       id: result.insertId,
       member_id: memberId,
       name, phone, email, gender, height, weight, bmi, plan, duration: numDuration,
@@ -236,17 +276,34 @@ async function updateMember(req, res) {
     }
 
     // Fetch the updated member
-    let fetchQuery;
-    let fetchParams;
+    // use the same enhanced lookup as getMemberById so caller receives counts/user_email
+    let sql;
+    let params;
     if (isNum) {
-      fetchQuery = `SELECT * FROM gym_members WHERE id = ?`;
-      fetchParams = [idNum];
+      sql = `
+        SELECT gm.*,
+               u.email AS user_email,
+               (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+               (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+        FROM gym_members gm
+        LEFT JOIN users u ON u.email = gm.email
+        WHERE gm.id = ?
+      `;
+      params = [idNum];
     } else {
-      fetchQuery = `SELECT * FROM gym_members WHERE member_id = ?`;
-      fetchParams = [id];
+      sql = `
+        SELECT gm.*,
+               u.email AS user_email,
+               (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+               (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+        FROM gym_members gm
+        LEFT JOIN users u ON u.email = gm.email
+        WHERE gm.member_id = ?
+      `;
+      params = [id];
     }
 
-    const [rows] = await connection.query(fetchQuery, fetchParams);
+    const [rows] = await connection.query(sql, params);
     await connection.commit();
     res.json(rows[0]);
 

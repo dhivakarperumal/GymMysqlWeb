@@ -51,6 +51,8 @@ async function createDiet(req, res) {
       trainerSource,
       memberId,
       memberName,
+      memberEmail,
+      memberMobile,
       title,
       totalCalories,
       duration,
@@ -61,19 +63,23 @@ async function createDiet(req, res) {
     const [result] = await db.query(
       `INSERT INTO diet_plans
       (trainer_id, trainer_name, trainer_source,
-       member_id, member_name, title, total_calories, duration, days, status)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`,
+       member_id, member_name, member_email, member_mobile,
+       title, total_calories, duration, days, status, user_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         trainerId,
         trainerName || null,
         trainerSource || null,
         memberId,
         memberName || null,
+        memberEmail || null,
+        memberMobile || null,
         title || null,
         totalCalories ? Number(totalCalories) : null,
         duration ? Number(duration) : null,
         JSON.stringify(days || {}),
         status || 'active',
+        memberId || null,
       ]
     );
 
@@ -94,6 +100,8 @@ async function updateDiet(req, res) {
       trainerSource,
       memberId,
       memberName,
+      memberEmail,
+      memberMobile,
       title,
       totalCalories,
       duration,
@@ -104,7 +112,8 @@ async function updateDiet(req, res) {
     const [result] = await db.query(
       `UPDATE diet_plans SET
         trainer_id=?, trainer_name=?, trainer_source=?,
-        member_id=?, member_name=?, title=?, total_calories=?, duration=?, days=?, status=?,
+        member_id=?, member_name=?, member_email=?, member_mobile=?,
+        title=?, total_calories=?, duration=?, days=?, status=?, user_id=?,
         updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
       [
@@ -113,11 +122,14 @@ async function updateDiet(req, res) {
         trainerSource || null,
         memberId,
         memberName || null,
+        memberEmail || null,
+        memberMobile || null,
         title || null,
         totalCalories ? Number(totalCalories) : null,
         duration ? Number(duration) : null,
         JSON.stringify(days || {}),
         status || 'active',
+        memberId || null,
         id,
       ]
     );

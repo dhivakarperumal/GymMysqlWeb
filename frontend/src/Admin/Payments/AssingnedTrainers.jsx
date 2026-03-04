@@ -19,30 +19,57 @@ const AssingnedTrainers = () => {
     const fetchMembers = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/members");
-        // backend returns a flat list of gym_members; each member only has one plan
-        const data = Array.isArray(res.data) ? res.data : [];
-        const usersData = data
-          .map((m) => {
-            const plans = [
-              {
-                id: m.id ? m.id.toString() : "",
-                planName: m.plan || "",
-                duration: m.duration || "",
-                startDate: m.join_date || "",
-                endDate: m.expiry_date || "",
-                pricePaid: m.price || 0,
-              },
-            ];
-            return {
-              uid: m.id ? m.id.toString() : "",
-              username: m.name,
-              email: m.email,
-              plans,
-            };
-          })
-          .filter((item) => item.plans.length > 0);
+        // get gym_members and user accounts, then combine
+        const [mRes, uRes] = await Promise.all([
+          api.get("/members"),
+          api.get("/users"),
+        ]);
+        const mData = Array.isArray(mRes.data) ? mRes.data : [];
+        const uData = Array.isArray(uRes.data) ? uRes.data : [];
 
+        const map = new Map();
+
+        mData.forEach((m) => {
+          const plans = [
+            {
+              id: m.id ? m.id.toString() : "",
+              planName: m.plan || "",
+              duration: m.duration || "",
+              startDate: m.join_date || "",
+              endDate: m.expiry_date || "",
+              pricePaid: m.price || 0,
+            },
+          ];
+          const uid = m.id ? m.id.toString() : "";
+          map.set(uid, {
+            uid,
+            username: m.name,
+            email: m.email || m.user_email || "",
+            userEmail: m.user_email || m.email || "",
+            workoutCount: m.workout_count || m.workoutCount || 0,
+            dietCount: m.diet_count || m.dietCount || 0,
+            plans,
+            source: "members",
+          });
+        });
+
+        uData.forEach((u) => {
+          const uid = u.id ? u.id.toString() : "";
+          if (!map.has(uid)) {
+            map.set(uid, {
+              uid,
+              username: u.username || u.email || "",
+              email: u.email || "",
+              userEmail: u.email || "",
+              workoutCount: 0,
+              dietCount: 0,
+              plans: [],
+              source: "users",
+            });
+          }
+        });
+
+        const usersData = Array.from(map.values());
         setMembers(usersData);
       } catch (error) {
         console.error("Error fetching members:", error);
@@ -286,9 +313,17 @@ const AssingnedTrainers = () => {
                   </div>
                   <div>
                     <p className="text-xl font-bold">{m.username || "لا يوجد اسم"}</p>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                      <Mail size={14} />
-                      {m.email || "لا يوجد بريد"}
+                    <div className="flex flex-wrap gap-2 text-sm text-gray-400 mt-1">
+                      <div className="flex items-center gap-2">
+                        <Mail size={14} />
+                        {m.email || "لا يوجد بريد"}
+                      </div>
+                      {m.userEmail && m.userEmail !== m.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail size={14} />
+                          <span className="underline">{m.userEmail}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -296,6 +331,12 @@ const AssingnedTrainers = () => {
                 <div className="flex gap-3 text-sm">
                   <div className="bg-blue-500/20 px-3 py-1 rounded-full border border-blue-400/30">
                     <span className="text-blue-300 font-medium">{m.plans?.length || 0}</span>
+                  </div>
+                  <div className="bg-purple-500/20 px-3 py-1 rounded-full border border-purple-400/30">
+                    <span className="text-purple-300 font-medium">W: {m.workoutCount || 0}</span>
+                  </div>
+                  <div className="bg-green-500/20 px-3 py-1 rounded-full border border-green-400/30">
+                    <span className="text-green-300 font-medium">D: {m.dietCount || 0}</span>
                   </div>
                 </div>
               </div>
@@ -425,7 +466,7 @@ const AssingnedTrainers = () => {
                       <input
                         type="checkbox"
                         className="accent-orange-500 mt-1 shrink-0"
-                        disabled={assigning}
+                        disabled={assigning || (m.plans?.length || 0) === 0}
                         checked={selectedUsers.includes(m.uid)}
                         onChange={(e) => {
                           setSelectedUsers((prev) =>

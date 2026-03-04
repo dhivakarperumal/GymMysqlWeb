@@ -42,6 +42,8 @@ const AddWorkout = () => {
   const [form, setForm] = useState({
     memberId: "",
     memberName: "",
+    memberEmail: "",
+    memberMobile: "",
     category: "",
     level: "Beginner",
     goal: "",
@@ -55,111 +57,68 @@ const AddWorkout = () => {
   // For debugging - show all assignments
   const [allAssignments, setAllAssignments] = useState([]);
 
-  /* ---------------- FETCH MEMBERS ---------------- */
+  /* ---------------- FETCH MEMBERS/USERS ---------------- */
   useEffect(() => {
     if (!user || (!user.id && !user.username && !user.email)) {
       console.log("Waiting for user authentication...", user);
       return;
     }
 
-    console.log("🔍 Fetching members for trainer:", {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    });
-
     const fetchMembers = async () => {
       try {
         setLoading(true);
 
-        const res = await fetch(`${API_BASE}/assignments`);
-        if (!res.ok) throw new Error("Failed to fetch assignments");
+        // fetch only assignments
+        const aRes = await fetch(`${API_BASE}/assignments`);
+        if (!aRes.ok) throw new Error("Failed to fetch assignments");
 
-        const response = await res.json();
-        console.log("📦 Full API Response:", response);
+        const aData = await aRes.json();
+        const assignments = Array.isArray(aData)
+          ? aData
+          : aData.data || aData.assignments || [];
 
-        // Support different backend structures
-        const assignments = Array.isArray(response)
-          ? response
-          : response.data || response.assignments || [];
+        // Filter ONLY members assigned to current trainer
+        const assignedMembers = [];
 
-        console.log("📋 Total assignments from API:", assignments.length);
-
-        // Show ALL assignments for debugging
-        console.log("📋 All assignments data:", JSON.stringify(assignments, null, 2));
-
-        // Filter by trainer - try multiple matching strategies
-        const filtered = assignments.filter((a) => {
-          // Strategy 1: Match by numeric trainer ID (database auth)
+        assignments.forEach((a) => {
+          let include = false;
           if (user.id) {
             const assignTrainerId = Number(a.trainerId || a.trainer_id);
             const currentTrainerId = Number(user.id);
-            if (!isNaN(assignTrainerId) && !isNaN(currentTrainerId) && assignTrainerId === currentTrainerId) {
-              console.log(
-                `✅ Matched by numeric ID: ${assignTrainerId} === ${currentTrainerId}`
-              );
-              return true;
+            if (!isNaN(assignTrainerId) && assignTrainerId === currentTrainerId) {
+              include = true;
             }
           }
-
-          // Strategy 2: Match by trainer name
-          if (
-            user.username &&
-            (a.trainerName || a.trainer_name)
-          ) {
-            const match =
-              (a.trainerName || a.trainer_name)?.toLowerCase() ===
-              user.username?.toLowerCase();
-            if (match) {
-              console.log(
-                `✅ Matched by trainer name: ${a.trainerName} === ${user.username}`
-              );
-              return true;
+          if (!include && user.username && (a.trainerName || a.trainer_name)) {
+            if ((a.trainerName || a.trainer_name).toLowerCase() === user.username.toLowerCase()) {
+              include = true;
             }
           }
-
-          // Strategy 3: Match by trainer email
-          if (user.email && (a.trainerEmail || a.trainer_email)) {
-            const match =
-              (a.trainerEmail || a.trainer_email)?.toLowerCase() ===
-              user.email?.toLowerCase();
-            if (match) {
-              console.log(
-                `✅ Matched by trainer email: ${a.trainerEmail} === ${user.email}`
-              );
-              return true;
+          if (!include && user.email && (a.trainerEmail || a.trainer_email)) {
+            if ((a.trainerEmail || a.trainer_email).toLowerCase() === user.email.toLowerCase()) {
+              include = true;
             }
           }
-
-          // Strategy 4: Match by Firebase trainer ID
-          if (user.firebaseId && a.trainerId === user.firebaseId) {
-            console.log(`✅ Matched by Firebase ID: ${a.trainerId}`);
-            return true;
+          if (!include && user.firebaseId && a.trainerId === user.firebaseId) {
+            include = true;
           }
+          if (!include) return;
 
-          console.log(
-            `❌ No match for assignment: trainerId=${
-              a.trainerId || a.trainer_id
-            }, trainerName=${a.trainerName || a.trainer_name}, status=${
-              a.status
-            }`
-          );
-          return false;
+          assignedMembers.push({
+            id: String(a.userId || a.user_id),
+            name: a.username || a.user_name || "Member",
+            planName: a.planName || a.plan_name || "Plan",
+            email: a.userEmail || a.user_email || "",
+            mobile: a.userMobile || a.user_mobile || "",
+            source: "assign",
+          });
         });
 
-        console.log("✅ Filtered members for current trainer:", filtered);
-
-        const formatted = filtered.map((d) => ({
-          id: String(d.userId || d.user_id),
-          name: d.username || d.user_name || "Member",
-          planName: d.planName || d.plan_name || "Plan",
-        }));
-
-        console.log("📝 Formatted members:", formatted);
-        setMembers(formatted);
-        setAllAssignments(assignments); // Store all for debugging
+        console.log("🔍 Assigned members list:", assignedMembers);
+        setMembers(assignedMembers);
+        setAllAssignments(assignments);
       } catch (err) {
-        console.error("❌ Error fetching members:", err);
+        console.error("❌ Error fetching members/users:", err);
         toast.error("Failed to load members");
       } finally {
         setLoading(false);
@@ -254,6 +213,8 @@ const AddWorkout = () => {
         trainerName,
         memberId: form.memberId,
         memberName: form.memberName,
+        memberEmail: form.memberEmail,
+        memberMobile: form.memberMobile,
         category: form.category,
         level: form.level,
         goal: form.goal,
@@ -310,7 +271,7 @@ const AddWorkout = () => {
 
           {/* MEMBER SELECT */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Select Member ({members.length} available)</label>
+            <label className="block text-sm font-semibold mb-2">Select Assigned Member ({members.length} available)</label>
             <select
               className={inputClass}
               value={form.memberId}
@@ -319,11 +280,13 @@ const AddWorkout = () => {
                 const member = members.find(
                   (m) => String(m.id) === String(selectedId)
                 );
-                console.log("Selected member:", member);
+                console.log("Selected member/user:", member);
                 setForm({
                   ...form,
                   memberId: selectedId,
                   memberName: member?.name || "",
+                  memberEmail: member?.email || "",
+                  memberMobile: member?.mobile || "",
                 });
               }}
               disabled={isEditMode}
@@ -332,18 +295,23 @@ const AddWorkout = () => {
               {members.length > 0 ? (
                 members.map((m) => (
                   <option key={m.id} value={String(m.id)}>
-                    {m.name} ({m.planName})
+                    {m.name}
+                    {m.email ? ` • ${m.email}` : ""}
+                    {m.mobile ? ` • ${m.mobile}` : ""}
+                    {m.planName ? ` (${m.planName})` : ""}
                   </option>
                 ))
               ) : (
-                <option disabled>No members assigned</option>
+                <option disabled>No assigned members</option>
               )}
             </select>
 
-            {members.length === 0 && (
-              <p className="text-red-400 text-sm mt-2">
-                ⚠️ No members assigned. Check console (F12) for details.
-              </p>
+            {/* show email/mobile after selection */}
+            {(form.memberEmail || form.memberMobile) && (
+              <div className="text-xs text-gray-300 mt-2">
+                {form.memberEmail && <div>Email: {form.memberEmail}</div>}
+                {form.memberMobile && <div>Mobile: {form.memberMobile}</div>}
+              </div>
             )}
 
             {isEditMode && (

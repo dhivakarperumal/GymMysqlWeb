@@ -7,6 +7,7 @@ function normalizeAssignment(row) {
     userId: row.user_id,
     username: row.username,
     userEmail: row.user_email,
+    userMobile: row.user_mobile || row.user_mobile,
     planId: row.plan_id,
     planName: row.plan_name,
     planDuration: row.plan_duration,
@@ -24,7 +25,7 @@ function normalizeAssignment(row) {
 async function getAllAssignments(req, res) {
   try {
     const [rows] = await db.query(`
-      SELECT a.*, m.name as username, m.email as user_email,
+      SELECT a.*, m.name as username, m.email as user_email, m.phone as user_mobile,
              s.name as trainer_name, s.role as trainer_source
       FROM trainer_assignments a
       LEFT JOIN gym_members m ON m.id = a.user_id

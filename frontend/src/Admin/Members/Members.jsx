@@ -111,8 +111,9 @@ const Members = () => {
             <tr>
               <th className="p-4 text-left font-medium">S No</th>
               <th className="p-4 text-left font-medium">Name</th>
-              <th className="p-4 text-left font-medium">Phone</th>
-              <th className="p-4 text-left font-medium">Role</th>
+              <th className="p-4 text-left font-medium">Phone</th>              <th className="p-4 text-left font-medium">Email</th>
+              <th className="p-4 text-left font-medium">Workouts</th>
+              <th className="p-4 text-left font-medium">Diets</th>              <th className="p-4 text-left font-medium">Role</th>
               {/* <th className="p-4 text-left font-medium">Type</th> */}
               <th className="p-4 text-left font-medium">Actions</th>
             </tr>
@@ -131,11 +132,15 @@ const Members = () => {
                   <td className="p-4 font-medium text-white">{startIndex + index + 1}</td>
                   <td className="p-4 font-medium text-white">{m.name || "N/A"}</td>
                   <td className="p-4">{m.phone || "N/A"}</td>
+                  <td className="p-4">{m.email || m.user_email || "-"}</td>
+                  <td className="p-4">{m.workout_count || m.workoutCount || 0}</td>
+                  <td className="p-4">{m.diet_count || m.dietCount || 0}</td>
                   <td className="p-4">
                     <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-orange-500/20 text-orange-400">
                       {m.role || m.plan || "Member"}
                     </span>
                   </td>
+                  {/* <th className="p-4 text-left font-medium">Type</th> */}
                   <td className="p-4">
                     <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
                       m.source === "users" 
@@ -243,7 +248,7 @@ const Members = () => {
                 <div className="flex-1">
                   <p className="font-semibold text-white">{startIndex + index + 1}. {m.name || "N/A"}</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {m.phone || "No phone"}
+                    {m.phone || "No phone"} • {m.email || m.user_email || "no email"}
                   </p>
                 </div>
               </div>
@@ -252,7 +257,12 @@ const Members = () => {
                 <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-500/20 text-orange-400">
                   {m.role || m.plan || "Member"}
                 </span>
-                
+                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/20 text-purple-400">
+                  W: {m.workout_count || m.workoutCount || 0}
+                </span>
+                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-500/20 text-green-400">
+                  D: {m.diet_count || m.dietCount || 0}
+                </span>
               </div>
 
               <div className="flex gap-2">
