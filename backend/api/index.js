@@ -23,6 +23,7 @@ const serviceRoutes = require("../src/routes/serviceRoutes");
 const authRoutes = require("../src/routes/authRoutes");
 const orderRoutes = require("../src/routes/orderRoutes");
 const assignmentRoutes = require("../src/routes/assignmentRoutes");
+const addressRoutes = require("./routes/addressRoutes");
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/workouts", require("../src/routes/workoutRoutes"));
+app.use("/api/addresses", addressRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
