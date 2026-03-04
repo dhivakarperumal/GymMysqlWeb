@@ -195,13 +195,6 @@ const TrainerDashboard = () => {
   }, [trainerId, user]);
 
   /* ---------------- LOADING ---------------- */
-  if (loading || !trainerId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white">
-        Loading Trainer Dashboard...
-      </div>
-    );
-  }
 
   /* ---------------- UI ---------------- */
   return (

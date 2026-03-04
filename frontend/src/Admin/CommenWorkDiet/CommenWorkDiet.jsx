@@ -200,51 +200,6 @@ const GymWorkoutManager = () => {
            Save Plans
         </button>
       </div>
-
-      
-
-      {/* {Object.keys(savedPlans).map((category) => (
-        <div
-          key={category}
-          className="bg-[#0f172a] border border-gray-700 rounded-xl p-5 mb-4"
-        >
-          <div className="flex justify-between">
-            <h3 className="text-lg font-semibold text-red-400">
-              {category}
-            </h3>
-            <button
-              onClick={() => deleteCategory(category)}
-              className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
-            >
-              Delete
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mt-4">
-            <div>
-              <p className="font-medium mb-2">🏋️ Workouts</p>
-              <ul className="list-disc ml-6 space-y-1">
-                {savedPlans[category].workouts.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <p className="font-medium mb-2">🥗 Diet</p>
-              <ul className="list-disc ml-6 space-y-1">
-                {Object.entries(savedPlans[category].diet).map(
-                  ([meal, food]) => (
-                    <li key={meal}>
-                      <b>{meal}:</b> {food}
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-          </div>
-        </div>
-      ))} */}
     </div>
   );
 };

@@ -53,11 +53,11 @@ const navItems = [
     label: "Attendance",
     icon: CalendarCheck,
   },
-  {
-    path: "/trainer/reports",
-    label: "Reports & Analytics",
-    icon: BarChart3,
-  },
+  // {
+  //   path: "/trainer/reports",
+  //   label: "Reports & Analytics",
+  //   icon: BarChart3,
+  // },
 
   { path: "/", label: "Back Home", icon: Home },
 ];

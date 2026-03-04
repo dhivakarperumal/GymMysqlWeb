@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from "../../firebase";
 import toast from "react-hot-toast";
 import {
   FaUser,
@@ -13,6 +10,8 @@ import {
   FaArrowLeft,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../PrivateRouter/AuthContext";
+import api from "../../api"; // axios wrapper for backend
 
 /* ================= GLASS CLASSES ================= */
 const glassCard =
@@ -22,10 +21,9 @@ const glassInput =
   "w-full bg-white/10 border border-white/20 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:bg-white/5 disabled:cursor-not-allowed";
 
 const ProfileSettings = () => {
-  const auth = getAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  const [uid, setUid] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -38,34 +36,22 @@ const ProfileSettings = () => {
     createdAt: null,
   });
 
-  /* ================= AUTH ================= */
+  // prefill form when auth user available
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) setUid(user.uid);
-      else setLoading(false);
-    });
-    return () => unsub();
-  }, [auth]);
+    if (user) {
+      setForm({
+        username: user.username || "",
+        mobile: user.mobile || "",
+        email: user.email || "",
+        role: user.role || "",
+        active: user.active || false,
+        createdAt: user.created_at ? new Date(user.created_at) : null,
+      });
+      setLoading(false);
+    }
+  }, [user]);
 
-  /* ================= LOAD PROFILE ================= */
-  useEffect(() => {
-    if (!uid) return;
-
-    const loadProfile = async () => {
-      try {
-        const snap = await getDoc(doc(db, "users", uid));
-        if (snap.exists()) {
-          setForm(snap.data());
-        }
-      } catch {
-        toast.error("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, [uid]);
+  // no Firebase auth/profile - using backend user object from context
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -79,13 +65,22 @@ const ProfileSettings = () => {
 
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", uid), {
+      const payload = {
         username: form.username,
         mobile: form.mobile,
-        updatedAt: serverTimestamp(),
-      });
-      toast.success("Profile updated successfully");
-    } catch {
+      };
+      // call backend api
+      const res = await api.put(`/users/${user.id}`, payload);
+      if (res.status === 200) {
+        const updated = res.data;
+        // update auth context
+        if (login) login(updated);
+        toast.success("Profile updated successfully");
+      } else {
+        throw new Error("update failed");
+      }
+    } catch (err) {
+      console.error("profile save error", err);
       toast.error("Update failed");
     } finally {
       setSaving(false);
@@ -194,8 +189,8 @@ const ProfileSettings = () => {
             <input
               disabled
               value={
-                form.createdAt?.toDate
-                  ? form.createdAt.toDate().toLocaleString("en-IN")
+                form.createdAt
+                  ? new Date(form.createdAt).toLocaleString("en-IN")
                   : ""
               }
               className={glassInput}

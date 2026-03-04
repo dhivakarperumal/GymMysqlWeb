@@ -246,13 +246,6 @@ const AddWorkout = () => {
     }
   };
 
-  if (!trainerId || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen p-6 text-white">

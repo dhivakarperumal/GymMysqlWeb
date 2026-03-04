@@ -103,13 +103,6 @@ const AllWorkouts = () => {
     }
   }, [selectedWorkout]);
 
-  if (loading || !trainerId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        Loading workouts...
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen p-6 text-white">
