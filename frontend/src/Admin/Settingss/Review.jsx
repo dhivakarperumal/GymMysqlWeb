@@ -134,16 +134,23 @@ const ReviewsSettings = () => {
     }
   };
 
-  const toggleStatus = async (id, status) => {
+  const toggleStatus = async (review) => {
     try {
-      await api.put(`/reviews/${id}`, { status: !status });
+      await api.put(`/reviews/${review.id}`, {
+        name: review.name,
+        rating: review.rating,
+        message: review.message,
+        image: review.image,
+        status: !review.status,
+      });
+
       fetchReviews();
     } catch (err) {
-      console.error('Error updating review status:', err);
+      console.error("Error updating review status:", err);
       toast.error("Failed to update review status");
     }
   };
-
+  
   const filtered = reviews.filter(
     (r) =>
       r.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -221,51 +228,50 @@ bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-105 transition shadow
 
                 {/* ACTIONS */}
                 <div className="flex gap-3 items-center">
-  {/* APPROVE / PENDING */}
-  <button
-    onClick={() => toggleStatus(r.id, r.status)}
-    title={r.status ? "Approved" : "Pending"}
-    className={`
+                  {/* APPROVE / PENDING */}
+                  <button
+                    onClick={() => toggleStatus(r)}
+                    title={r.status ? "Approved" : "Pending"}
+                    className={`
       p-2 rounded-lg transition
       border border-white/20 backdrop-blur-md
-      ${
-        r.status
-          ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-          : "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"
-      }
+      ${r.status
+                        ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                        : "bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"
+                      }
     `}
-  >
-    <FaCheckCircle className="text-lg" />
-  </button>
+                  >
+                    <FaCheckCircle className="text-lg" />
+                  </button>
 
-  {/* EDIT */}
-  <button
-    onClick={() => handleEdit(r)}
-    title="Edit Review"
-    className="
+                  {/* EDIT */}
+                  <button
+                    onClick={() => handleEdit(r)}
+                    title="Edit Review"
+                    className="
       p-2 rounded-lg
       bg-yellow-500/80 hover:bg-yellow-500
       text-white transition
       shadow
     "
-  >
-    <FaEdit />
-  </button>
+                  >
+                    <FaEdit />
+                  </button>
 
-  {/* DELETE */}
-  <button
-    onClick={() => handleDelete(r.id)}
-    title="Delete Review"
-    className="
+                  {/* DELETE */}
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    title="Delete Review"
+                    className="
       p-2 rounded-lg
       bg-red-500/80 hover:bg-red-500
       text-white transition
       shadow
     "
-  >
-    <FaTrash />
-  </button>
-</div>
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
 
               </div>
 
@@ -317,11 +323,10 @@ bg-gradient-to-r from-orange-500 to-orange-600 hover:scale-105 transition shadow
                 <FaStar
                   key={i}
                   onClick={() => setForm({ ...form, rating: i })}
-                  className={`cursor-pointer text-2xl ${
-                    i <= form.rating
-                      ? "text-yellow-400"
-                      : "text-gray-500"
-                  }`}
+                  className={`cursor-pointer text-2xl ${i <= form.rating
+                    ? "text-yellow-400"
+                    : "text-gray-500"
+                    }`}
                 />
               ))}
             </div>
