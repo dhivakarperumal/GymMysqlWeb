@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import AddressForm from "./AddressForm";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
+import { toast } from "react-hot-toast";
 
 const UserAddresses = () => {
   const { user } = useAuth();
@@ -11,11 +12,13 @@ const UserAddresses = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editAddress, setEditAddress] = useState(null);
+  // toggled whenever we need to reload addresses (after add/edit/delete)
+  const [refreshFlag, setRefreshFlag] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
 
-    const fetch = async () => {
+    const fetchAddresses = async () => {
       try {
         const res = await api.get(`/addresses/user/${uid}`);
         setAddresses(Array.isArray(res.data) ? res.data : []);
@@ -26,8 +29,8 @@ const UserAddresses = () => {
       }
     };
 
-    fetch();
-  }, [uid]);
+    fetchAddresses();
+  }, [uid, refreshFlag]);
 
   if (loading) {
     return <div className="p-10 text-center text-red-500">LOADING...</div>;
@@ -48,7 +51,12 @@ const UserAddresses = () => {
       {showForm && (
         <AddressForm
           editAddress={editAddress}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false);
+            // reload the list after the form closes
+            setRefreshFlag((f) => !f);
+            toast.success("Address saved");
+          }}
         />
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

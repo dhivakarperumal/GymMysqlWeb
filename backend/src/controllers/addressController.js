@@ -88,7 +88,7 @@ const updateAddress = async (req, res) => {
 
     const [result] = await db.query(
       `UPDATE user_addresses
-        SET name=?, email=?, phone=?, address=?, city=?, state=?, zip=?, country=?, updated_at=CURRENT_TIMESTAMP
+        SET name=?, email=?, phone=?, address=?, city=?, state=?, zip=?, country=?
         WHERE id = ?`,
       [name, email, phone, address, city, state, zip, country || "India", id]
     );

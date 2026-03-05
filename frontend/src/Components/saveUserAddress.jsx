@@ -37,6 +37,7 @@ export const saveUserAddress = async (
       await api.post("/addresses", payload);
     }
   } catch (err) {
+    console.error("saveUserAddress error", err.response || err);
     if (err.response?.data?.message?.includes("exists")) {
       throw new Error("DUPLICATE_ADDRESS");
     }

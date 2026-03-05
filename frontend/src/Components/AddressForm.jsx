@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { saveUserAddress } from "./saveUserAddress";
 
@@ -38,10 +39,20 @@ const handleSubmit = async (e) => {
 
   try {
     await saveUserAddress(uid, form, editAddress?.id);
+    // close the modal first so update isn't blocked
     onClose();
+    toast.success("Address saved successfully");
   } catch (err) {
+    console.error("AddressForm save error:", err);
+    // check for duplicate error thrown by helper
     if (err.message === "DUPLICATE_ADDRESS") {
       setError("This address already exists.");
+    } else if (err.response?.data?.error) {
+      // server provided error object or message
+      const msg = typeof err.response.data.error === 'string'
+        ? err.response.data.error
+        : err.response.data.error.message || err.response.data.error;
+      setError(msg || "Something went wrong.");
     } else {
       setError("Something went wrong.");
     }
