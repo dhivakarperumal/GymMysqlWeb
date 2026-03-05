@@ -6,13 +6,7 @@ import { FiArrowRight } from "react-icons/fi";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import FacilityCard from "./FacilityCard";
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import api from "../api";
 
 const Facilities = () => {
   const [facilities, setFacilities] = useState([]);
@@ -21,18 +15,8 @@ const Facilities = () => {
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const q = query(
-          collection(db, "gym_facilities"),
-          orderBy("createdAt", "desc")
-        );
-
-        const snapshot = await getDocs(q);
-
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
+        const res = await api.get('/facilities');
+        const data = res.data || [];
         setFacilities(data);
       } catch (error) {
         console.error("Failed to load facilities", error);
