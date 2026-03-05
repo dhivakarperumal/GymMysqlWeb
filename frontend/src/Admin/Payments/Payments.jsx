@@ -103,14 +103,14 @@ const Payments = () => {
           m.uid !== memberId
             ? m
             : {
-                ...m,
-                status: "inactive",
-                plans: m.plans.map((p) =>
-                  p.id === planId
-                    ? { ...p, status: "inactive", paymentStatus: "Unpaid" }
-                    : p
-                ),
-              }
+              ...m,
+              status: "inactive",
+              plans: m.plans.map((p) =>
+                p.id === planId
+                  ? { ...p, status: "inactive", paymentStatus: "Unpaid" }
+                  : p
+              ),
+            }
         )
       );
     } catch (err) {
@@ -161,6 +161,11 @@ const Payments = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filterType]);
+
+  const formatDate = (date) => {
+    if (!date) return "—";
+    return new Date(date).toISOString().split("T")[0];
+  };
 
   return (
     <div className="min-h-screen p-4 md:p-8 text-white">
@@ -269,12 +274,12 @@ const Payments = () => {
 
                 <div>
                   <p className="text-gray-400">Start Date</p>
-                  <p>{plan.startDate || "—"}</p>
+                  <p className="whitespace-nowrap">{formatDate(plan.startDate)}</p>
                 </div>
 
                 <div>
                   <p className="text-gray-400">End Date</p>
-                  <p>{plan.endDate}</p>
+                  <p className="whitespace-nowrap">{formatDate(plan.endDate)}</p>
                 </div>
               </div>
 
@@ -327,8 +332,8 @@ const Payments = () => {
                   <td className="px-4 py-4">{member.email}</td>
                   <td className="px-4 py-4">{plan.planName}</td>
                   <td className="px-4 py-4">₹ {plan.pricePaid}</td>
-                  <td className="px-4 py-4">{plan.startDate || "—"}</td>
-                  <td className="px-4 py-4">{plan.endDate}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.startDate)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.endDate)}</td>
                   <td className="px-4 py-4">
                     {plan.status === "active"
                       ? "Active"
