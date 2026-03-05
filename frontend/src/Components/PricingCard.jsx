@@ -42,10 +42,10 @@ export default function PricingCard({
             drop-shadow-[0_0_14px_rgba(255,0,0,0.9)]
           "
         >
-          ₹{service.finalPrice ?? service.price}
+          ₹{service.finalPrice ?? service.price ?? 0}
         </span>
         <span className="text-sm text-white/60 ml-2">
-          / {service.duration}
+          / {service.duration || service.duration_months || "month"}
         </span>
       </div>
 
@@ -64,7 +64,10 @@ export default function PricingCard({
 
       {/* FACILITIES */}
       <ul className="text-sm text-white/75 flex-grow">
-        {service.facilities?.slice(0, 4).map((item, i) => (
+        {(service.facilities && service.facilities.length > 0 
+          ? service.facilities 
+          : service.features || []
+        ).map((item, i) => (
           <li
             key={i}
             className="flex items-center gap-3 border-b border-red-500/10 pb-2"
