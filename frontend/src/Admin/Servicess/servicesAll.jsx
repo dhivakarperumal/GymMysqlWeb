@@ -17,6 +17,23 @@ const ServicesList = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // helper for image URLs (same logic used elsewhere)
+  const makeImageUrl = (raw) => {
+    if (!raw) return "";
+    let img = raw.trim();
+    // strip surrounding quotes if present
+    if ((img.startsWith('"') && img.endsWith('"')) || (img.startsWith("'") && img.endsWith("'"))) {
+      img = img.slice(1, -1);
+    }
+    if (img.startsWith("http") || img.startsWith("data:")) return img;
+    const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+    if (maybeBase64 && img.length > 50) {
+      return `data:image/webp;base64,${img}`;
+    }
+    const base = import.meta.env.VITE_API_URL || "";
+    return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+  }; 
+
   /* ================= FETCH SERVICES ================= */
   const fetchServices = async () => {
     try {
@@ -27,7 +44,8 @@ const ServicesList = () => {
         serviceId: r.service_id,
         title: r.title,
         slug: r.slug,
-        heroImage: r.hero_image,
+        // API returns camelCased field
+        heroImage: makeImageUrl(r.heroImage || r.hero_image),
         shortDesc: r.short_desc,
         description: r.description,
         points: Array.isArray(r.points) ? r.points : [],
@@ -104,15 +122,16 @@ const ServicesList = () => {
                   </td>
 
                   <td className={tdClass}>
-                    {s.heroImage ? (
-                      <img
-                        src={s.heroImage}
-                        alt={s.title}
-                        className="h-12 w-16 rounded-lg object-cover border border-white/20"
-                      />
-                    ) : (
-                      <span className="text-gray-500">—</span>
-                    )}
+                    <img
+                      src={
+                        s.heroImage
+                          ? makeImageUrl(s.heroImage)
+                          : "https://via.placeholder.com/64?text=No+Image"
+                      }
+                      alt={s.title}
+                      onError={(e) => { e.target.src = "https://via.placeholder.com/64?text=No+Image"; }}
+                      className="h-12 w-16 rounded-lg object-cover border border-white/20"
+                    />
                   </td>
 
                   <td className={tdClass}>

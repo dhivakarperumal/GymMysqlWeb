@@ -23,6 +23,10 @@ const UserManagement = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
+  // pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 10; // items per page
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,6 +89,15 @@ const UserManagement = () => {
 
     return matchSearch && matchRole && matchStatus;
   });
+
+  // reset page when filters/search change
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const pagedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+
 
   if (loading) {
     return <p className="text-center mt-10 text-gray-300">Loading users…</p>;
@@ -174,9 +187,9 @@ const UserManagement = () => {
           </thead>
 
           <tbody>
-            {filteredUsers.map((u, index) => (
+            {pagedUsers.map((u, index) => (
               <tr key={u.id} className="border-b border-white/10 hover:bg-white/5 transition">
-                <td className="px-4 py-3">{index + 1}</td>
+                <td className="px-4 py-3">{(page - 1) * pageSize + index + 1}</td>
                 <td className="px-4 py-3 font-medium">{u.username}</td>
                 <td className="px-4 py-3">{u.email}</td>
 
@@ -223,6 +236,35 @@ const UserManagement = () => {
           </tbody>
         </table>
       </div>
+
+      {/* PAGINATION CONTROLS */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-4 text-white">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50"
+          >
+            Prev
+          </button>
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i + 1)}
+              className={`px-3 py-1 rounded ${page === i + 1 ? "bg-blue-500" : "bg-white/10 hover:bg-white/20"}`}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
     </div>
   );
