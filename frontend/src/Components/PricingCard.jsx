@@ -67,7 +67,7 @@ export default function PricingCard({
         {(service.facilities && service.facilities.length > 0 
           ? service.facilities 
           : service.features || []
-        ).map((item, i) => (
+        ).slice(0, 4).map((item, i) => (
           <li
             key={i}
             className="flex items-center gap-3 border-b border-red-500/10 pb-2"

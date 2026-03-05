@@ -10,17 +10,20 @@ import ServiceCard from "./ServicesCard";
 export default function Services() {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const response = await api.get("/services");
-        setServices(response.data);
+        setServices(response.data || []);
         setTimeout(() => {
           AOS.refresh();
         }, 100);
       } catch (err) {
         console.error("Failed to fetch services:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -46,16 +49,19 @@ export default function Services() {
 
       <section className="bg-[#05060c] py-20">
         <PageContainer>
-          <div data-aos="fade-up" className="">
-            {/* Cards */}
+          {loading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <p className="text-white/60 text-lg">Loading services...</p>
+            </div>
+          ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12">
               {services.map((item, index) => (
                 <ServiceCard key={item.id} item={item} index={index} />
               ))}
             </div>
-          </div>
+          )}
         </PageContainer>
-      </section>
+      </section >
     </>
   );
 }
