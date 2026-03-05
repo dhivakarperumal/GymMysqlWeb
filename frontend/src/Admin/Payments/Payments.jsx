@@ -40,8 +40,9 @@ const Payments = () => {
           .filter((m) => m.plan) // only members with a plan
           .map((m) => {
             const planObj = planMap.get(m.plan);
+
             const pricePaid =
-              planObj?.finalPrice ?? planObj?.final_price ?? 0;
+              m.amount ?? planObj?.finalPrice ?? planObj?.final_price ?? 0;
 
             return {
               ...m,
@@ -262,9 +263,11 @@ const Payments = () => {
             },
             body: JSON.stringify({
               name: row.Name,
+              username: row.Name,
               phone: String(row.Mobile || ""),
               email: row.Email,
               plan: row.Plan,
+              amount: row.Amount,
               joinDate: excelDateToJSDate(row["Start Date"]),
               expiryDate: excelDateToJSDate(row["End Date"]),
               status: row.Status || "active"
