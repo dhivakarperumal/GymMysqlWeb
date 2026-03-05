@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FiPrinter } from "react-icons/fi";
+import { useAuth } from "../PrivateRouter/AuthContext";
+import api from "../api";
 
 /* ---------------- ORDER STEPS ---------------- */
 const ORDER_STEPS = [
@@ -37,64 +37,94 @@ const normalizeStatus = (status) => {
 };
 
 const UserOrders = () => {
-  const user = auth.currentUser;
-  const uid = user?.uid;
+  const { user } = useAuth();
+  const userId = user?.id;
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   /* ---------------- FETCH ORDERS ---------------- */
-useEffect(() => {
-  if (!uid) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  const q = query(
-    collection(db, "orders"),
-    orderBy("createdAt", "desc")
-  );
+    const fetchOrders = async () => {
+      try {
+        const res = await api.get('/orders');
+        const allOrders = res.data || [];
+        // Filter orders for current user
+        const userOrders = allOrders.filter(order => order.user_id === userId);
+        setOrders(userOrders);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch orders', err);
+        setLoading(false);
+      }
+    };
 
-  const unsub = onSnapshot(q, (snap) => {
-    const data = snap.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .filter((order) => order.uid === uid); // 🔥 filter user orders
+    fetchOrders();
+  }, [userId]);
 
-    setOrders(data);
-    setLoading(false);
-  });
+  /* ---------------- FETCH ORDER DETAILS ---------------- */
+  useEffect(() => {
+    if (!selectedOrder) {
+      setSelectedOrderDetails(null);
+      return;
+    }
 
-  return () => unsub();
-}, [uid]);
+    const fetchOrderDetails = async () => {
+      setLoadingDetails(true);
+      try {
+        const res = await api.get(`/orders/${selectedOrder.order_id}`);
+        setSelectedOrderDetails(res.data);
+      } catch (err) {
+        console.error('Failed to fetch order details', err);
+      } finally {
+        setLoadingDetails(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [selectedOrder]);
 
   /* ---------------- PRINT ---------------- */
-  const handlePrint = (order) => {
-    const win = window.open("", "", "width=800,height=600");
-    win.document.write(`
-      <h2>Order Invoice</h2>
-      <p><b>Order ID:</b> ${order.orderId}</p>
-      <p><b>Status:</b> ${formatStatus(normalizeStatus(order.status))}</p>
-      <table border="1" width="100%" cellspacing="0" cellpadding="8">
-        <tr>
-          <th>Product</th><th>Qty</th><th>Price</th>
-        </tr>
-        ${order.items
-        .map(
-          (i) => `
-              <tr>
-                <td>${i.name}</td>
-                <td>${i.quantity}</td>
-                <td>₹${i.price}</td>
-              </tr>`
-        )
-        .join("")}
-      </table>
-      <h3>Total: ₹${order.total}</h3>
-    `);
-    win.print();
-    win.close();
+  const handlePrint = async (order) => {
+    try {
+      // Fetch order details including items
+      const res = await api.get(`/orders/${order.order_id}`);
+      const orderDetails = res.data;
+
+      const win = window.open("", "", "width=800,height=600");
+      win.document.write(`
+        <h2>Order Invoice</h2>
+        <p><b>Order ID:</b> ${orderDetails.order_id}</p>
+        <p><b>Status:</b> ${formatStatus(normalizeStatus(orderDetails.status))}</p>
+        <table border="1" width="100%" cellspacing="0" cellpadding="8">
+          <tr>
+            <th>Product</th><th>Qty</th><th>Price</th>
+          </tr>
+          ${(orderDetails.items || [])
+          .map(
+            (i) => `
+                <tr>
+                  <td>${i.name || 'Product'}</td>
+                  <td>${i.quantity}</td>
+                  <td>₹${i.price}</td>
+                </tr>`
+          )
+          .join("")}
+        </table>
+        <h3>Total: ₹${orderDetails.total}</h3>
+      `);
+      win.print();
+      win.close();
+    } catch (err) {
+      console.error('Failed to fetch order details for print', err);
+      alert('Failed to load order details for printing');
+    }
   };
 
   /* ---------------- LOADING ---------------- */
@@ -140,10 +170,10 @@ useEffect(() => {
             <div className="flex justify-between items-start">
               <div>
                 <p className="font-bold text-red-500">
-                  Order ID: {order.orderId}
+                  Order ID: {order.order_id}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {order.createdAt?.toDate().toLocaleString()}
+                  {new Date(order.created_at).toLocaleString()}
                 </p>
               </div>
 
@@ -167,7 +197,7 @@ useEffect(() => {
             <div className="flex justify-between items-center mt-4">
               <p className="font-semibold">Total: ₹{order.total}</p>
               <p className="text-sm text-gray-400">
-                {order.paymentMethod} ({order.paymentStatus})
+                Payment: {order.payment_status}
               </p>
             </div>
           </div>
@@ -189,65 +219,68 @@ useEffect(() => {
               Order Details
             </h3>
 
-            <div className="flex justify-between mb-4">
-              <p><b>Order ID:</b> {selectedOrder.orderId}</p>
-              <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
-                {formatStatus(normalizeStatus(selectedOrder.status))}
-              </span>
-            </div>
+            {loadingDetails ? (
+              <div className="text-center py-8">Loading order details...</div>
+            ) : selectedOrderDetails ? (
+              <>
+                <div className="flex justify-between mb-4">
+                  <p><b>Order ID:</b> {selectedOrderDetails.order_id}</p>
+                  <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
+                    {formatStatus(normalizeStatus(selectedOrderDetails.status))}
+                  </span>
+                </div>
 
-            {/* ADDRESS */}
-            {selectedOrder.shipping && (
-              <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
-                <h4 className="font-semibold mb-2 text-red-500">
-                  Delivery Address
+                {/* ADDRESS */}
+                {selectedOrderDetails.shipping && (
+                  <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
+                    <h4 className="font-semibold mb-2 text-red-500">
+                      Delivery Address
+                    </h4>
+                    <p className="font-medium">{selectedOrderDetails.shipping.name}</p>
+                    <p className="text-sm text-gray-400">{selectedOrderDetails.shipping.email}</p>
+                    <p className="text-sm text-gray-400">{selectedOrderDetails.shipping.phone}</p>
+                    <p className="text-sm text-gray-400">
+                      {selectedOrderDetails.shipping.address},{" "}
+                      {selectedOrderDetails.shipping.city},{" "}
+                      {selectedOrderDetails.shipping.state},{" "}
+                      {selectedOrderDetails.shipping.country}
+                    </p>
+                  </div>
+                )}
+
+                {/* ITEMS */}
+                <table className="w-full text-sm mb-4">
+                  <thead className="bg-black border-b border-red-500/30">
+                    <tr>
+                      <th className="p-3 text-left text-red-500">Product</th>
+                      <th className="p-3 text-center text-red-500">Qty</th>
+                      <th className="p-3 text-center text-red-500">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedOrderDetails.items || []).map((item, i) => (
+                      <tr key={i} className="border-b border-red-500/20">
+                        <td className="p-3">{item.name || 'Product'}</td>
+                        <td className="p-3 text-center">{item.quantity}</td>
+                        <td className="p-3 text-center">₹{item.price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="flex justify-between font-bold mb-6 border-t border-red-500/20 pt-4">
+                  <span>Total</span>
+                  <span className="text-red-500">₹{selectedOrderDetails.total}</span>
+                </div>
+
+                {/* TRACK ORDER */}
+                <h4 className="font-semibold mb-4 text-center text-red-500">
+                  Track Order
                 </h4>
-                <p className="font-medium">{selectedOrder.shipping.name}</p>
-                <p className="text-sm text-gray-400">{selectedOrder.shipping.email}</p>
-                <p className="text-sm text-gray-400">{selectedOrder.shipping.phone}</p>
-                <p className="text-sm text-gray-400">
-                  {selectedOrder.shipping.address},{" "}
-                  {selectedOrder.shipping.city},{" "}
-                  {selectedOrder.shipping.state},{" "}
-                  {selectedOrder.shipping.country}
-                </p>
-              </div>
-            )}
 
-            {/* ITEMS */}
-            <table className="w-full text-sm mb-4">
-              <thead className="bg-black border-b border-red-500/30">
-                <tr>
-                  <th className="p-3 text-left text-red-500">Product</th>
-                  <th className="p-3 text-center text-red-500">Qty</th>
-                  <th className="p-3 text-center text-red-500">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedOrder.items.map((item, i) => (
-                  <tr key={i} className="border-b border-red-500/20">
-                    <td className="p-3">{item.name}</td>
-                    <td className="p-3 text-center">{item.quantity}</td>
-                    <td className="p-3 text-center">₹{item.price}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="flex justify-between font-bold mb-6 border-t border-red-500/20 pt-4">
-              <span>Total</span>
-              <span className="text-red-500">₹{selectedOrder.total}</span>
-            </div>
-
-            {/* TRACK ORDER */}
-
-            <h4 className="font-semibold mb-4 text-center text-red-500">
-              Track Order
-            </h4>
-
-            {(() => {
-              const rawStatus = selectedOrder.status;
-              const normalizedStatus = normalizeStatus(rawStatus);
+                {(() => {
+                  const rawStatus = selectedOrderDetails.status;
+                  const normalizedStatus = normalizeStatus(rawStatus);
 
               const stepIndex = ORDER_STEPS.findIndex(
                 (step) => step === normalizedStatus
@@ -300,6 +333,10 @@ useEffect(() => {
                 </div>
               );
             })()}
+              </>
+            ) : (
+              <div className="text-center py-8">Failed to load order details</div>
+            )}
           </div>
         </div>
       )}
