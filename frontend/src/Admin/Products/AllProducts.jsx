@@ -126,22 +126,20 @@ const AllProducts = () => {
             <div className="flex rounded-lg overflow-hidden border border-white/10">
               <button
                 onClick={() => setViewMode("table")}
-                className={`px-3 py-2 text-sm flex items-center gap-1 ${
-                  viewMode === "table"
+                className={`px-3 py-2 text-sm flex items-center gap-1 ${viewMode === "table"
                     ? "bg-orange-500 text-white"
                     : "bg-white/5 text-gray-300"
-                }`}
+                  }`}
               >
                 <TableIcon size={16} /> Table
               </button>
 
               <button
                 onClick={() => setViewMode("card")}
-                className={`px-3 py-2 text-sm flex items-center gap-1 ${
-                  viewMode === "card"
+                className={`px-3 py-2 text-sm flex items-center gap-1 ${viewMode === "card"
                     ? "bg-orange-500 text-white"
                     : "bg-white/5 text-gray-300"
-                }`}
+                  }`}
               >
                 <LayoutGrid size={16} /> Card
               </button>
@@ -186,6 +184,81 @@ const AllProducts = () => {
             <option value="Accessories">Accessories</option>
           </select>
         </div>
+
+        {/* CARD VIEW */}
+        {viewMode === "card" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {paginated.map((p) => (
+              <div
+                key={p.id}
+                className="bg-white/5 border border-white/10 rounded-xl p-4 
+                   hover:bg-white/10 transition backdrop-blur-lg"
+              >
+                {/* IMAGE */}
+                <div className="flex justify-center mb-3">
+                  <img
+                    src={getImage(p)}
+                    alt={p.name}
+                    className="w-28 h-28 object-cover rounded-lg border border-white/10"
+                  />
+                </div>
+
+                {/* PRODUCT INFO */}
+                <div className="space-y-1 text-center">
+                  <p className="text-orange-400 font-semibold text-sm">{p.id}</p>
+
+                  <h3 className="text-white font-semibold text-md truncate">
+                    {p.name}
+                  </h3>
+
+                  <p className="text-gray-400 text-xs">
+                    {p.category}
+                    {p.subcategory && ` (${p.subcategory})`}
+                  </p>
+
+                  {/* PRICE */}
+                  <div className="flex justify-center gap-2 mt-2">
+                    <span className="text-gray-400 line-through text-sm">
+                      ₹{getMrp(p)}
+                    </span>
+
+                    <span className="text-green-400 font-semibold">
+                      ₹{getOfferPrice(p)}
+                    </span>
+                  </div>
+
+                  {/* RATING */}
+                  <p className="text-yellow-400 text-sm mt-1">
+                    ⭐ {p.ratings || 0}
+                  </p>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="flex justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => navigate(`/admin/addproducts/${p.id}`)}
+                    className="p-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white transition"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    onClick={() => deleteProduct(p.id)}
+                    className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {filteredProducts.length === 0 && (
+              <div className="col-span-full text-center py-10 text-gray-400">
+                No products found
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TABLE VIEW */}
         {viewMode === "table" && (

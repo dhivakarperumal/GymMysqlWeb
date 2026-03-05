@@ -293,33 +293,64 @@ const Payments = () => {
     <div className="min-h-screen p-4 md:p-8 text-white">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">
-          Payment Details
-        </h1>
 
-        {/* TOGGLE PILLS */}
-        <div className="flex items-center bg-[#2a2540] rounded-xl p-1 w-fit ml-auto">
-          <button
-            onClick={() => setViewType("table")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${viewType === "table"
-              ? "bg-orange-500 text-white"
-              : "text-gray-300 hover:bg-white/10"
-              }`}
-          >
-            Table
-          </button>
+  {/* Title */}
+  <h1 className="text-2xl md:text-3xl font-bold">
+    Payment Details
+  </h1>
 
-          <button
-            onClick={() => setViewType("card")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${viewType === "card"
-              ? "bg-orange-500 text-white"
-              : "text-gray-300 hover:bg-white/10"
-              }`}
-          >
-            Card
-          </button>
-        </div>
-      </div>
+  {/* Right Section */}
+  <div className="flex flex-wrap items-center gap-3 mb-5 ml-auto">
+
+    {/* Import Excel */}
+    <label className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm cursor-pointer hover:bg-blue-600 transition">
+      Import Excel
+      <input
+        type="file"
+        accept=".xlsx,.xls"
+        onChange={handleImport}
+        className="hidden"
+      />
+    </label>
+
+    {/* Export Excel */}
+    <button
+      onClick={exportToExcel}
+      className="px-4 py-2.5 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition"
+    >
+      Export Excel
+    </button>
+
+    {/* Toggle Buttons */}
+    <div className="flex items-center bg-[#2a2540] rounded-xl p-1">
+
+      <button
+        onClick={() => setViewType("table")}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          viewType === "table"
+            ? "bg-orange-500 text-white"
+            : "text-gray-300 hover:bg-white/10"
+        }`}
+      >
+        Table
+      </button>
+
+      <button
+        onClick={() => setViewType("card")}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          viewType === "card"
+            ? "bg-orange-500 text-white"
+            : "text-gray-300 hover:bg-white/10"
+        }`}
+      >
+        Card
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 
       {/* SEARCH + FILTERS SAME ROW */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -426,26 +457,7 @@ const Payments = () => {
         </div>
       )}
 
-      <div className="flex justify-end mb-4 gap-3">
 
-        <label className="px-4 py-2 bg-blue-500 rounded-lg text-sm cursor-pointer">
-          Import Excel
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleImport}
-            className="hidden"
-          />
-        </label>
-
-        <button
-          onClick={exportToExcel}
-          className="px-4 py-2 bg-green-500 rounded-lg text-sm"
-        >
-          Export Excel
-        </button>
-
-      </div>
 
       {/* ================= TABLE VIEW ================= */}
       {viewType === "table" && (

@@ -354,7 +354,7 @@ const OrderDetails = () => {
                   <td className="px-4 py-3">
                     {i.image ? (
                       <img 
-                        src={i.image.startsWith('http') ? i.image : `${API_BASE}/${i.image.replace(/^\//,"")}`}
+                        src={i.image.startsWith('http') || i.image.startsWith('data:') ? i.image : `${API_BASE}/${i.image.replace(/^\//,"")}`}
                         alt={i.name}
                         className="w-12 h-12 object-cover rounded-lg"
                       />

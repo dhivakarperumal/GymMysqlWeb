@@ -108,7 +108,7 @@ const generateOrderNumber = async () => {
     // Get product image and normalize URL
     const images = product.images ? (Array.isArray(product.images) ? product.images : JSON.parse(product.images)) : [];
     let image = images.length > 0 ? images[0] : null;
-    if (image && !image.match(/^https?:\/\//)) {
+    if (image && !image.match(/^(https?:\/\/|data:)/) ) {
       image = `${API_BASE}/${image.replace(/^\//,"")}`;
     }
 
@@ -270,40 +270,8 @@ const generateOrderNumber = async () => {
       <div className="mb-3">
         <h1 className="page-title text-2xl font-bold text-white">Billing</h1>
       </div>
-
       {/* RECENT ORDERS / BILLS */}
-      {recentOrders.length > 0 && (
-        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-4">
-          <h2 className="text-lg font-semibold text-blue-300 mb-4 flex items-center gap-2">
-            📋 Recent Bills
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="bg-white/5 border border-blue-500/20 rounded-lg p-3 hover:bg-white/10 transition">
-                <div className="text-xs text-gray-400 mb-1">Order ID</div>
-                <div className="text-lg font-bold text-blue-400 font-mono mb-2">{order.order_id}</div>
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Amount:</span>
-                    <span className="text-white">₹{order.total}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Status:</span>
-                    <span className={order.payment_status === 'Paid' ? 'text-green-400' : 'text-yellow-400'}>
-                      {order.payment_status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Type:</span>
-                    <span className="text-white">{order.order_type}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      
       <div>
         <h3 className="text-lg font-semibold mb-3">Add Products</h3>
 

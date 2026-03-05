@@ -75,7 +75,6 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [showCategory, setShowCategory] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
-  const [categories, setCategories] = useState([]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarView, setSidebarView] = useState("menu"); // menu | categories | subcategories
@@ -101,20 +100,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  /* ------------------ FETCH CATEGORIES ------------------ */
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await api.get("/categories");
-        setCategories(Array.isArray(response.data) ? response.data : []);
-      } catch (err) {
-        console.error("Failed to fetch categories:", err);
-        setCategories([]);
-      }
-    };
-
-    fetchCategories();
-  }, []);
   /* ------------------ CLOSE ON ROUTE CHANGE ------------------ */
   useEffect(() => {
     setOpen(false);
