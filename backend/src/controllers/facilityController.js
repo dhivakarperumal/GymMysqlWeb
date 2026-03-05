@@ -5,6 +5,8 @@ const parseFacility = (facility) => {
   if (!facility) return facility;
   return {
     ...facility,
+    heroImage: facility.hero_image,
+    shortDesc: facility.short_description,
     equipments: typeof facility.equipments === 'string' ? JSON.parse(facility.equipments || '[]') : (facility.equipments || []),
     workouts: typeof facility.workouts === 'string' ? JSON.parse(facility.workouts || '[]') : (facility.workouts || []),
     facilities: typeof facility.facilities === 'string' ? JSON.parse(facility.facilities || '[]') : (facility.facilities || []),

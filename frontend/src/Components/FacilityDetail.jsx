@@ -4,6 +4,7 @@ import PageContainer from "./PageContainer";
 import PageHeader from "./PageHeader";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import api from "../api";
 
 const FacilityDetail = () => {
   const { slug } = useParams();
@@ -15,18 +16,13 @@ const FacilityDetail = () => {
   useEffect(() => {
     const fetchFacility = async () => {
       try {
-        const response = await fetch("/facilities.json");
-        if (!response.ok) throw new Error("Failed to fetch data");
-
-        const data = await response.json();
-        const selectedFacility = data.find((item) => item.slug === slug);
-
-        setFacility(selectedFacility || null);
+        const response = await api.get(`/facilities/${slug}`);
+        setFacility(response.data || null);
         setTimeout(() => {
           AOS.refresh();
         }, 100);
       } catch (err) {
-        console.error(err);
+        console.error('Failed to fetch facility', err);
         setError(true);
       } finally {
         setLoading(false);
@@ -103,7 +99,7 @@ const FacilityDetail = () => {
             data-aos="fade-up"
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {facility.gallery.map((img, index) => (
+            {(facility.gallery || []).map((img, index) => (
               <div
                 key={index}
                 data-aos="zoom-in"
@@ -133,7 +129,7 @@ const FacilityDetail = () => {
                 AVAILABLE EQUIPMENT
               </h3>
               <ul className="space-y-3 text-white/80">
-                {facility.equipments.map((eq, index) => (
+                {(facility.equipments || []).map((eq, index) => (
                   <li key={index} className="border-b border-red-500/20 pb-2">
                     {eq}
                   </li>
@@ -147,7 +143,7 @@ const FacilityDetail = () => {
                 SUPPORTED WORKOUTS
               </h3>
               <ul className="space-y-3 text-white/80">
-                {facility.workouts.map((workout, index) => (
+                {(facility.workouts || []).map((workout, index) => (
                   <li key={index} className="border-b border-red-500/20 pb-2">
                     {workout}
                   </li>
