@@ -95,8 +95,10 @@ async function updateOrderStatus(req, res) {
 // create new order
 async function createOrder(req, res) {
   const data = req.body;
+  console.log("Creating order with data:", data);
 
   if (!data.order_id) {
+    console.error("Missing order_id");
     return res.status(400).json({ message: "order_id required" });
   }
 
@@ -105,62 +107,88 @@ async function createOrder(req, res) {
     const num = parseInt(data.order_id.replace(/[^0-9]/g, ''), 10) || 0;
     data.order_id = `ORD${String(num).padStart(3, '0')}`;
   }
+  console.log("Normalized order_id:", data.order_id);
 
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
+    console.log("Transaction started");
 
     // Insert order
-    await connection.query(
-      `INSERT INTO orders 
+    const insertOrderQuery = `INSERT INTO orders 
       (order_id,user_id,status,payment_status,total,order_type,shipping,pickup,order_track)
-      VALUES (?,?,?,?,?,?,?,?,?)`,
-      [
-        data.order_id,
-        data.user_id || null,
-        data.status || "orderPlaced",
-        data.payment_status || "pending",
-        data.total || 0,
-        data.order_type || null,
-        data.shipping ? JSON.stringify(data.shipping) : null,
-        data.pickup ? JSON.stringify(data.pickup) : null,
-        JSON.stringify(data.order_track || [])
-      ]
-    );
+      VALUES (?,?,?,?,?,?,?,?,?)`;
+    
+    const orderValues = [
+      data.order_id,
+      data.user_id || null,
+      data.status || "orderPlaced",
+      data.payment_status || "pending",
+      data.total || 0,
+      data.order_type || null,
+      data.shipping ? JSON.stringify(data.shipping) : null,
+      data.pickup ? JSON.stringify(data.pickup) : null,
+      JSON.stringify(data.order_track || [])
+    ];
+    
+    console.log("Inserting order with values:", orderValues);
+    await connection.query(insertOrderQuery, orderValues);
+    console.log("Order inserted successfully");
 
-    // Insert order items
-    if (data.items && data.items.length > 0) {
-      for (const item of data.items) {
+    // Insert order items (frontend may send various key names)
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      console.log("Inserting", data.items.length, "order items");
+      
+      for (const raw of data.items) {
+        // normalise keys from frontend
+        const product_id = raw.product_id || raw.productId || null;
+        const product_name = raw.product_name || raw.name || null;
+        const price = raw.price || 0;
+        const qty = raw.qty || raw.quantity || 0;
+        const size = raw.size || raw.weight || null;
+        const color = raw.color || null;
+        // image may be array or single
+        let image = raw.image || "";
+        if (!image && raw.images) {
+          if (Array.isArray(raw.images)) image = raw.images[0] || "";
+          else image = raw.images;
+        }
+
+        console.log("Inserting item:", { product_id, product_name, price, qty, size, color });
+
+
         await connection.query(
           `INSERT INTO order_items
           (order_id,product_id,product_name,price,qty,size,color,image)
           VALUES (?,?,?,?,?,?,?,?)`,
           [
             data.order_id,
-            item.product_id,
-            item.product_name,
-            item.price,
-            item.qty,
-            item.size,
-            item.color,
-            item.image
+            product_id,
+            product_name,
+            price,
+            qty,
+            size,
+            color,
+            image
           ]
         );
       }
     }
 
     await connection.commit();
+    console.log("Transaction committed successfully");
 
     res.status(201).json({
       success: true,
-      message: "Order created successfully"
+      message: "Order created successfully",
+      order_id: data.order_id
     });
 
   } catch (err) {
+    console.error("Order creation error:", err);
     await connection.rollback();
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message || "Server error" });
 
   } finally {
     connection.release();

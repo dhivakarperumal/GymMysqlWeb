@@ -53,6 +53,42 @@ const getUserAddresses = (req, res) => {
   });
 };
 
+// UPDATE ADDRESS
+const updateAddress = (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    email,
+    phone,
+    address,
+    city,
+    state,
+    zip,
+    country,
+  } = req.body;
+
+  const sql = `
+    UPDATE user_addresses
+    SET name=?, email=?, phone=?, address=?, city=?, state=?, zip=?, country=?, updated_at=CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.query(
+    sql,
+    [name, email, phone, address, city, state, zip, country, id],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: err });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+      res.json({ success: true, message: "Address updated" });
+    }
+  );
+};
+
 // DELETE ADDRESS
 const deleteAddress = (req, res) => {
   const { id } = req.params;
@@ -74,5 +110,6 @@ const deleteAddress = (req, res) => {
 module.exports = {
   createAddress,
   getUserAddresses,
+  updateAddress,
   deleteAddress,
 };

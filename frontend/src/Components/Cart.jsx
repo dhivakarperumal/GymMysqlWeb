@@ -7,6 +7,14 @@ import PageHeader from "./PageHeader";
 import { ShoppingCart } from "lucide-react";
 import { useAuth } from "../PrivateRouter/AuthContext";
 
+// helper to normalise image URLs (same logic as Admin components)
+const makeImageUrl = (img) => {
+  if (!img) return "";
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
+
 export default function Cart() {
   const { user } = useAuth();
   const userId = user?.id;
@@ -152,9 +160,13 @@ export default function Cart() {
                       <div className="flex items-center gap-4 md:gap-7">
                         <img
                           src={
-                            item.images
-                              ? (Array.isArray(item.images) ? item.images[0] : item.images)
-                              : item.image
+                            makeImageUrl(
+                              item.images
+                                ? Array.isArray(item.images)
+                                  ? item.images[0]
+                                  : item.images
+                                : item.image
+                            )
                           }
                           className="w-16 h-16 object-contain border border-red-500/40 rounded-xl"
                         />

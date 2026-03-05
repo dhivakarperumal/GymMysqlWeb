@@ -105,7 +105,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/diet-plans", dietRoutes);
 app.use("/api/cart", require("./routes/cartRoutes"));
-app.use("/api/address", addressRoutes);
+app.use("/api/addresses", addressRoutes);
 app.use("/api/reports", reportRoutes);
 
 const PORT = process.env.PORT || 5000;
