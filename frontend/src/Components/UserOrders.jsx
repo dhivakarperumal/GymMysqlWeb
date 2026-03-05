@@ -45,6 +45,10 @@ const UserOrders = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const shipping =
+    typeof selectedOrderDetails?.shipping === "string"
+      ? JSON.parse(selectedOrderDetails.shipping)
+      : selectedOrderDetails?.shipping;
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   /* ---------------- FETCH ORDERS ---------------- */
@@ -110,8 +114,8 @@ const UserOrders = () => {
           .map(
             (i) => `
                 <tr>
-                  <td>${i.name || 'Product'}</td>
-                  <td>${i.quantity}</td>
+                 <td>${i.product_name}</td>
+<td>${i.qty}</td>
                   <td>₹${i.price}</td>
                 </tr>`
           )
@@ -231,20 +235,25 @@ const UserOrders = () => {
                 </div>
 
                 {/* ADDRESS */}
-                {selectedOrderDetails.shipping && (
+                {shipping && (
                   <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
                     <h4 className="font-semibold mb-2 text-red-500">
                       Delivery Address
                     </h4>
-                    <p className="font-medium">{selectedOrderDetails.shipping.name}</p>
-                    <p className="text-sm text-gray-400">{selectedOrderDetails.shipping.email}</p>
-                    <p className="text-sm text-gray-400">{selectedOrderDetails.shipping.phone}</p>
+
+                    <p className="font-medium">{shipping.name}</p>
+                    <p className="text-sm text-gray-400">{shipping.email}</p>
+                    <p className="text-sm text-gray-400">{shipping.phone}</p>
+
                     <p className="text-sm text-gray-400">
-                      {selectedOrderDetails.shipping.address},{" "}
-                      {selectedOrderDetails.shipping.city},{" "}
-                      {selectedOrderDetails.shipping.state},{" "}
-                      {selectedOrderDetails.shipping.country}
+                      {shipping.address}, {shipping.city}
                     </p>
+
+                    <p className="text-sm text-gray-400">
+                      {shipping.state} - {shipping.zip}
+                    </p>
+
+                    <p className="text-sm text-gray-400">{shipping.country}</p>
                   </div>
                 )}
 
@@ -260,9 +269,40 @@ const UserOrders = () => {
                   <tbody>
                     {(selectedOrderDetails.items || []).map((item, i) => (
                       <tr key={i} className="border-b border-red-500/20">
-                        <td className="p-3">{item.name || 'Product'}</td>
-                        <td className="p-3 text-center">{item.quantity}</td>
-                        <td className="p-3 text-center">₹{item.price}</td>
+                        <td className="p-3 flex items-center gap-3">
+
+                          {/* PRODUCT IMAGE */}
+                          <img
+                            src={
+                              item.image
+                                ? item.image.startsWith("data:")
+                                  ? item.image
+                                  : `data:image/jpeg;base64,${item.image}`
+                                : "https://via.placeholder.com/60"
+                            }
+                            alt={item.product_name}
+                            className="w-14 h-14 object-cover rounded-lg border border-red-500/30"
+                          />
+
+                          <div>
+                            <p className="font-semibold">{item.product_name}</p>
+
+                            {item.size && (
+                              <p className="text-xs text-gray-400">Size: {item.size}</p>
+                            )}
+
+                            {item.color && (
+                              <p className="text-xs text-gray-400">Color: {item.color}</p>
+                            )}
+                          </div>
+
+                        </td>
+
+                        <td className="p-3 text-center">{item.qty}</td>
+
+                        <td className="p-3 text-center">
+                          ₹{Number(item.price).toLocaleString()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -282,57 +322,57 @@ const UserOrders = () => {
                   const rawStatus = selectedOrderDetails.status;
                   const normalizedStatus = normalizeStatus(rawStatus);
 
-              const stepIndex = ORDER_STEPS.findIndex(
-                (step) => step === normalizedStatus
-              );
+                  const stepIndex = ORDER_STEPS.findIndex(
+                    (step) => step === normalizedStatus
+                  );
 
-              console.log("🧾 RAW STATUS FROM FIRESTORE 👉", rawStatus);
-              console.log("🧹 NORMALIZED STATUS 👉", normalizedStatus);
-              console.log("📍 ORDER STEPS 👉", ORDER_STEPS);
-              console.log("🔢 STEP INDEX 👉", stepIndex);
+                  console.log("🧾 RAW STATUS FROM FIRESTORE 👉", rawStatus);
+                  console.log("🧹 NORMALIZED STATUS 👉", normalizedStatus);
+                  console.log("📍 ORDER STEPS 👉", ORDER_STEPS);
+                  console.log("🔢 STEP INDEX 👉", stepIndex);
 
 
-              const safeStep = stepIndex === -1 ? 0 : stepIndex;
+                  const safeStep = stepIndex === -1 ? 0 : stepIndex;
 
-              return (
-                <div className="flex items-center justify-between w-full mt-6">
-                  {ORDER_STEPS.map((step, index) => {
-                    const isCompleted = index < safeStep;
-                    const isActive = index === safeStep;
+                  return (
+                    <div className="flex items-center justify-between w-full mt-6">
+                      {ORDER_STEPS.map((step, index) => {
+                        const isCompleted = index < safeStep;
+                        const isActive = index === safeStep;
 
-                    return (
-                      <React.Fragment key={step}>
-                        <div className="flex flex-col items-center min-w-[70px]">
-                          <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold
+                        return (
+                          <React.Fragment key={step}>
+                            <div className="flex flex-col items-center min-w-[70px]">
+                              <div
+                                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold
                   ${isCompleted
-                                ? "bg-red-600 text-white"
-                                : isActive
-                                  ? "bg-red-500 text-white animate-pulse"
-                                  : "bg-gray-700 text-gray-400"
-                              }
+                                    ? "bg-red-600 text-white"
+                                    : isActive
+                                      ? "bg-red-500 text-white animate-pulse"
+                                      : "bg-gray-700 text-gray-400"
+                                  }
                 `}
-                          >
-                            {index + 1}
-                          </div>
+                              >
+                                {index + 1}
+                              </div>
 
-                          <span className="text-xs mt-2 text-center">
-                            {formatStatus(step)}
-                          </span>
-                        </div>
+                              <span className="text-xs mt-2 text-center">
+                                {formatStatus(step)}
+                              </span>
+                            </div>
 
-                        {index !== ORDER_STEPS.length - 1 && (
-                          <div
-                            className={`flex-1 h-1 mx-2 rounded ${isCompleted ? "bg-red-600" : "bg-gray-700"
-                              }`}
-                          />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+                            {index !== ORDER_STEPS.length - 1 && (
+                              <div
+                                className={`flex-1 h-1 mx-2 rounded ${isCompleted ? "bg-red-600" : "bg-gray-700"
+                                  }`}
+                              />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <div className="text-center py-8">Failed to load order details</div>
