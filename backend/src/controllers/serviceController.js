@@ -46,7 +46,7 @@ async function getAllServices(req, res) {
       slug: r.slug,
       short_desc: r.short_desc,
       description: r.description,
-      hero_image: r.hero_image,
+      heroImage: r.hero_image,    // normalize to camelCase for frontend
       points: safeParsePoints(r.points),
       created_at: r.created_at,
       updated_at: r.updated_at

@@ -18,7 +18,7 @@ hover:-translate-y-2
     >
       {/* Image */}
       <img
-        src={trainer.image}
+        src={trainer.photo}
         alt={trainer.name}
         className="
 w-full h-[430px] object-cover

@@ -28,8 +28,9 @@ const Pricing = () => {
 
         setServices(plans);
 
+        // Get unique durations from plans
         const durations = [
-          ...new Set(plans.map((p) => p.duration).filter(Boolean)),
+          ...new Set(plans.map((p) => p.duration || p.duration_months).filter(Boolean)),
         ];
         setAvailableDurations(durations);
       } catch (err) {
@@ -44,7 +45,7 @@ const Pricing = () => {
   const filteredServices =
     selectedDuration === "ALL"
       ? services
-      : services.filter((service) => service.duration === selectedDuration);
+      : services.filter((service) => (service.duration || service.duration_months) === selectedDuration);
 
   /* 🔥 AOS */
   useEffect(() => {
