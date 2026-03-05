@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import PageHeader from "../Components/PageHeader";
 import PageContainer from "../Components/PageContainer";
+import ProductCard from "../Components/ProductsCard";
 
 export default function Products() {
   const navigate = useNavigate();
@@ -43,7 +44,9 @@ export default function Products() {
       quantity: 1,
       price: Number(prod.offer_price ?? prod.mrp ?? prod.offerPrice ?? 0) || 0,
       productName: prod.name,
-      productImage: Array.isArray(prod.images) ? prod.images[0] : prod.images || "",
+      productImage: Array.isArray(prod.images)
+        ? prod.images[0]
+        : prod.images || "",
     };
 
     try {
@@ -51,7 +54,8 @@ export default function Products() {
       toast.success("Added to cart");
     } catch (err) {
       console.error("addToCart failed", err, "payload", payload);
-      const message = err.response?.data?.error || err.message || "Failed to add to cart";
+      const message =
+        err.response?.data?.error || err.message || "Failed to add to cart";
       toast.error(message);
     }
   };
@@ -69,36 +73,14 @@ export default function Products() {
       />
       <PageContainer>
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((p) => {
+          {products.map((p, index) => {
             const id = p.id ?? p.product_id;
             if (!id) {
               console.warn("product without id", p);
               return null;
             }
-            return (
-              <div
-                key={id}
-                className="bg-white/10 p-4 rounded-xl hover:bg-white/20 cursor-pointer"
-              >
-                <img
-                  src={(Array.isArray(p.images) ? p.images[0] : "") ||
-                    "https://via.placeholder.com/150"}
-                  alt={p.name}
-                  className="w-full h-40 object-contain mb-2"
-                  onClick={() => navigate(`/products/${id}`)}
-                />
-                <p className="font-semibold truncate" onClick={() => navigate(`/products/${id}`)}>
-                  {p.name}
-                </p>
-                <p className="text-sm text-gray-400">₹{p.offer_price || p.mrp}</p>
-                <button
-                  onClick={() => addToCart(p)}
-                  className="mt-2 w-full py-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg text-white text-sm"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            );
+
+            return <ProductCard key={id} product={p} index={index} />;
           })}
         </div>
       </PageContainer>
