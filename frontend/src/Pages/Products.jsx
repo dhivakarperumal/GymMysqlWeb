@@ -72,7 +72,7 @@ export default function Products() {
         bgImage="https://images.unsplash.com/photo-1571902943202-507ec2618e8f"
       />
       <PageContainer>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-6 grid-cols-1 py-20 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {products.map((p, index) => {
             const id = p.id ?? p.product_id;
             if (!id) {
