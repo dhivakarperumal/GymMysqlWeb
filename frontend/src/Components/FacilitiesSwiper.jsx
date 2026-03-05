@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
-import { FiArrowRight } from "react-icons/fi";
 import "swiper/css";
 import FacilityCard from "./FacilityCard";
 import PageContainer from "./PageContainer";
@@ -24,7 +22,7 @@ export default function FacilitiesSwiper() {
 
     fetchFacilities();
   }, []);
-  
+
   return (
     <section className="bg-[#05060c] py-5">
       <PageContainer>
