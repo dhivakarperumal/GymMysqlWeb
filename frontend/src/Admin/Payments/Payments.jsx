@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // backend API
 const MEMBERS_API = "http://localhost:5000/api/members";
@@ -10,6 +11,8 @@ const Payments = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [viewType, setViewType] = useState("table");
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -37,8 +40,9 @@ const Payments = () => {
           .filter((m) => m.plan) // only members with a plan
           .map((m) => {
             const planObj = planMap.get(m.plan);
+
             const pricePaid =
-              planObj?.finalPrice ?? planObj?.final_price ?? 0;
+              m.amount ?? planObj?.finalPrice ?? planObj?.final_price ?? 0;
 
             return {
               ...m,
@@ -103,14 +107,14 @@ const Payments = () => {
           m.uid !== memberId
             ? m
             : {
-                ...m,
-                status: "inactive",
-                plans: m.plans.map((p) =>
-                  p.id === planId
-                    ? { ...p, status: "inactive", paymentStatus: "Unpaid" }
-                    : p
-                ),
-              }
+              ...m,
+              status: "inactive",
+              plans: m.plans.map((p) =>
+                p.id === planId
+                  ? { ...p, status: "inactive", paymentStatus: "Unpaid" }
+                  : p
+              ),
+            }
         )
       );
     } catch (err) {
@@ -161,6 +165,129 @@ const Payments = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filterType]);
+
+  const formatDate = (date) => {
+    if (!date) return "—";
+    return new Date(date).toISOString().split("T")[0];
+  };
+
+  const toggleRow = (id) => {
+    setSelectedRows((prev) =>
+      prev.includes(id)
+        ? prev.filter((rowId) => rowId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedRows([]);
+    } else {
+      const allIds = paginatedPlans.map(({ member }) => member.uid);
+      setSelectedRows(allIds);
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const exportToExcel = () => {
+    const selectedData = paginatedPlans
+      .filter(({ member }) => selectedRows.includes(member.uid))
+      .map(({ member, plan }, index) => ({
+        "S.No": index + 1,
+        Name: member.username,
+        Email: member.email,
+        Plan: plan.planName,
+        Amount: plan.pricePaid,
+        "Start Date": formatDate(plan.startDate),
+        "End Date": formatDate(plan.endDate),
+        Status: plan.status,
+      }));
+
+    if (selectedData.length === 0) {
+      alert("Please select rows first");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(selectedData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
+
+    XLSX.writeFile(workbook, "payments.xlsx");
+  };
+
+  const excelDateToJSDate = (value) => {
+
+    if (!value) return null;
+
+    // If already string date
+    if (typeof value === "string") {
+      return value;
+    }
+
+    // If Excel serial number
+    const utc_days = Math.floor(value - 25569);
+    const utc_value = utc_days * 86400;
+    const date = new Date(utc_value * 1000);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async (evt) => {
+      const data = new Uint8Array(evt.target.result);
+
+      const workbook = XLSX.read(data, { type: "array" });
+
+      const sheetName = workbook.SheetNames[0];
+
+      const worksheet = workbook.Sheets[sheetName];
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      console.log("Imported Data:", jsonData);
+
+      try {
+
+        for (const row of jsonData) {
+
+          await fetch(MEMBERS_API, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: row.Name,
+              username: row.Name,
+              phone: String(row.Mobile || ""),
+              email: row.Email,
+              plan: row.Plan,
+              amount: row.Amount,
+              joinDate: excelDateToJSDate(row["Start Date"]),
+              expiryDate: excelDateToJSDate(row["End Date"]),
+              status: row.Status || "active"
+            })
+          });
+
+        }
+
+        alert("Excel imported successfully");
+
+        window.location.reload();
+
+      } catch (error) {
+        console.error(error);
+        alert("Import failed");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
 
   return (
     <div className="min-h-screen p-4 md:p-8 text-white">
@@ -269,12 +396,12 @@ const Payments = () => {
 
                 <div>
                   <p className="text-gray-400">Start Date</p>
-                  <p>{plan.startDate || "—"}</p>
+                  <p className="whitespace-nowrap">{formatDate(plan.startDate)}</p>
                 </div>
 
                 <div>
                   <p className="text-gray-400">End Date</p>
-                  <p>{plan.endDate}</p>
+                  <p className="whitespace-nowrap">{formatDate(plan.endDate)}</p>
                 </div>
               </div>
 
@@ -299,12 +426,40 @@ const Payments = () => {
         </div>
       )}
 
+      <div className="flex justify-end mb-4 gap-3">
+
+        <label className="px-4 py-2 bg-blue-500 rounded-lg text-sm cursor-pointer">
+          Import Excel
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImport}
+            className="hidden"
+          />
+        </label>
+
+        <button
+          onClick={exportToExcel}
+          className="px-4 py-2 bg-green-500 rounded-lg text-sm"
+        >
+          Export Excel
+        </button>
+
+      </div>
+
       {/* ================= TABLE VIEW ================= */}
       {viewType === "table" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-sm text-left">
             <thead className="bg-white/10 text-gray-300">
               <tr>
+                <th className="px-4 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-4">S.No</th>
                 <th className="px-4 py-4">Name</th>
                 <th className="px-4 py-4">Email</th>
@@ -322,13 +477,20 @@ const Payments = () => {
                   key={`${member.uid}_${plan.id}`}
                   className="border-b border-white/10 hover:bg-white/5"
                 >
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(member.uid)}
+                      onChange={() => toggleRow(member.uid)}
+                    />
+                  </td>
                   <td className="px-4 py-4">{getSerialNumber(index)}</td>
                   <td className="px-4 py-4">{member.username}</td>
                   <td className="px-4 py-4">{member.email}</td>
                   <td className="px-4 py-4">{plan.planName}</td>
                   <td className="px-4 py-4">₹ {plan.pricePaid}</td>
-                  <td className="px-4 py-4">{plan.startDate || "—"}</td>
-                  <td className="px-4 py-4">{plan.endDate}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.startDate)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.endDate)}</td>
                   <td className="px-4 py-4">
                     {plan.status === "active"
                       ? "Active"
