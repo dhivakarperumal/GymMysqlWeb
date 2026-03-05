@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from "../../firebase";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   FaUser,
@@ -12,7 +10,8 @@ import {
   FaSave,
   FaArrowLeft,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../PrivateRouter/AuthContext";
+import api from "../../api";
 
 /* ================= GLASS CLASSES ================= */
 const glassCard =
@@ -22,10 +21,9 @@ const glassInput =
   "w-full bg-white/10 border border-white/20 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:bg-white/5 disabled:cursor-not-allowed";
 
 const ProfileSettings = () => {
-  const auth = getAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const [uid, setUid] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -33,39 +31,56 @@ const ProfileSettings = () => {
     username: "",
     mobile: "",
     email: "",
-    role: "",
-    active: false,
-    createdAt: null,
+    role: "admin",
+    active: true,
+    createdAt: new Date().toLocaleString("en-IN"),
   });
-
-  /* ================= AUTH ================= */
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) setUid(user.uid);
-      else setLoading(false);
-    });
-    return () => unsub();
-  }, [auth]);
 
   /* ================= LOAD PROFILE ================= */
   useEffect(() => {
-    if (!uid) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const loadProfile = async () => {
       try {
-        const snap = await getDoc(doc(db, "users", uid));
-        if (snap.exists()) {
-          setForm(snap.data());
+        // Fetch user details from API
+        if (user.id) {
+          const res = await api.get(`/users/${user.id}`);
+          if (res.data) {
+            setForm({
+              username: res.data.username || user.name || "",
+              mobile: res.data.mobile || "",
+              email: res.data.email || user.email || "",
+              role: res.data.role || "admin",
+              active: res.data.active !== false,
+              createdAt: res.data.createdAt || new Date().toLocaleString("en-IN"),
+            });
+          }
+        } else {
+          // Fallback to user from context
+          setForm((prev) => ({
+            ...prev,
+            username: user.name || "",
+            email: user.email || "",
+          }));
         }
-      } catch {
-        toast.error("Failed to load profile");
+      } catch (err) {
+        console.error("Failed to load profile", err);
+        // Fallback to user from context
+        setForm((prev) => ({
+          ...prev,
+          username: user.name || "",
+          email: user.email || "",
+        }));
       } finally {
         setLoading(false);
       }
     };
 
     loadProfile();
-  }, [uid]);
+  }, [user]);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -79,14 +94,18 @@ const ProfileSettings = () => {
 
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", uid), {
-        username: form.username,
-        mobile: form.mobile,
-        updatedAt: serverTimestamp(),
-      });
-      toast.success("Profile updated successfully");
-    } catch {
-      toast.error("Update failed");
+      if (user?.id) {
+        await api.put(`/users/${user.id}`, {
+          username: form.username,
+          mobile: form.mobile,
+        });
+        toast.success("Profile updated successfully");
+      } else {
+        toast.error("User ID not found");
+      }
+    } catch (err) {
+      console.error("Update failed", err);
+      toast.error(err.response?.data?.message || "Update failed");
     } finally {
       setSaving(false);
     }
@@ -100,6 +119,21 @@ const ProfileSettings = () => {
         <div className="h-12 bg-white/20 rounded mb-4" />
         <div className="h-12 bg-white/20 rounded mb-4" />
         <div className="h-12 bg-white/20 rounded mb-4" />
+      </div>
+    );
+  }
+
+  // Check if user is authenticated
+  if (!user) {
+    return (
+      <div className="text-center text-white p-6">
+        <p className="text-lg">Please log in to view profile settings</p>
+        <button
+          onClick={() => navigate("/login")}
+          className="mt-4 px-6 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition"
+        >
+          Go to Login
+        </button>
       </div>
     );
   }
@@ -193,11 +227,7 @@ const ProfileSettings = () => {
             <FaCalendarAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               disabled
-              value={
-                form.createdAt?.toDate
-                  ? form.createdAt.toDate().toLocaleString("en-IN")
-                  : ""
-              }
+              value={form.createdAt || ""}
               className={glassInput}
             />
           </div>
