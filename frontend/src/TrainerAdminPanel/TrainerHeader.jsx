@@ -32,7 +32,7 @@ const Header = ({ onMenuClick }) => {
   const searchInputRef = useRef(null);
 
   // ✅ CORRECT VALUES FROM AUTH CONTEXT
-  const { user, role, profileName, email } = useAuth();
+  const { user, role, profileName, email, logout } = useAuth();
 
   // fallback email from user object if context email missing
 
@@ -56,10 +56,17 @@ const Header = ({ onMenuClick }) => {
 
   const handleLogout = async () => {
     try {
+      // Clear AuthContext first
+      logout();
+      // Then sign out from Firebase
       await signOut(auth);
+      // Navigate to login
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
+      // Still navigate even if Firebase signout fails
+      logout();
+      navigate("/login", { replace: true });
     }
   };
 
