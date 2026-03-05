@@ -215,6 +215,77 @@ const Payments = () => {
     XLSX.writeFile(workbook, "payments.xlsx");
   };
 
+  const excelDateToJSDate = (value) => {
+
+    if (!value) return null;
+
+    // If already string date
+    if (typeof value === "string") {
+      return value;
+    }
+
+    // If Excel serial number
+    const utc_days = Math.floor(value - 25569);
+    const utc_value = utc_days * 86400;
+    const date = new Date(utc_value * 1000);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async (evt) => {
+      const data = new Uint8Array(evt.target.result);
+
+      const workbook = XLSX.read(data, { type: "array" });
+
+      const sheetName = workbook.SheetNames[0];
+
+      const worksheet = workbook.Sheets[sheetName];
+
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      console.log("Imported Data:", jsonData);
+
+      try {
+
+        for (const row of jsonData) {
+
+          await fetch(MEMBERS_API, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: row.Name,
+              phone: String(row.Mobile || ""),
+              email: row.Email,
+              plan: row.Plan,
+              joinDate: excelDateToJSDate(row["Start Date"]),
+              expiryDate: excelDateToJSDate(row["End Date"]),
+              status: row.Status || "active"
+            })
+          });
+
+        }
+
+        alert("Excel imported successfully");
+
+        window.location.reload();
+
+      } catch (error) {
+        console.error(error);
+        alert("Import failed");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 text-white">
       {/* HEADER */}
@@ -352,13 +423,25 @@ const Payments = () => {
         </div>
       )}
 
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-4 gap-3">
+
+        <label className="px-4 py-2 bg-blue-500 rounded-lg text-sm cursor-pointer">
+          Import Excel
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImport}
+            className="hidden"
+          />
+        </label>
+
         <button
           onClick={exportToExcel}
           className="px-4 py-2 bg-green-500 rounded-lg text-sm"
         >
           Export Excel
         </button>
+
       </div>
 
       {/* ================= TABLE VIEW ================= */}
