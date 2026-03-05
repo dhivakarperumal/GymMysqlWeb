@@ -10,7 +10,7 @@ export default function PricingCard({
       data-aos="fade-up"
       data-aos-delay={index * 120}
       className="
-        bg-black/80 h-[500px] md:h-[447px] border border-red-500/60 rounded-2xl
+        bg-black/80 h-[500px] md:h-[475px] border border-red-500/60 rounded-2xl
         p-8 flex flex-col
         shadow-[0_0_25px_rgba(255,0,0,0.15)]
         hover:shadow-red-600/40 transition
@@ -22,9 +22,17 @@ export default function PricingCard({
       </h3>
 
       {/* DESCRIPTION */}
-      <p className="text-white/60 text-sm mb-6 leading-relaxed">
-        {service.description}
-      </p>
+      <p
+  className="text-white/60 text-sm mb-6 leading-relaxed overflow-hidden"
+  style={{
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 3,
+    minHeight: "72px",
+  }}
+>
+  {service.description}
+</p>
 
       {/* PRICE */}
       <div className="mb-6">
@@ -83,10 +91,9 @@ export default function PricingCard({
         className={`
           mt-5 py-3 rounded-full text-sm font-semibold tracking-widest
           transition-all duration-300
-          ${
-            hasActivePlan
-              ? "bg-gray-600 cursor-not-allowed opacity-60"
-              : "bg-red-600 hover:bg-red-700 shadow-[0_0_18px_rgba(255,0,0,0.6)]"
+          ${hasActivePlan
+            ? "bg-gray-600 cursor-not-allowed opacity-60"
+            : "bg-red-600 hover:bg-red-700 shadow-[0_0_18px_rgba(255,0,0,0.6)]"
           }
         `}
       >

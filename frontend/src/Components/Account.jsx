@@ -63,8 +63,14 @@ const Account = () => {
   const tabs = [
     { key: "personal", label: "Personal Details" },
     { key: "plans", label: "My Plans" },
-    { key: "diet", label: "Diet Chart" },
-    { key: "workouts", label: "Workouts" },
+
+    ...(hasActivePlan
+      ? [
+        { key: "diet", label: "Diet Chart" },
+        { key: "workouts", label: "Workouts" },
+      ]
+      : []),
+
     { key: "orders", label: "My Orders" },
     { key: "address", label: "Address" },
   ];
@@ -180,7 +186,7 @@ const Account = () => {
       {/* HEADER */}
       <header className=" border-b mt-10 border-red-500/20 px-6 py-4 flex justify-between items-center">
 
-      
+
 
       </header>
 
@@ -201,11 +207,10 @@ const Account = () => {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`text-left px-4 py-3 rounded-lg transition
-                ${
-                  activeTab === tab.key
+                ${activeTab === tab.key
                     ? "bg-red-600"
                     : "hover:bg-red-700 text-gray-300"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
