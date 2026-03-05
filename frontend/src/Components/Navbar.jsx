@@ -1,12 +1,9 @@
-
-
-
-
 import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
+import logo from "../../public/images/logo-dark.png";
 
 import { Menu, X } from "lucide-react";
 import { FaUser } from "react-icons/fa";
@@ -177,18 +174,21 @@ const Navbar = () => {
           WebkitBackdropFilter: scrolled ? "blur(18px) saturate(180%)" : "none",
         }}
         className={`fixed top-0 w-full z-50 transition-all duration-500
-    ${
-      scrolled
-        ? "bg-gradient-to-b from-black/60 via-black/40 to-black/20 border-b border-white/10 shadow-xl"
-        : "bg-transparent"
-    }
+    ${scrolled
+            ? "bg-gradient-to-b from-black/60 via-black/40 to-black/20 border-b border-white/10 shadow-xl"
+            : "bg-transparent"
+          }
   `}
       >
         <PageContainer>
-          <div className="flex items-center justify-between  py-3">
+          <div className="flex items-center justify-between  py-2">
             {/* LOGO */}
-            <Link to="/" className="shrink-0">
-              <span className="text-xl font-bold text-red-500">Power Gym 💪</span>
+            <Link to="/" className="shrink-0 flex items-center">
+              <img
+                src={logo}
+                alt="Power Gym"
+                className="h-15 w-auto object-contain"
+              />
             </Link>
 
             {/* DESKTOP NAV */}
@@ -196,10 +196,9 @@ const Navbar = () => {
               <NavLink
                 to="/"
                 className={({ isActive }) =>
-                  `cursor-pointer transition ${
-                    isActive
-                      ? "text-red-500 font-semibold"
-                      : "hover:text-red-400"
+                  `cursor-pointer transition ${isActive
+                    ? "text-red-500 font-semibold"
+                    : "hover:text-red-400"
                   }`
                 }
               >
@@ -209,10 +208,9 @@ const Navbar = () => {
               <NavLink
                 to="/products"
                 className={({ isActive }) =>
-                  `cursor-pointer transition ${
-                    isActive
-                      ? "text-red-500 font-semibold"
-                      : "hover:text-red-400"
+                  `cursor-pointer transition ${isActive
+                    ? "text-red-500 font-semibold"
+                    : "hover:text-red-400"
                   }`
                 }
               >
@@ -222,10 +220,9 @@ const Navbar = () => {
               <NavLink
                 to="/pricing"
                 className={({ isActive }) =>
-                  `cursor-pointer transition ${
-                    isActive
-                      ? "text-red-500 font-semibold"
-                      : "hover:text-red-400"
+                  `cursor-pointer transition ${isActive
+                    ? "text-red-500 font-semibold"
+                    : "hover:text-red-400"
                   }`
                 }
               >
@@ -250,10 +247,9 @@ const Navbar = () => {
                     <NavLink
                       to="/trainers"
                       className={({ isActive }) =>
-                        `block px-5 py-3 cursor-pointer ${
-                          isActive
-                            ? "bg-gray-200 font-semibold"
-                            : "hover:bg-gray-100"
+                        `block px-5 py-3 cursor-pointer ${isActive
+                          ? "bg-gray-200 font-semibold"
+                          : "hover:bg-gray-100"
                         }`
                       }
                     >
@@ -262,10 +258,9 @@ const Navbar = () => {
                     <NavLink
                       to="/services"
                       className={({ isActive }) =>
-                        `block px-5 py-3 cursor-pointer ${
-                          isActive
-                            ? "bg-gray-200 font-semibold"
-                            : "hover:bg-gray-100"
+                        `block px-5 py-3 cursor-pointer ${isActive
+                          ? "bg-gray-200 font-semibold"
+                          : "hover:bg-gray-100"
                         }`
                       }
                     >
@@ -274,10 +269,9 @@ const Navbar = () => {
                     <NavLink
                       to="/facilities"
                       className={({ isActive }) =>
-                        `block px-5 py-3 cursor-pointer ${
-                          isActive
-                            ? "bg-gray-200 font-semibold"
-                            : "hover:bg-gray-100"
+                        `block px-5 py-3 cursor-pointer ${isActive
+                          ? "bg-gray-200 font-semibold"
+                          : "hover:bg-gray-100"
                         }`
                       }
                     >
@@ -287,10 +281,9 @@ const Navbar = () => {
                       <NavLink
                         to="/calendar"
                         className={({ isActive }) =>
-                          `cursor-pointer transition pl-5 ${
-                            isActive
-                              ? "text-red-500 font-semibold"
-                              : "hover:text-red-400"
+                          `cursor-pointer transition pl-5 ${isActive
+                            ? "text-red-500 font-semibold"
+                            : "hover:text-red-400"
                           }`
                         }
                       >
@@ -301,10 +294,9 @@ const Navbar = () => {
                     <NavLink
                       to="/contact"
                       className={({ isActive }) =>
-                        `block px-5 py-3 cursor-pointer ${
-                          isActive
-                            ? "bg-gray-200 font-semibold"
-                            : "hover:bg-gray-100"
+                        `block px-5 py-3 cursor-pointer ${isActive
+                          ? "bg-gray-200 font-semibold"
+                          : "hover:bg-gray-100"
                         }`
                       }
                     >
@@ -435,9 +427,13 @@ const Navbar = () => {
           >
             {/* HEADER */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-              <div className="flex items-center gap-3">
-                <span className="text-white font-semibold text-lg">Power Gym 💪</span>
-              </div>
+              <Link to="/" className="shrink-0 flex items-center">
+                <img
+                  src={logo}
+                  alt="Power Gym"
+                  className="h-14 w-auto object-contain"
+                />
+              </Link>
               <X
                 className="text-white cursor-pointer"
                 onClick={() => setMobileOpen(false)}

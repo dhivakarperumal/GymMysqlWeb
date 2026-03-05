@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
-import { FiArrowRight } from "react-icons/fi";
 import "swiper/css";
 import FacilityCard from "./FacilityCard";
 import PageContainer from "./PageContainer";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../firebase";
+import api from "../api";
 
 export default function FacilitiesSwiper() {
   const [facilities, setFacilities] = useState([]);
@@ -15,18 +12,8 @@ export default function FacilitiesSwiper() {
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        const q = query(
-          collection(db, "gym_facilities"),
-          orderBy("createdAt", "desc"),
-        );
-
-        const snapshot = await getDocs(q);
-
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
+        const res = await api.get("/facilities");
+        const data = res.data || [];
         setFacilities(data);
       } catch (error) {
         console.error("Failed to load facilities", error);
