@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../frontend/src/PrivateRouter/AuthContext";
-import api from "../src/api";
+import { useAuth } from "../../src/PrivateRouter/AuthContext";
+import api from "../../src/api";
 
 
 

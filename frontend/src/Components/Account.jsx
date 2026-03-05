@@ -2,14 +2,14 @@
 
 
 import React, { useEffect, useState } from "react";
-import DietChart from "../../WorkoutsDiet/DietChart";
-import Workouts from "../../WorkoutsDiet/Workouts";
+import DietChart from "../WorkoutsDiet/DietChart";
+import Workouts from "../WorkoutsDiet/Workouts";
 import UserOrders from "./UserOrders";
 import UserAddresses from "./UserAddresses";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import MemberSBuyPlans from "../../WorkoutsDiet/MemberBuyPlans";
+import MemberSBuyPlans from "../WorkoutsDiet/MemberBuyPlans";
 
 const Account = () => {
   const navigate = useNavigate();
