@@ -117,8 +117,8 @@ async function createOrder(req, res) {
 
     // Insert order
     const insertOrderQuery = `INSERT INTO orders 
-      (order_id,user_id,status,payment_status,total,order_type,shipping,pickup,order_track)
-      VALUES (?,?,?,?,?,?,?,?,?)`;
+      (order_id,user_id,status,payment_status,total,payment_method,payment_id,order_type,shipping,pickup,order_track,notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
     
     const orderValues = [
       data.order_id,
@@ -126,10 +126,13 @@ async function createOrder(req, res) {
       data.status || "orderPlaced",
       data.payment_status || "pending",
       data.total || 0,
+      data.payment_method || "CASH",
+      data.payment_id || null,
       data.order_type || null,
       data.shipping ? JSON.stringify(data.shipping) : null,
       data.pickup ? JSON.stringify(data.pickup) : null,
-      JSON.stringify(data.order_track || [])
+      JSON.stringify(data.order_track || []),
+      data.notes || null
     ];
     
     console.log("Inserting order with values:", orderValues);
@@ -187,8 +190,14 @@ async function createOrder(req, res) {
 
   } catch (err) {
     console.error("Order creation error:", err);
+    console.error("Error message:", err.message);
+    console.error("Error stack:", err.stack);
     await connection.rollback();
-    res.status(500).json({ message: err.message || "Server error" });
+    res.status(500).json({ 
+      success: false,
+      message: err.message || "Server error", 
+      error: process.env.NODE_ENV === 'development' ? err : undefined 
+    });
 
   } finally {
     connection.release();

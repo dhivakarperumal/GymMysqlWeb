@@ -210,6 +210,7 @@ const saveOrder = async (paymentId = null) => {
 
       // 🧾 Save order via API
       console.log("Sending order to backend...");
+      console.log("Order payload:", JSON.stringify(orderData, null, 2));
       const orderResponse = await api.post("/orders", orderData);
       console.log("Order created successfully:", orderResponse.data);
 
@@ -256,7 +257,7 @@ const saveOrder = async (paymentId = null) => {
       }
 
       const loaded = await loadRazorpay();
-      if (!loaded) throw new Error();
+      if (!loaded) throw new Error("Razorpay failed to load");
 
       new window.Razorpay({
         key: "rzp_test_SGj8n5SyKSE10b",
@@ -266,9 +267,19 @@ const saveOrder = async (paymentId = null) => {
         description: "Order Payment",
         handler: async (res) => {
           console.log("Payment successful:", res);
-          await saveOrder(res.razorpay_payment_id);
+          try {
+            await saveOrder(res.razorpay_payment_id);
+          } catch (err) {
+            console.error("Failed to save order after payment:", err);
+            toast.error("Payment succeeded but order save failed. Please contact support.");
+          }
         },
-
+        modal: {
+          ondismiss: () => {
+            console.log("Payment cancelled by user");
+            setPlacing(false);
+          }
+        },
         prefill: {
           name: shipping.name,
           email: shipping.email,
@@ -276,9 +287,9 @@ const saveOrder = async (paymentId = null) => {
         },
         theme: { color: "#ef4444" },
       }).open();
-    } catch {
-      toast.error("Payment failed");
-    } finally {
+    } catch (err) {
+      console.error("Payment error:", err);
+      toast.error("Payment failed: " + (err.message || "Unknown error"));
       setPlacing(false);
     }
   };
