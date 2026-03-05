@@ -70,11 +70,11 @@ export default function Products() {
 
       <PageContainer>
         {loading ? (
-          <div className="flex justify-center items-center py-20">
+          <div className="flex justify-center items-center py-20 ">
             <p className="text-gray-400 text-lg">Loading products...</p>
           </div>
         ) : (
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:py-25">
             {products.map((p, index) => {
               const id = p.id ?? p.product_id;
               if (!id) {
