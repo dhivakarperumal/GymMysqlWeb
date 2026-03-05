@@ -14,6 +14,9 @@ const Billing = () => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
   const [orderType, setOrderType] = useState("OFFLINE");
+  const [createdOrderId, setCreatedOrderId] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [recentOrders, setRecentOrders] = useState([]);
 
   /* ================= SHIPPING STATE ================= */
   const [shipping, setShipping] = useState({
@@ -42,6 +45,23 @@ const Billing = () => {
     };
     loadProducts();
   }, []);
+
+  /* ================= LOAD RECENT ORDERS ================= */
+  useEffect(() => {
+    const loadRecentOrders = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/orders`);
+        if (!res.ok) throw new Error("Failed to load orders");
+        const data = await res.json();
+        // Sort by created_at DESC and take last 5
+        const sorted = (data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setRecentOrders(sorted.slice(0, 5));
+      } catch (err) {
+        console.error("Failed to load recent orders:", err);
+      }
+    };
+    loadRecentOrders();
+  }, [createdOrderId]); // Reload when a new order is created
 
   /* ================= GENERATE ORDER NUMBER ================= */
 const generateOrderNumber = async () => {
@@ -216,10 +236,14 @@ const generateOrderNumber = async () => {
       throw new Error(errData.message || "Failed to create order");
     }
 
-    toast.success("Order placed successfully ✅");
+    // ✅ Order created successfully - show order ID to user
+    setCreatedOrderId(orderId);
+    setShowSuccessModal(true);
+    
+    toast.success(`Order ${orderId} placed successfully ✅`);
 
+    // Reset form
     setCart([]);
-
     setShipping({
       name: "",
       phone: "",
@@ -247,7 +271,39 @@ const generateOrderNumber = async () => {
         <h1 className="page-title text-2xl font-bold text-white">Billing</h1>
       </div>
 
-      {/* ADD PRODUCTS */}
+      {/* RECENT ORDERS / BILLS */}
+      {recentOrders.length > 0 && (
+        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-4">
+          <h2 className="text-lg font-semibold text-blue-300 mb-4 flex items-center gap-2">
+            📋 Recent Bills
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            {recentOrders.map((order) => (
+              <div key={order.id} className="bg-white/5 border border-blue-500/20 rounded-lg p-3 hover:bg-white/10 transition">
+                <div className="text-xs text-gray-400 mb-1">Order ID</div>
+                <div className="text-lg font-bold text-blue-400 font-mono mb-2">{order.order_id}</div>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Amount:</span>
+                    <span className="text-white">₹{order.total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Status:</span>
+                    <span className={order.payment_status === 'Paid' ? 'text-green-400' : 'text-yellow-400'}>
+                      {order.payment_status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Type:</span>
+                    <span className="text-white">{order.order_type}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div>
         <h3 className="text-lg font-semibold mb-3">Add Products</h3>
 
@@ -438,6 +494,68 @@ const generateOrderNumber = async () => {
           {loading ? "Processing..." : "Place Order"}
         </button>
       </div>
+
+      {/* SUCCESS MODAL - SHOW ORDER ID */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1f35] border-2 border-green-500/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            
+            {/* SUCCESS CHECKMARK */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
+                <svg className="w-8 h-8 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+
+            {/* TITLE */}
+            <h2 className="text-2xl font-bold text-center text-white mb-2">Order Placed Successfully! 🎉</h2>
+            <p className="text-center text-gray-300 text-sm mb-6">Your order has been created and added to the system.</p>
+
+            {/* ORDER ID - HIGHLIGHTED */}
+            <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/50 rounded-xl p-6 mb-6 text-center">
+              <p className="text-gray-300 text-sm mb-2">Order ID</p>
+              <p className="text-3xl font-bold text-green-400 font-mono">{createdOrderId}</p>
+            </div>
+
+            {/* ORDER DETAILS */}
+            <div className="bg-white/5 rounded-lg p-4 mb-6 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Order Type:</span>
+                <span className="text-white font-semibold">{orderType === "OFFLINE" ? "Offline (Cash)" : "Online (Payment)"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Items:</span>
+                <span className="text-white font-semibold">{cart.length}</span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-white/10 pt-3">
+                <span className="text-gray-400">Total Amount:</span>
+                <span className="text-green-400 font-bold">₹{subtotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* ACTION BUTTON */}
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold rounded-lg transition"
+            >
+              Continue
+            </button>
+
+            {/* COPY ORDER ID BUTTON */}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(createdOrderId);
+                toast.success("Order ID copied!");
+              }}
+              className="w-full mt-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
+            >
+              📋 Copy Order ID
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

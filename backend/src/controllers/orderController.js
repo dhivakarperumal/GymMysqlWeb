@@ -207,26 +207,38 @@ async function createOrder(req, res) {
 
 async function generateOrderId(req, res) {
   try {
+    console.log("Generating next order ID...");
 
     const [rows] = await pool.query(
-      "SELECT order_id FROM orders ORDER BY id DESC LIMIT 1"
+      "SELECT order_id FROM orders WHERE order_id LIKE 'ORD%' ORDER BY id DESC LIMIT 1"
     );
 
     let nextNumber = 1;
 
     if (rows.length > 0 && rows[0].order_id) {
       const lastOrderId = rows[0].order_id; // ORD001
-      const number = parseInt(lastOrderId.replace("ORD", ""));
-      nextNumber = number + 1;
+      console.log("Last order ID:", lastOrderId);
+      
+      // Extract number from ORD001 format
+      const numberMatch = lastOrderId.match(/\d+/);
+      if (numberMatch) {
+        const number = parseInt(numberMatch[0], 10);
+        nextNumber = number + 1;
+      }
     }
 
     const order_id = `ORD${String(nextNumber).padStart(3, "0")}`;
+    console.log("Generated order ID:", order_id);
 
     res.json({ order_id });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Generate order ID error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 }
 
