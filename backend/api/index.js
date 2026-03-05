@@ -24,6 +24,7 @@ const authRoutes = require("../src/routes/authRoutes");
 const orderRoutes = require("../src/routes/orderRoutes");
 const assignmentRoutes = require("../src/routes/assignmentRoutes");
 const addressRoutes = require("./routes/addressRoutes");
+const membershipRoutes = require("./routes/membershipRoutes");
 
 const app = express();
 
@@ -74,6 +75,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/workouts", require("../src/routes/workoutRoutes"));
 app.use("/api/addresses", addressRoutes);
+
+app.use("/api/memberships", membershipRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

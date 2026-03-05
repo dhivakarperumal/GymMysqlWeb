@@ -30,6 +30,8 @@ const dietRoutes = require("./routes/dietRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 
+const membershipRoutes = require("./routes/membershipRoutes");
+
 // other routes can be added later
 
 const app = express();
@@ -107,6 +109,8 @@ app.use("/api/diet-plans", dietRoutes);
 app.use("/api/cart", require("./routes/cartRoutes"));
 app.use("/api/addresses", addressRoutes);
 app.use("/api/reports", reportRoutes);
+
+app.use("/api/memberships", membershipRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -9,6 +9,7 @@ import UserAddresses from "./UserAddresses";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
+import MemberSBuyPlans from "../../WorkoutsDiet/MemberBuyPlans";
 
 const Account = () => {
   const navigate = useNavigate();
@@ -109,57 +110,7 @@ const Account = () => {
         return <UserOrders />;
 
       case "plans":
-        return plans.length === 0 ? (
-          <div className="text-center p-12">
-            <h2 className="text-xl text-red-500 font-bold">
-              No Plans Yet
-            </h2>
-
-            <p className="text-gray-400 mt-2">
-              Start your fitness journey today.
-            </p>
-
-            <button
-              onClick={() => navigate("/pricing")}
-              className="mt-4 bg-red-600 px-6 py-3 rounded-lg"
-            >
-              View Plans
-            </button>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-4">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
-                className="bg-gray-900 border border-red-500/20 p-5 rounded-lg"
-              >
-                <h3 className="text-lg font-bold text-red-500">
-                  {plan.planName}
-                </h3>
-
-                <p className="text-sm text-gray-400">
-                  Duration: {plan.duration}
-                </p>
-
-                <p className="mt-2 font-semibold">
-                  ₹{plan.pricePaid}
-                </p>
-
-                <p className="text-sm">
-                  Start: {plan.startDate}
-                </p>
-
-                <p className="text-sm">
-                  End: {plan.endDate}
-                </p>
-
-                <span className="inline-block mt-2 bg-red-600 px-3 py-1 rounded text-sm">
-                  {plan.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        );
+        return <MemberSBuyPlans/>
 
       case "diet":
         return hasActivePlan ? (
