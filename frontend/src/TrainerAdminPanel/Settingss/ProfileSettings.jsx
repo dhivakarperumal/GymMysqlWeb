@@ -10,7 +10,7 @@ import {
   FaArrowLeft,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../PrivateRouter/AuthContext";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import api from "../../api"; // axios wrapper for backend
 
 /* ================= GLASS CLASSES ================= */
@@ -81,7 +81,7 @@ const ProfileSettings = () => {
       }
     } catch (err) {
       console.error("profile save error", err);
-      toast.error("Update failed");
+      toast.error(err.response?.data?.message || "Update failed");
     } finally {
       setSaving(false);
     }
@@ -95,6 +95,21 @@ const ProfileSettings = () => {
         <div className="h-12 bg-white/20 rounded mb-4" />
         <div className="h-12 bg-white/20 rounded mb-4" />
         <div className="h-12 bg-white/20 rounded mb-4" />
+      </div>
+    );
+  }
+
+  // Check if user is authenticated
+  if (!user) {
+    return (
+      <div className="text-center text-white p-6">
+        <p className="text-lg">Please log in to view profile settings</p>
+        <button
+          onClick={() => navigate("/login")}
+          className="mt-4 px-6 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 transition"
+        >
+          Go to Login
+        </button>
       </div>
     );
   }
