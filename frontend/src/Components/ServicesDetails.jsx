@@ -43,7 +43,13 @@ export default function ServicesDetails() {
     loadData();
   }, [slug]);
 
-  if (!service) return null;
+  if (!service) {
+    return (
+      <section className="bg-[#05060c] min-h-[100vh] flex items-center justify-center">
+        <p className="text-white/60 text-lg">Loading service...</p>
+      </section>
+    );
+  }
 
   return (
     <>
