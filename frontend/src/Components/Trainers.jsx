@@ -46,19 +46,19 @@ export default function Trainers() {
       <section className="bg-[#05060c] py-15">
         <PageContainer>
           {loading ? (
-            <p className="text-center text-white/60">Loading trainers...</p>
+            <div className="flex justify-center items-center py-20 min-h-[400px]">
+              <p className="text-white/60 text-lg">Loading trainers...</p>
+            </div>
           ) : (
-            <div
-              data-aos="fade-up"
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {trainers.map((trainer, index) => (
-                <TrainersCard
+                <div
+                  key={trainer.id}
                   data-aos="fade-up"
                   data-aos-delay={index * 120}
-                  key={trainer.id}
-                  trainer={trainer}
-                />
+                >
+                  <TrainersCard trainer={trainer} />
+                </div>
               ))}
             </div>
           )}

@@ -60,29 +60,32 @@ export default function Products() {
     }
   };
 
-  if (loading) {
-    return <div className="p-10 text-center text-white">Loading...</div>;
-  }
-
   return (
-    <div className="bg-black text-white">
+    <div className="bg-black text-white min-h-screen flex flex-col">
       <PageHeader
         title="Products"
         subtitle="Browse our catalog"
         bgImage="https://images.unsplash.com/photo-1571902943202-507ec2618e8f"
       />
-      <PageContainer>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((p, index) => {
-            const id = p.id ?? p.product_id;
-            if (!id) {
-              console.warn("product without id", p);
-              return null;
-            }
 
-            return <ProductCard key={id} product={p} index={index} />;
-          })}
-        </div>
+      <PageContainer>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <p className="text-gray-400 text-lg">Loading products...</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.map((p, index) => {
+              const id = p.id ?? p.product_id;
+              if (!id) {
+                console.warn("product without id", p);
+                return null;
+              }
+
+              return <ProductCard key={id} product={p} index={index} />;
+            })}
+          </div>
+        )}
       </PageContainer>
     </div>
   );
