@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // backend API
 const MEMBERS_API = "http://localhost:5000/api/members";
@@ -10,6 +11,8 @@ const Payments = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [viewType, setViewType] = useState("table");
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -167,6 +170,51 @@ const Payments = () => {
     return new Date(date).toISOString().split("T")[0];
   };
 
+  const toggleRow = (id) => {
+    setSelectedRows((prev) =>
+      prev.includes(id)
+        ? prev.filter((rowId) => rowId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedRows([]);
+    } else {
+      const allIds = paginatedPlans.map(({ member }) => member.uid);
+      setSelectedRows(allIds);
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const exportToExcel = () => {
+    const selectedData = paginatedPlans
+      .filter(({ member }) => selectedRows.includes(member.uid))
+      .map(({ member, plan }, index) => ({
+        "S.No": index + 1,
+        Name: member.username,
+        Email: member.email,
+        Plan: plan.planName,
+        Amount: plan.pricePaid,
+        "Start Date": formatDate(plan.startDate),
+        "End Date": formatDate(plan.endDate),
+        Status: plan.status,
+      }));
+
+    if (selectedData.length === 0) {
+      alert("Please select rows first");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(selectedData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
+
+    XLSX.writeFile(workbook, "payments.xlsx");
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 text-white">
       {/* HEADER */}
@@ -304,12 +352,28 @@ const Payments = () => {
         </div>
       )}
 
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={exportToExcel}
+          className="px-4 py-2 bg-green-500 rounded-lg text-sm"
+        >
+          Export Excel
+        </button>
+      </div>
+
       {/* ================= TABLE VIEW ================= */}
       {viewType === "table" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-sm text-left">
             <thead className="bg-white/10 text-gray-300">
               <tr>
+                <th className="px-4 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-4">S.No</th>
                 <th className="px-4 py-4">Name</th>
                 <th className="px-4 py-4">Email</th>
@@ -327,6 +391,13 @@ const Payments = () => {
                   key={`${member.uid}_${plan.id}`}
                   className="border-b border-white/10 hover:bg-white/5"
                 >
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.includes(member.uid)}
+                      onChange={() => toggleRow(member.uid)}
+                    />
+                  </td>
                   <td className="px-4 py-4">{getSerialNumber(index)}</td>
                   <td className="px-4 py-4">{member.username}</td>
                   <td className="px-4 py-4">{member.email}</td>
