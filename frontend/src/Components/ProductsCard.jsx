@@ -2,28 +2,43 @@ import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const getProductPricing = (product) => {
-  if (!product.stock) return null;
-
-  const stockValues = Object.values(product.stock);
-  if (!stockValues.length) return null;
-
-  const stock = stockValues[0];
+  if (!product) return null;
 
   // 🥤 Food products (price inside stock)
-  if (stock.mrp && stock.offerPrice) {
+  if (product.stock) {
+    const stockValues = Object.values(product.stock);
+    if (stockValues.length) {
+      const stock = stockValues[0];
+
+      if (stock.mrp || stock.offerPrice) {
+        return {
+          mrp: stock.mrp ?? stock.offerPrice,
+          offerPrice: stock.offerPrice ?? stock.mrp,
+          offer: stock.offer || 0,
+        };
+      }
+    }
+  }
+
+  // 👕 Dress / Accessories (product level)
+  if (product.mrp || product.offerPrice) {
     return {
-      mrp: stock.mrp,
-      offerPrice: stock.offerPrice,
-      offer: stock.offer || 0,
+      mrp: product.mrp ?? product.offerPrice,
+      offerPrice: product.offerPrice ?? product.mrp,
+      offer: product.offer || 0,
     };
   }
 
-  // 👕 Dress / Accessories (price at product level)
-  if (product.mrp && product.offerPrice) {
+  // 🆕 API structure you used in addToCart
+  const price =
+    Number(product.offer_price ?? product.mrp ?? product.offerPrice ?? product.price ?? 0) ||
+    0;
+
+  if (price) {
     return {
-      mrp: product.mrp,
-      offerPrice: product.offerPrice,
-      offer: product.offer || 0,
+      mrp: price,
+      offerPrice: price,
+      offer: 0,
     };
   }
 
