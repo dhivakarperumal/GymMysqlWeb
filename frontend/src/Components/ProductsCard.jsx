@@ -1,6 +1,18 @@
 import { FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
+// Helper to normalize image URLs
+const makeImageUrl = (img) => {
+  if (!img) return "";
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+  if (maybeBase64 && img.length > 50) {
+    return `data:image/webp;base64,${img}`;
+  }
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
+
 const getProductPricing = (product) => {
   if (!product) return null;
 
@@ -78,10 +90,10 @@ export default function ProductCard({ product, index = 0 }) {
 
         <img
           onClick={goToDetails}
-          src={
-            product.images?.[0] ||
-            "https://via.placeholder.com/300x300?text=No+Image"
-          }
+          src={makeImageUrl(product.images?.[0] || "") || "https://via.placeholder.com/300x300?text=No+Image"}
+          onError={(e) => {
+            e.target.src = "https://via.placeholder.com/300x300?text=No+Image";
+          }}
           alt={product.name}
           className="
     cursor-pointer

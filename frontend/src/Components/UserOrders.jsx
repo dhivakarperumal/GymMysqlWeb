@@ -4,6 +4,21 @@ import { FiPrinter } from "react-icons/fi";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import api from "../api";
 
+// helper to produce usable image URL or data URI
+const makeImageUrl = (img) => {
+  if (!img) return "";
+  // already full URL or data URI
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  // looks like raw base64 without prefix (common when stored in order_items)
+  const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+  if (maybeBase64 && img.length > 50) {
+    return `data:image/webp;base64,${img}`;
+  }
+  // otherwise treat as relative path on API server
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
+
 /* ---------------- ORDER STEPS ---------------- */
 const ORDER_STEPS = [
   "OrderPlaced",
@@ -272,17 +287,22 @@ const UserOrders = () => {
                         <td className="p-3 flex items-center gap-3">
 
                           {/* PRODUCT IMAGE */}
-                          <img
-                            src={
-                              item.image
-                                ? item.image.startsWith("data:")
-                                  ? item.image
-                                  : `data:image/jpeg;base64,${item.image}`
-                                : "https://via.placeholder.com/60"
-                            }
-                            alt={item.product_name}
-                            className="w-14 h-14 object-cover rounded-lg border border-red-500/30"
-                          />
+                          {(() => {
+                            const raw = makeImageUrl(item.image);
+                            // if it's a data uri but extremely short/likely truncated, force invalid to trigger onError
+                            const src = raw && raw.startsWith("data:") && raw.length < 150 ? "invalid" : raw;
+                            return (
+                              <img
+                                src={src || "https://via.placeholder.com/60"}
+                                alt={item.product_name}
+                                className="w-14 h-14 object-cover rounded-lg border border-red-500/30"
+                                onError={(e) => {
+                                  console.error("order item image failed to load", e.target.src, "length", e.target.src.length);
+                                  e.target.src = "https://via.placeholder.com/60";
+                                }}
+                              />
+                            );
+                          })()}
 
                           <div>
                             <p className="font-semibold">{item.product_name}</p>

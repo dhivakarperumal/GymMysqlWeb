@@ -57,7 +57,7 @@ const Header = ({ onMenuClick }) => {
   const searchInputRef = useRef(null);
 
   // ✅ CORRECT AUTH VALUES
-  const { profileName, role, email } = useAuth();
+  const { profileName, role, email, logout } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,10 +78,17 @@ const Header = ({ onMenuClick }) => {
 
   const handleLogout = async () => {
     try {
+      // Clear AuthContext first
+      logout();
+      // Then sign out from Firebase
       await signOut(auth);
+      // Navigate to login
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
+      // Still navigate even if Firebase signout fails
+      logout();
+      navigate("/login", { replace: true });
     }
   };
 

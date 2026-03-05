@@ -6,6 +6,18 @@ import PageContainer from "./PageContainer";
 import PageHeader from "./PageHeader";
 import { useAuth } from "../PrivateRouter/AuthContext";
 
+// Helper to normalize image URLs
+const makeImageUrl = (img) => {
+  if (!img) return "";
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+  if (maybeBase64 && img.length > 50) {
+    return `data:image/webp;base64,${img}`;
+  }
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
+
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -179,9 +191,12 @@ export default function ProductDetails() {
                   {/* IMAGE */}
                   <div className="relative flex items-center justify-center">
                     <img
-                      src={selectedImage || product.images?.[0]}
-                      alt={product.name}
+                      src={makeImageUrl(selectedImage || product?.images?.[0] || "")}
+                      alt={product?.name}
                       className="h-[450px] w-auto object-contain"
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/450?text=No+Image";
+                      }}
                       onMouseMove={handleMouseMove}
                       onMouseEnter={handleMouseEnter}
                       onMouseLeave={handleMouseLeave}
@@ -199,13 +214,16 @@ export default function ProductDetails() {
                 </div>
 
                 {/* THUMBNAILS */}
-                {product.images?.length > 1 && (
+                {product?.images?.length > 1 && (
                   <div className="flex gap-3 mt-4">
                     {product.images.map((img, idx) => (
                       <img
                         key={idx}
-                        src={img}
+                        src={makeImageUrl(img)}
                         onClick={() => setSelectedImage(img)}
+                        onError={(e) => {
+                          e.target.src = "https://via.placeholder.com/56?text=No";
+                        }}
                         className={`w-14 h-14 object-contain rounded-xl cursor-pointer border
                         ${selectedImage === img
                             ? "border-red-500 ring-2 ring-red-500/60"

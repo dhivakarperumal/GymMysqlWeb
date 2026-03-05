@@ -353,11 +353,33 @@ const OrderDetails = () => {
                 <tr key={idx} className="border-t border-white/10">
                   <td className="px-4 py-3">
                     {i.image ? (
-                      <img 
-                        src={i.image.startsWith('http') || i.image.startsWith('data:') ? i.image : `${API_BASE}/${i.image.replace(/^\//,"")}`}
-                        alt={i.name}
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
+                      (() => {
+                        const raw = i.image;
+                        // compute src similar to user orders helper
+                        let src = "";
+                        if (raw) {
+                          if (raw.startsWith('http') || raw.startsWith('data:')) {
+                            src = raw;
+                          } else {
+                            src = `${API_BASE}/${raw.replace(/^\//,"")}`;
+                          }
+                        }
+                        // drop tiny data URIs that are probably truncated
+                        if (src.startsWith('data:') && src.length < 150) {
+                          src = "invalid"; // force onError to trigger
+                        }
+                        return (
+                          <img
+                            src={src || "https://via.placeholder.com/60"}
+                            alt={i.name}
+                            className="w-12 h-12 object-cover rounded-lg"
+                            onError={(e) => {
+                              console.error("admin order item image failed", e.target.src, "len", e.target.src.length);
+                              e.target.src = "https://via.placeholder.com/60";
+                            }}
+                          />
+                        );
+                      })()
                     ) : (
                       <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center text-gray-400">
                         No Image

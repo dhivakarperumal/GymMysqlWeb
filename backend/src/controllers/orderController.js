@@ -159,7 +159,13 @@ async function createOrder(req, res) {
         }
 
         console.log("Inserting item:", { product_id, product_name, price, qty, size, color });
-
+        if (image && image.length) {
+          console.log("item image length", image.length);
+          // warn if we're about to insert a very long string (likely base64)
+          if (image.length > 1000) {
+            console.warn("large image detected; consider storing URL instead");
+          }
+        }
 
         await connection.query(
           `INSERT INTO order_items

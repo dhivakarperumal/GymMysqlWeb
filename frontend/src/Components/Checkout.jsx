@@ -10,7 +10,14 @@ import { saveUserAddress } from "./saveUserAddress";
 // image helper
 const makeImageUrl = (img) => {
   if (!img) return "";
+  // full URL or already a data URI
   if (img.startsWith("http") || img.startsWith("data:")) return img;
+  // raw base64 string without data: prefix
+  const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+  if (maybeBase64 && img.length > 50) {
+    return `data:image/webp;base64,${img}`;
+  }
+  // treat as relative path on API server
   const base = import.meta.env.VITE_API_URL || "";
   return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
 };
@@ -529,13 +536,16 @@ h-[100vh] flex flex-col
                 >
                   {/* IMAGE */}
                   <img
-                  src={
-                    i.images
-                      ? Array.isArray(i.images)
-                        ? i.images[0]
-                        : i.images
-                      : i.image
-                  }
+                    src={makeImageUrl(
+                      i.images
+                        ? Array.isArray(i.images)
+                          ? i.images[0]
+                          : i.images
+                        : i.image
+                    )}
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/64?text=No+Image";
+                    }}
                     className="w-16 h-16 object-contain rounded-xl bg-black/60"
                   />
 
