@@ -43,7 +43,7 @@ export default function PricingSwiper() {
 
     const checkActivePlan = async () => {
       try {
-        const response = await api.get(`/members/${user.id}/plans`);
+        const response = await api.get(`/memberships/user/${user.id}`);
         const activePlan = response.data?.some((plan) => plan.status === "active");
         setHasActivePlan(!!activePlan);
       } catch (err) {
