@@ -337,6 +337,7 @@ async function deleteMember(req, res) {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Member not found' });
     }
+
     res.json({ success: true, message: 'Member deleted successfully' });
   } catch (err) {
     console.error('deleteMember error', err);
@@ -344,4 +345,50 @@ async function deleteMember(req, res) {
   }
 }
 
-module.exports = { getAllMembers, getMemberById, createMember, updateMember, deleteMember };
+async function getMemberPlans(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Get member info and their plan
+    const sql = `
+      SELECT m.membership_plan_id, p.*, m.is_active as member_active
+      FROM members m
+      LEFT JOIN plans p ON m.membership_plan_id = p.id
+      WHERE m.user_id = ?
+    `;
+    
+    const [rows] = await db.query(sql, [userId]);
+    
+    if (rows.length === 0) {
+      return res.json([]); // No member found, return empty array
+    }
+
+    const member = rows[0];
+    
+    if (!member.membership_plan_id) {
+      return res.json([]); // No plan assigned
+    }
+
+    // Return plan with status
+    const planWithStatus = {
+      ...member,
+      status: member.member_active ? 'active' : 'inactive'
+    };
+
+    // Remove redundant fields
+    delete planWithStatus.membership_plan_id;
+    delete planWithStatus.member_active;
+
+    res.json([planWithStatus]);
+  } catch (err) {
+    console.error('getMemberPlans error', err);
+    res.status(500).json({ error: 'Query failed' });
+  }
+}
+
+module.exports = { getAllMembers, getMemberById, createMember, updateMember, deleteMember, getMemberPlans };

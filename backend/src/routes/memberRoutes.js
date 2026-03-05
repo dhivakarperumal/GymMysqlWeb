@@ -5,6 +5,7 @@ const {
   createMember,
   updateMember,
   deleteMember,
+  getMemberPlans,
 } = require("../controllers/memberController.js");
 
 const router = express.Router();
@@ -32,6 +33,12 @@ router.post("/", createMember);
  * @desc    Update member
  */
 router.put("/:id", updateMember);
+
+/**
+ * @route   GET /api/members/:id/plans
+ * @desc    Get plans for a member
+ */
+router.get("/:id/plans", getMemberPlans);
 
 /**
  * @route   DELETE /api/members/:id

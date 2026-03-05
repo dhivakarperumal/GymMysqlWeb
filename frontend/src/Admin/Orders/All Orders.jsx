@@ -171,8 +171,19 @@ const AllOrders = () => {
       }));
       setOrders(formatted);
     } catch (err) {
-      console.error(err);
-      alert("Failed to update status");
+      console.error("updateStatus error:", err);
+      
+      // Better error messaging
+      let errorMessage = "Failed to update status";
+      if (err.code === "ERR_NETWORK" || !err.response) {
+        errorMessage = "Cannot connect to server. Please check:\n1. Backend server is running on localhost:5000\n2. Network connectivity";
+      } else if (err.response?.status === 401) {
+        errorMessage = "Unauthorized. Please login again.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 

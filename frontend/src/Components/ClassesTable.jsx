@@ -1,9 +1,8 @@
 import PageContainer from "./PageContainer";
 import PageHeader from "./PageHeader";
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { auth } from "../firebase";
+import { useAuth } from "../PrivateRouter/AuthContext";
+import api from "../api";
 
 const days = [
   "Monday",
@@ -36,6 +35,7 @@ const WORKOUT_COLORS = {
 };
 
 export default function ClassesTable() {
+  const { user } = useAuth();
   const [classes, setClasses] = useState([]);
   const [activeFilter, setActiveFilter] = useState("ALL");
 
@@ -51,22 +51,24 @@ const getColorFromText = (text) => {
 };
 
   // 🔥 FETCH DATA (logged-in user only)
-useEffect(() => {
-  const fetchClasses = async () => {
-    const user = auth.currentUser;
+  useEffect(() => {
+    const fetchClasses = async () => {
+      if (!user) return;
 
-    console.log("👤 Logged user:", user?.uid);
+      console.log("👤 Logged user:", user.id);
 
-    if (!user) return;
+      // TODO: Update to use API instead of Firebase
+      // For now, keeping Firebase as it might still be in use
+      const userObj = { uid: user.id }; // Mock for compatibility
 
-    const q = query(
-      collection(db, "workoutPrograms"),
-      where("memberId", "==", user.uid)
-    );
+      const q = query(
+        collection(db, "workoutPrograms"),
+        where("memberId", "==", userObj.uid)
+      );
 
-    const snapshot = await getDocs(q);
+      const snapshot = await getDocs(q);
 
-    console.log("📦 Programs found:", snapshot.size);
+      console.log("📦 Programs found:", snapshot.size);
 
     const data = [];
 

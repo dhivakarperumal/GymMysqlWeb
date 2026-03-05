@@ -119,23 +119,23 @@ export default function ProductDetails() {
   }, [id]);
 
   // ---------- FETCH CART QUANTITY ----------
-  useEffect(() => {
+  const fetchCartQuantity = async () => {
     if (!product || !userId) return;
+    
+    try {
+      const res = await api.get("/cart", { params: { userId } });
+      const pid = product.id ?? product.product_id;
+      const key = getVariantKey();
+      const existing = (res.data || []).find(
+        (item) => item.productId === pid && item.variant === key
+      );
+      setCartQuantity(existing ? existing.quantity : 0);
+    } catch (err) {
+      console.error("fetchCartQuantity", err);
+    }
+  };
 
-    const fetchCartQuantity = async () => {
-      try {
-        const res = await api.get("/cart", { params: { userId } });
-        const pid = product.id ?? product.product_id;
-        const key = getVariantKey();
-        const existing = (res.data || []).find(
-          (item) => item.productId === pid && item.variant === key
-        );
-        setCartQuantity(existing ? existing.quantity : 0);
-      } catch (err) {
-        console.error("fetchCartQuantity", err);
-      }
-    };
-
+  useEffect(() => {
     fetchCartQuantity();
   }, [product, selectedSize, selectedGender, selectedWeight, userId]);
 
