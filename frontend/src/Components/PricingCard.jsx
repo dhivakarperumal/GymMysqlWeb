@@ -53,7 +53,7 @@ export default function PricingCard({
         </div>
         {/* Original Price */}
         {service.price && service.final_price && service.price !== service.final_price && (
-          <span className="text-sm text-white/10 line-through mb-1">
+          <span className="text-sm text-white/90 line-through mb-1">
             ₹{service.price}
           </span>
         )}
