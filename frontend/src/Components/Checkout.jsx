@@ -135,9 +135,7 @@ export default function Checkout() {
   const clearCart = async () => {
     if (!userId) return;
     try {
-      await Promise.all(
-        items.map((item) => api.delete(`/cart/${item.id}`))
-      );
+      await Promise.all(items.map((item) => api.delete(`/cart/${item.id}`)));
       setItems([]);
     } catch (err) {
       console.error("failed to clear cart", err);
@@ -155,8 +153,8 @@ export default function Checkout() {
       document.body.appendChild(s);
     });
 
-const saveOrder = async (paymentId = null) => {
-  if (placing) return; // prevent double order
+  const saveOrder = async (paymentId = null) => {
+    if (placing) return; // prevent double order
     if (!userId) {
       toast.error("User not logged in");
       return;
@@ -174,7 +172,8 @@ const saveOrder = async (paymentId = null) => {
         qty: Number(i.quantity) || 0,
         size: i.size || null,
         color: i.color || null,
-        image: i.image || (Array.isArray(i.images) ? i.images[0] : i.images) || "",
+        image:
+          i.image || (Array.isArray(i.images) ? i.images[0] : i.images) || "",
         variant: i.weight || i.size || "",
       }));
       console.log("Formatted Items:", formattedItems);
@@ -201,7 +200,7 @@ const saveOrder = async (paymentId = null) => {
         payment_id: paymentId,
       };
       console.log("Order Data:", orderData);
-      
+
       // 🏠 Save address / pickup contact
       try {
         await saveUserAddress(userId, {
@@ -278,14 +277,16 @@ const saveOrder = async (paymentId = null) => {
             await saveOrder(res.razorpay_payment_id);
           } catch (err) {
             console.error("Failed to save order after payment:", err);
-            toast.error("Payment succeeded but order save failed. Please contact support.");
+            toast.error(
+              "Payment succeeded but order save failed. Please contact support.",
+            );
           }
         },
         modal: {
           ondismiss: () => {
             console.log("Payment cancelled by user");
             setPlacing(false);
-          }
+          },
         },
         prefill: {
           name: shipping.name,
@@ -327,7 +328,9 @@ const saveOrder = async (paymentId = null) => {
               <div className="mb-6 p-4 rounded-xl bg-red-600/30 border border-red-500 flex gap-3">
                 <span className="text-xl">⚠️</span>
                 <div>
-                  <p className="font-semibold text-red-400">Fill all fields to continue</p>
+                  <p className="font-semibold text-red-400">
+                    Fill all fields to continue
+                  </p>
                   <p className="text-xs text-red-300 mt-1">
                     {orderType === "DELIVERY"
                       ? "Name, Phone, Address & State are required"
@@ -439,7 +442,9 @@ const saveOrder = async (paymentId = null) => {
                     <div key={k} className="mb-4">
                       <label className="block text-red-500 text-xs mb-1 tracking-wide">
                         {k.toUpperCase()}
-                        {isRequired && <span className="text-red-600 font-bold"> *</span>}
+                        {isRequired && (
+                          <span className="text-red-600 font-bold"> *</span>
+                        )}
                       </label>
                       <input
                         placeholder={k.toUpperCase()}
@@ -476,13 +481,7 @@ const saveOrder = async (paymentId = null) => {
                     onChange={(e) =>
                       setShipping({ ...shipping, state: e.target.value })
                     }
-                    className={`w-full px-4 py-3 rounded-xl transition
-                      ${
-                        !shipping.state || shipping.state === ""
-                          ? "bg-red-600/20 border-2 border-red-500"
-                          : "bg-black/70 border border-red-500/40"
-                      }
-                    `}
+                    className="w-full px-4 py-3 rounded-xl bg-black/70 border border-red-500/40 focus:outline-none focus:border-red-500 text-white"
                   >
                     <option value="">-- Select State --</option>
                     {indianStates.map((s) => (
@@ -541,10 +540,11 @@ h-[100vh] flex flex-col
                         ? Array.isArray(i.images)
                           ? i.images[0]
                           : i.images
-                        : i.image
+                        : i.image,
                     )}
                     onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/64?text=No+Image";
+                      e.target.src =
+                        "https://via.placeholder.com/64?text=No+Image";
                     }}
                     className="w-16 h-16 object-contain rounded-xl bg-black/60"
                   />
