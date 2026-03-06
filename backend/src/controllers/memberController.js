@@ -7,6 +7,7 @@ async function getAllMembers(req, res) {
     // compute how many workouts / diet plans each member has.
     const sql = `
       SELECT gm.*,
+             u.id AS u_id,
              u.email AS user_email,
              (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
              (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
@@ -27,12 +28,13 @@ async function getMemberById(req, res) {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
-    
+
     let sql;
     let params;
     if (isNum) {
       sql = `
         SELECT gm.*,
+               u.id AS u_id,
                u.email AS user_email,
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
@@ -44,6 +46,7 @@ async function getMemberById(req, res) {
     } else {
       sql = `
         SELECT gm.*,
+               u.id AS u_id,
                u.email AS user_email,
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
@@ -53,7 +56,7 @@ async function getMemberById(req, res) {
       `;
       params = [id];
     }
-    
+
     const [rows] = await db.query(sql, params);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Member not found' });
@@ -142,6 +145,7 @@ async function createMember(req, res) {
     const [fetched] = await connection.query(
       `
       SELECT gm.*,
+             u.id AS u_id,
              u.email AS user_email,
              0 AS workout_count,
              0 AS diet_count
@@ -177,10 +181,10 @@ async function updateMember(req, res) {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
-    
+
     const { name, phone, email, gender, height, weight, bmi,
-            plan, duration, joinDate, expiryDate, status,
-            photo, notes, address, username } = req.body;
+      plan, duration, joinDate, expiryDate, status,
+      photo, notes, address, username } = req.body;
     // ensure numeric values are correctly typed
     const numHeight = height != null && !isNaN(height) ? Number(height) : null;
     const numWeight = weight != null && !isNaN(weight) ? Number(weight) : null;
@@ -198,7 +202,7 @@ async function updateMember(req, res) {
         dupQuery = `SELECT * FROM gym_members WHERE phone = ? AND member_id != ?`;
         dupParams = [phone, id];
       }
-      
+
       const [existing] = await connection.query(dupQuery, dupParams);
       if (existing.length > 0) {
         await connection.rollback();
@@ -288,6 +292,7 @@ async function updateMember(req, res) {
     if (isNum) {
       sql = `
         SELECT gm.*,
+               u.id AS u_id,
                u.email AS user_email,
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
@@ -299,6 +304,7 @@ async function updateMember(req, res) {
     } else {
       sql = `
         SELECT gm.*,
+               u.id AS u_id,
                u.email AS user_email,
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
@@ -327,7 +333,7 @@ async function deleteMember(req, res) {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
     const isNum = !isNaN(idNum);
-    
+
     let deleteQuery;
     let deleteParams;
     if (isNum) {
@@ -339,7 +345,7 @@ async function deleteMember(req, res) {
     }
 
     const [result] = await db.query(deleteQuery, deleteParams);
-    
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Member not found' });
     }
@@ -367,15 +373,15 @@ async function getMemberPlans(req, res) {
       LEFT JOIN plans p ON m.membership_plan_id = p.id
       WHERE m.user_id = ?
     `;
-    
+
     const [rows] = await db.query(sql, [userId]);
-    
+
     if (rows.length === 0) {
       return res.json([]); // No member found, return empty array
     }
 
     const member = rows[0];
-    
+
     if (!member.membership_plan_id) {
       return res.json([]); // No plan assigned
     }

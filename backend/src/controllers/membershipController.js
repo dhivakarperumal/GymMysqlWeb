@@ -11,29 +11,34 @@ async function createMembership(req, res) {
       planId,
       planName,
       pricePaid,
+      price,
       duration,
       startDate,
       endDate,
       paymentId,
+      paymentMode,
       status,
     } = req.body;
 
+    const actualPricePaid = pricePaid !== undefined ? pricePaid : price;
+
     const query = `
       INSERT INTO memberships
-      (userId, planId, planName, pricePaid, duration, startDate, endDate, paymentId, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (userId, planId, planName, pricePaid, duration, startDate, endDate, paymentId, paymentMode, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       userId,
       planId,
       planName,
-      pricePaid,
+      actualPricePaid,
       duration,
       startDate,
       endDate,
-      paymentId,
-      status,
+      paymentId || null,
+      paymentMode || null,
+      status || 'active',
     ];
 
     const [result] = await db.query(query, values);
