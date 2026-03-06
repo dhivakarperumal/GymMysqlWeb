@@ -216,17 +216,7 @@ const AddMember = () => {
 
             <input type="date" name="joinDate" value={form.joinDate} onChange={handleChange} className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
 
-            <select name="plan" value={form.plan} onChange={handleChange} className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500">
-              <option value="">Select Plan</option>
-              <option className="text-black">Basic</option>
-              <option className="text-black">Silver</option>
-              <option className="text-black">Gold</option>
-              <option className="text-black">Platinum</option>
-            </select>
-
-            <input type="number" name="duration" value={form.duration} onChange={handleChange} placeholder="Duration (months)" className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-
-            <input type="date" name="expiryDate" value={form.expiryDate} onChange={handleChange} placeholder="Expiry Date" className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500" readOnly />
+          
 
             <select name="status" value={form.status} onChange={handleChange} className="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500">
               <option value="active" className="text-black">Active</option>
