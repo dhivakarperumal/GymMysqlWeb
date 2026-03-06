@@ -82,7 +82,7 @@ const DietChart = () => {
           <button
             key={day}
             onClick={() => setActiveDay(day)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer
               ${
                 activeDay === day
                   ? "bg-red-500 text-white"
