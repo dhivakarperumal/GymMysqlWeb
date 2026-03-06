@@ -3,8 +3,8 @@ import api from "../api";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../PrivateRouter/AuthContext";
-import PageHeader from "../Components/PageHeader";
 import PageContainer from "../Components/PageContainer";
+import { FaDumbbell } from "react-icons/fa";
 
 export default function Workouts() {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function Workouts() {
         ) : workouts.length === 0 ? (
           <div className="flex flex-col items-center mt-20 text-center">
             <div className="w-28 h-28 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-700 mb-6">
-              <span className="text-red-500 text-4xl">🏋️</span>
+              <FaDumbbell className="text-red-500 text-4xl" />
             </div>
 
             <h2 className="text-xl font-bold">No Workouts Assigned</h2>
@@ -69,9 +69,9 @@ export default function Workouts() {
           </div>
         ) : (
           <div className="overflow-x-auto md:py-20">
-            <div className="bg-zinc-900 rounded-xl shadow-4xl border border-zinc-800">
+            <div className="bg-gray-900 rounded-xl shadow-2xl border border-red-500/20">
               <table className="w-full border border-zinc-800 rounded-lg overflow-hidden">
-                <thead className="bg-zinc-600 text-gray-300 text-sm uppercase">
+                <thead className="bg-gray-900 text-gray-300 text-sm uppercase border-b border-red-500/20">
                   <tr>
                     <th className="px-6 py-4 text-left">Category</th>
                     <th className="px-6 py-4 text-left">Goal</th>
@@ -84,7 +84,7 @@ export default function Workouts() {
                 <tbody>
                   {workouts.map((item, index) => (
                     <React.Fragment key={index}>
-                      <tr className="border-t border-zinc-700 hover:bg-zinc-900 transition">
+                      <tr className="border-t border-zinc-700 hover:bg-gray-800 transition">
                         <td className="px-6 py-4 font-semibold">
                           {item.category}
                         </td>
@@ -114,22 +114,22 @@ export default function Workouts() {
                       </tr>
 
                       {openWorkout === item.id && (
-                        <tr className="bg-zinc-700 border-t border-zinc-800">
+                        <tr className="bg-gray-800 border-t border-red-500/60">
                           <td colSpan="5" className="px-8 py-6">
                             {/* WORKOUT DETAILS */}
 
                             <div className="grid md:grid-cols-3 gap-6 mb-6">
-                              <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center">
+                              <div className="bg-gray-900 p-4 rounded-xl border border-red-500/60 text-center">
                                 <p className="text-gray-400 text-sm">Trainer</p>
                                 <p className="font-bold">{item.trainer_name}</p>
                               </div>
 
-                              <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center">
+                              <div className="bg-gray-900 p-4 rounded-xl border border-red-500/60 text-center">
                                 <p className="text-gray-400 text-sm">Level</p>
                                 <p className="font-bold">{item.level}</p>
                               </div>
 
-                              <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center">
+                              <div className="bg-gray-900 p-4 rounded-xl border border-red-500/60 text-center">
                                 <p className="text-gray-400 text-sm">
                                   Duration
                                 </p>
@@ -149,7 +149,7 @@ export default function Workouts() {
                               ([day, exercises], i) => (
                                 <div
                                   key={i}
-                                  className="bg-zinc-900 rounded-xl p-4 mb-4 border border-zinc-800"
+                                  className="bg-gray-900 rounded-xl p-4 mb-4 border border-red-500/60"
                                 >
                                   <div className="flex justify-between mb-3">
                                     <span className="text-red-500 font-bold">
@@ -163,7 +163,7 @@ export default function Workouts() {
                                   {exercises.map((ex, j) => (
                                     <div
                                       key={j}
-                                      className="flex justify-between text-sm border-b border-zinc-800 py-2"
+                                      className="flex justify-between text-sm border-b border-red-500/30 py-2"
                                     >
                                       <span>{ex.name}</span>
                                       <span className="text-gray-400">
