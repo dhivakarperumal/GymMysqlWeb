@@ -12,6 +12,7 @@ const Pricing = () => {
   const [services, setServices] = useState([]);
   const [availableDurations, setAvailableDurations] = useState([]);
   const [selectedDuration, setSelectedDuration] = useState("ALL");
+  
 
   const [hasActivePlan, setHasActivePlan] = useState(false);
   const [checkingPlan, setCheckingPlan] = useState(true);
@@ -67,7 +68,7 @@ const Pricing = () => {
 
     const checkActivePlan = async () => {
       try {
-        const response = await api.get(`/members/${user.id}/plans`);
+        const response = await api.get(`/memberships/user/${user.id}`);
         const activePlan = response.data?.some(
           (plan) => plan.status === "active"
         );

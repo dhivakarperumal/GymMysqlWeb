@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState } from "react";
 import DietChart from "../WorkoutsDiet/DietChart";
 import Workouts from "../WorkoutsDiet/Workouts";
@@ -47,10 +44,11 @@ const Account = () => {
 
     const fetchPlans = async () => {
       try {
-        const res = await api.get(`/members/${userId}/plans`);
+        const res = await api.get(`/memberships/user/${userId}`);
         const list = Array.isArray(res.data) ? res.data : [];
         setPlans(list);
-        setHasActivePlan(list.some((p) => p.status === "active"));
+        const active = list.find((p) => p.status === "active");
+        setHasActivePlan(!!active);
       } catch (err) {
         console.error("failed to fetch user plans", err);
       }
@@ -110,7 +108,7 @@ const Account = () => {
         return <UserOrders />;
 
       case "plans":
-        return <MemberSBuyPlans/>
+        return <MemberSBuyPlans />
 
       case "diet":
         return hasActivePlan ? (
