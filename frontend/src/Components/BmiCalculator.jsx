@@ -64,7 +64,7 @@ const BmiCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-[#120000] to-black text-white py-10">
+    <div className="bg-gradient-to-br from-black via-[#120000] to-black text-white py-15">
       <PageContainer>
       <div className=" grid md:grid-cols-2 gap-14">
 
