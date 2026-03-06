@@ -106,7 +106,7 @@ const BuyPlanadmin = () => {
 🏋️ Gym Membership Activated
 
 👤 Name: ${selectedUser.name}
-📞 Phone: ${selectedUser.phone}
+📞 Phone: ${form.phone || selectedUser.phone}
 
 📦 Plan: ${selectedPlan.name}
 ⏳ Duration: ${selectedPlan.duration}
@@ -115,9 +115,9 @@ const BuyPlanadmin = () => {
 💰 Paid: ₹${selectedPlan.finalPrice ?? selectedPlan.final_price}
 💳 Mode: ${form.paymentMode.toUpperCase()}
 
-📏 Height: ${form.height}
-⚖️ Weight: ${form.weight}
-🧮 BMI: ${form.bmi}
+📏 Height: ${form.height || selectedUser.height}
+⚖️ Weight: ${form.weight || selectedUser.weight}
+🧮 BMI: ${form.bmi || selectedUser.bmi}
 
 ✅ Status: Active
 
@@ -145,12 +145,12 @@ Thank you for joining 💪
       // build updated object merging existing fields with new plan info
       const updated = {
         name: selectedUser.name,
-        phone: selectedUser.phone,
-        email: selectedUser.email,
+        phone: form.phone || selectedUser.phone,
+        email: form.email || selectedUser.email,
         gender: selectedUser.gender,
-        height: form.height,
-        weight: form.weight,
-        bmi: form.bmi,
+        height: form.height || selectedUser.height,
+        weight: form.weight || selectedUser.weight,
+        bmi: form.bmi || selectedUser.bmi,
         plan: selectedPlan.name,
         duration: parseInt(selectedPlan.duration) || null,
         joinDate: form.startDate,
@@ -158,7 +158,7 @@ Thank you for joining 💪
         status: "active",
         photo: selectedUser.photo || null,
         notes: selectedUser.notes || null,
-        address: selectedUser.address || "",
+        address: form.address || selectedUser.address,
       };
 
       const res = await fetch(`${MEMBERS_API}/${selectedUser.id}`, {
@@ -240,7 +240,7 @@ Thank you for joining 💪
             type="tel"
             value={form.phone || ""}
             placeholder="Mobile Number"
-            readOnly
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="w-full p-3 bg-gray-900 rounded-lg mb-4 placeholder-gray-400"
           />
 
@@ -249,7 +249,7 @@ Thank you for joining 💪
             type="email"
             value={form.email || ""}
             placeholder="Email Address"
-            readOnly
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="w-full p-3 bg-gray-900 rounded-lg mb-4 placeholder-gray-400"
           />
 
@@ -257,7 +257,7 @@ Thank you for joining 💪
           <textarea
             value={form.address || ""}
             placeholder="Member Address"
-            readOnly
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
             rows={3}
             className="w-full p-3 bg-gray-900 rounded-lg mb-4 placeholder-gray-400"
           />
@@ -269,21 +269,21 @@ Thank you for joining 💪
               type="text"
               value={form.height}
               placeholder="Height"
-              readOnly
+              onChange={(e) => setForm({ ...form, height: e.target.value })}
               className="p-3 bg-gray-900 rounded-lg"
             />
             <input
               type="text"
               value={form.weight}
               placeholder="Weight"
-              readOnly
+              onChange={(e) => setForm({ ...form, weight: e.target.value })}
               className="p-3 bg-gray-900 rounded-lg"
             />
             <input
               type="text"
               value={form.bmi}
               placeholder="BMI"
-              readOnly
+              onChange={(e) => setForm({ ...form, bmi: e.target.value })}
               className="p-3 bg-gray-900 rounded-lg"
             />
           </div>
