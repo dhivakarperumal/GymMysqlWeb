@@ -177,9 +177,9 @@ const Account = () => {
       </div>
 
       {/* FOOTER */}
-      <footer className="bg-gray-900 border-t border-red-500/20 text-center py-4 text-sm text-gray-400">
+      {/* <footer className="bg-gray-900 border-t border-red-500/20 text-center py-4 text-sm text-gray-400">
         © 2026 Fitness Club. All rights reserved.
-      </footer>
+      </footer> */}
 
     </div>
   );
