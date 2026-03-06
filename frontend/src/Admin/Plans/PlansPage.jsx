@@ -33,7 +33,7 @@ const PlansAll = () => {
       setLoading(true);
       const res = await fetch(API);
       const data = await res.json();
-      
+
       if (!res.ok) {
         toast.error("Failed to load plans");
         return;
@@ -98,22 +98,22 @@ const PlansAll = () => {
 
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-  
-  <h2 className="text-xl sm:text-2xl font-bold text-center sm:text-left">
-    Gym Membership Plans
-  </h2>
 
-  <button
-    onClick={() => navigate("/admin/addplan")}
-    className="w-full sm:w-auto px-6 sm:px-8 py-3 rounded-xl text-white font-semibold
+        <h2 className="text-xl sm:text-2xl font-bold text-center sm:text-left">
+          Gym Membership Plans
+        </h2>
+
+        <button
+          onClick={() => navigate("/admin/addplan")}
+          className="w-full sm:w-auto px-6 sm:px-8 py-3 rounded-xl text-white font-semibold
     bg-gradient-to-r from-orange-500 to-orange-600 
     hover:scale-105 transition shadow-lg flex items-center justify-center"
-  >
-    <FaPlus className="mr-2" />
-    Add Plan
-  </button>
+        >
+          <FaPlus className="mr-2" />
+          Add Plan
+        </button>
 
-</div>
+      </div>
 
 
       {/* STATS */}
@@ -133,32 +133,32 @@ const PlansAll = () => {
 
       {/* SEARCH + FILTER */}
       <div
-  className={`${glassCard} p-4 flex flex-col md:flex-row items-center justify-between gap-4`}
->
-  {/* LEFT — SEARCH */}
-  <div className="relative w-full md:w-1/3">
-    <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-    <input
-      placeholder="Search plan..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className={`${glassInput} pl-11`}
-    />
-  </div>
+        className={`${glassCard} p-4 flex flex-col md:flex-row items-center justify-between gap-4`}
+      >
+        {/* LEFT — SEARCH */}
+        <div className="relative w-full md:w-1/3">
+          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            placeholder="Search plan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`${glassInput} pl-11`}
+          />
+        </div>
 
-  {/* RIGHT — FILTER */}
-  <div className="w-full md:w-1/4">
-    <select
-      value={filter}
-      onChange={(e) => setFilter(e.target.value)}
-      className={glassInput}
-    >
-      <option value="all">All Plans</option>
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
-    </select>
-  </div>
-</div>
+        {/* RIGHT — FILTER */}
+        <div className="w-full md:w-1/4">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className={glassInput}
+          >
+            <option value="all">All Plans</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
 
 
       {/* PLANS LIST */}
@@ -176,10 +176,9 @@ const PlansAll = () => {
 
                 <span
                   className={`px-3 py-1 text-xs rounded-full font-semibold
-                    ${
-                      p.active
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-gray-500/20 text-gray-400"
+                    ${p.active
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-gray-500/20 text-gray-400"
                     }`}
                 >
                   {p.active ? "Active" : "Inactive"}
@@ -191,7 +190,7 @@ const PlansAll = () => {
               </p>
 
               <p className="text-gray-300 text-sm">
-                Price: ₹{p.finalPrice}{" "}
+                Price: ₹{p.finalPrice ?? p.final_price ?? p.price}{" "}
                 {p.discount > 0 && (
                   <span className="text-xs text-emerald-400">
                     ({p.discount}% OFF)
@@ -221,11 +220,10 @@ const PlansAll = () => {
 
                 <button
                   onClick={() => toggleStatus(p.id, p.active)}
-                  className={`p-2 rounded-lg ${
-                    p.active
+                  className={`p-2 rounded-lg ${p.active
                       ? "bg-red-500/80 hover:bg-red-500"
                       : "bg-emerald-500/80 hover:bg-emerald-500"
-                  }`}
+                    }`}
                 >
                   {p.active ? <FaToggleOff /> : <FaToggleOn />}
                 </button>
