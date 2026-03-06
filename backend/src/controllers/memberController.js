@@ -12,7 +12,7 @@ async function getAllMembers(req, res) {
              (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
              (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
       FROM gym_members gm
-      LEFT JOIN users u ON u.email = gm.email
+      LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
       ORDER BY gm.created_at DESC
     `;
     const [rows] = await db.query(sql);
@@ -39,7 +39,7 @@ async function getMemberById(req, res) {
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
         FROM gym_members gm
-        LEFT JOIN users u ON u.email = gm.email
+        LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
         WHERE gm.id = ?
       `;
       params = [idNum];
@@ -51,7 +51,7 @@ async function getMemberById(req, res) {
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
         FROM gym_members gm
-        LEFT JOIN users u ON u.email = gm.email
+        LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
         WHERE gm.member_id = ?
       `;
       params = [id];
@@ -150,7 +150,7 @@ async function createMember(req, res) {
              0 AS workout_count,
              0 AS diet_count
       FROM gym_members gm
-      LEFT JOIN users u ON u.email = gm.email
+      LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
       WHERE gm.id = ?
       `,
       [result.insertId]
@@ -297,7 +297,7 @@ async function updateMember(req, res) {
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
         FROM gym_members gm
-        LEFT JOIN users u ON u.email = gm.email
+        LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
         WHERE gm.id = ?
       `;
       params = [idNum];
@@ -309,7 +309,7 @@ async function updateMember(req, res) {
                (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
                (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
         FROM gym_members gm
-        LEFT JOIN users u ON u.email = gm.email
+        LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
         WHERE gm.member_id = ?
       `;
       params = [id];
