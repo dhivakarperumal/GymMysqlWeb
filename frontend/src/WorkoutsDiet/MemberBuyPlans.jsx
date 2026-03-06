@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../src/PrivateRouter/AuthContext";
 import api from "../../src/api";
-
-
+import { Trash2 } from "lucide-react";
 
 const MemberSBuyPlans = () => {
   const navigate = useNavigate();
@@ -32,13 +31,29 @@ const MemberSBuyPlans = () => {
     fetchMemberships();
   }, [user]);
 
+  const handleDelete = async (plan) => {
+    const isExpired = new Date(plan.endDate) < new Date();
+
+    if (!isExpired) {
+      alert("You can't delete this plan before it expires.");
+      return;
+    }
+
+    const confirmDelete = window.confirm("Delete this plan?");
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/memberships/${plan.id}`);
+
+      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
   return (
     <>
-
-
       <div className="bg-black text-white min-h-screen py-16">
-
-
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-red-500">
             My Plans
@@ -84,8 +99,17 @@ const MemberSBuyPlans = () => {
               return (
                 <div
                   key={plan.id}
-                  className="bg-gray-900 border border-red-500/20 p-6 rounded-xl"
+                  className="relative bg-gray-900 border border-red-500/20 p-6 rounded-xl"
                 >
+                  <button
+                    onClick={() => handleDelete(plan)}
+                    className={`absolute top-4 right-4 transition ${isExpired
+                        ? "text-red-500 hover:text-red-600"
+                        : "text-gray-500 cursor-not-allowed"
+                      }`}
+                  >
+                    <Trash2 size={20} />
+                  </button>
                   <h3 className="text-xl font-bold text-red-500">
                     {plan.planName}
                   </h3>
@@ -108,8 +132,8 @@ const MemberSBuyPlans = () => {
 
                   <span
                     className={`inline-block mt-3 px-3 py-1 rounded text-sm font-semibold ${isExpired
-                        ? "bg-gray-600"
-                        : "bg-green-600"
+                      ? "bg-gray-600"
+                      : "bg-green-600"
                       }`}
                   >
                     {isExpired ? "EXPIRED" : plan.status.toUpperCase()}
