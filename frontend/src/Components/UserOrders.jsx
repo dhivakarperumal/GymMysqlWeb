@@ -28,8 +28,7 @@ const ORDER_STEPS = [
   "Delivered",
 ];
 
-const formatStatus = (s) =>
-  s.replace(/([A-Z])/g, " $1").trim();
+const formatStatus = (s) => s.replace(/([A-Z])/g, " $1").trim();
 
 /* ---------------- NORMALIZE STATUS ---------------- */
 const normalizeStatus = (status) => {
@@ -72,14 +71,16 @@ const UserOrders = () => {
 
     const fetchOrders = async () => {
       try {
-        const res = await api.get('/orders');
+        const res = await api.get("/orders");
         const allOrders = res.data || [];
         // Filter orders for current user
-        const userOrders = allOrders.filter(order => order.user_id === userId);
+        const userOrders = allOrders.filter(
+          (order) => order.user_id === userId,
+        );
         setOrders(userOrders);
         setLoading(false);
       } catch (err) {
-        console.error('Failed to fetch orders', err);
+        console.error("Failed to fetch orders", err);
         setLoading(false);
       }
     };
@@ -100,7 +101,7 @@ const UserOrders = () => {
         const res = await api.get(`/orders/${selectedOrder.order_id}`);
         setSelectedOrderDetails(res.data);
       } catch (err) {
-        console.error('Failed to fetch order details', err);
+        console.error("Failed to fetch order details", err);
       } finally {
         setLoadingDetails(false);
       }
@@ -112,37 +113,250 @@ const UserOrders = () => {
   /* ---------------- PRINT ---------------- */
   const handlePrint = async (order) => {
     try {
-      // Fetch order details including items
       const res = await api.get(`/orders/${order.order_id}`);
       const orderDetails = res.data;
 
-      const win = window.open("", "", "width=800,height=600");
+      const shipping =
+        typeof orderDetails.shipping === "string"
+          ? JSON.parse(orderDetails.shipping)
+          : orderDetails.shipping;
+
+      const items = orderDetails.items || [];
+
+      const subtotal = items.reduce(
+        (sum, i) => sum + Number(i.price) * Number(i.qty),
+        0,
+      );
+
+      const win = window.open("", "", "width=900,height=700");
+
       win.document.write(`
-        <h2>Order Invoice</h2>
-        <p><b>Order ID:</b> ${orderDetails.order_id}</p>
-        <p><b>Status:</b> ${formatStatus(normalizeStatus(orderDetails.status))}</p>
-        <table border="1" width="100%" cellspacing="0" cellpadding="8">
-          <tr>
-            <th>Product</th><th>Qty</th><th>Price</th>
-          </tr>
-          ${(orderDetails.items || [])
-          .map(
-            (i) => `
-                <tr>
-                 <td>${i.product_name}</td>
+<html>
+<head>
+<title>Invoice</title>
+
+<style>
+
+body{
+font-family:Arial, Helvetica, sans-serif;
+padding:40px;
+background:#fafafa;
+color:#333;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+border-bottom:2px solid #eee;
+padding-bottom:15px;
+}
+
+.logo{
+font-size:22px;
+font-weight:bold;
+color:#dc2626;
+}
+
+.invoice-title{
+font-size:28px;
+font-weight:bold;
+color:#111;
+}
+
+.section{
+margin-top:25px;
+}
+
+.card{
+background:#fff;
+border:1px solid #eee;
+border-radius:10px;
+padding:20px;
+margin-top:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.label{
+font-weight:bold;
+color:#555;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+background:#fff;
+border-radius:10px;
+overflow:hidden;
+}
+
+th{
+background:#111;
+color:#fff;
+padding:12px;
+font-size:14px;
+}
+
+td{
+padding:12px;
+border-bottom:1px solid #eee;
+font-size:14px;
+}
+
+.product{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.product img{
+width:50px;
+height:50px;
+object-fit:cover;
+border-radius:6px;
+border:1px solid #eee;
+}
+
+.total-box{
+margin-top:25px;
+background:#fff;
+padding:20px;
+border-radius:10px;
+border:1px solid #eee;
+width:280px;
+margin-left:auto;
+}
+
+.total-row{
+display:flex;
+justify-content:space-between;
+margin-bottom:8px;
+font-size:14px;
+}
+
+.grand{
+font-size:18px;
+font-weight:bold;
+color:#dc2626;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div class="logo">
+<img src="/public/images/logo-dark.png" style="height:50px; object-fit:contain;" />
+</div>
+<div class="invoice-title">INVOICE</div>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<p class="label">Order Details</p>
+<p><b>Order ID:</b> ${orderDetails.order_id}</p>
+<p><b>Status:</b> ${formatStatus(normalizeStatus(orderDetails.status))}</p>
+<p><b>Date:</b> ${new Date(orderDetails.created_at).toLocaleString()}</p>
+<p><b>Payment Method:</b> ${orderDetails.payment_method}</p>
+<p><b>Payment Status:</b> ${orderDetails.payment_status}</p>
+</div>
+
+${
+  shipping
+    ? `
+<div class="card">
+<p class="label">Shipping Address</p>
+<p>${shipping.name}</p>
+<p>${shipping.phone}</p>
+<p>${shipping.email || ""}</p>
+<p>${shipping.address}</p>
+<p>${shipping.city || ""}, ${shipping.state || ""}</p>
+<p>${shipping.zip || ""}</p>
+<p>${shipping.country || ""}</p>
+</div>
+`
+    : ""
+}
+
+</div>
+
+
+<div class="section">
+<h3>Order Items</h3>
+
+<table>
+
+<tr>
+<th>Product</th>
+<th>Variant</th>
+<th>Qty</th>
+<th>Price</th>
+<th>Total</th>
+</tr>
+
+${items
+  .map(
+    (i) => `
+<tr>
+
+<td>
+<div class="product">
+<img src="${makeImageUrl(i.image) || "https://via.placeholder.com/50"}"/>
+<span>${i.product_name}</span>
+</div>
+</td>
+
+<td>${i.size || i.color || i.variant || "-"}</td>
+
 <td>${i.qty}</td>
-                  <td>₹${i.price}</td>
-                </tr>`
-          )
-          .join("")}
-        </table>
-        <h3>Total: ₹${orderDetails.total}</h3>
-      `);
+
+<td>₹${Number(i.price).toLocaleString()}</td>
+
+<td>₹${(i.price * i.qty).toLocaleString()}</td>
+
+</tr>
+`,
+  )
+  .join("")}
+
+</table>
+</div>
+
+
+<div class="total-box">
+
+<div class="total-row">
+<span>Subtotal</span>
+<span>₹${subtotal.toLocaleString()}</span>
+</div>
+
+<div class="total-row grand">
+<span>Total</span>
+<span>₹${Number(orderDetails.total).toLocaleString()}</span>
+</div>
+
+</div>
+
+
+</body>
+</html>
+`);
+
+      win.document.close();
+      win.focus();
       win.print();
-      win.close();
     } catch (err) {
-      console.error('Failed to fetch order details for print', err);
-      alert('Failed to load order details for printing');
+      console.error("Failed to fetch order details for print", err);
+      alert("Failed to load order details for printing");
     }
   };
 
@@ -243,7 +457,9 @@ const UserOrders = () => {
             ) : selectedOrderDetails ? (
               <>
                 <div className="flex justify-between mb-4">
-                  <p><b>Order ID:</b> {selectedOrderDetails.order_id}</p>
+                  <p>
+                    <b>Order ID:</b> {selectedOrderDetails.order_id}
+                  </p>
                   <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
                     {formatStatus(normalizeStatus(selectedOrderDetails.status))}
                   </span>
@@ -285,20 +501,28 @@ const UserOrders = () => {
                     {(selectedOrderDetails.items || []).map((item, i) => (
                       <tr key={i} className="border-b border-red-500/20">
                         <td className="p-3 flex items-center gap-3">
-
                           {/* PRODUCT IMAGE */}
                           {(() => {
                             const raw = makeImageUrl(item.image);
                             // if it's a data uri but extremely short/likely truncated, force invalid to trigger onError
-                            const src = raw && raw.startsWith("data:") && raw.length < 150 ? "invalid" : raw;
+                            const src =
+                              raw && raw.startsWith("data:") && raw.length < 150
+                                ? "invalid"
+                                : raw;
                             return (
                               <img
                                 src={src || "https://via.placeholder.com/60"}
                                 alt={item.product_name}
                                 className="w-14 h-14 object-cover rounded-lg border border-red-500/30"
                                 onError={(e) => {
-                                  console.error("order item image failed to load", e.target.src, "length", e.target.src.length);
-                                  e.target.src = "https://via.placeholder.com/60";
+                                  console.error(
+                                    "order item image failed to load",
+                                    e.target.src,
+                                    "length",
+                                    e.target.src.length,
+                                  );
+                                  e.target.src =
+                                    "https://via.placeholder.com/60";
                                 }}
                               />
                             );
@@ -308,14 +532,17 @@ const UserOrders = () => {
                             <p className="font-semibold">{item.product_name}</p>
 
                             {item.size && (
-                              <p className="text-xs text-gray-400">Size: {item.size}</p>
+                              <p className="text-xs text-gray-400">
+                                Size: {item.size}
+                              </p>
                             )}
 
                             {item.color && (
-                              <p className="text-xs text-gray-400">Color: {item.color}</p>
+                              <p className="text-xs text-gray-400">
+                                Color: {item.color}
+                              </p>
                             )}
                           </div>
-
                         </td>
 
                         <td className="p-3 text-center">{item.qty}</td>
@@ -330,7 +557,9 @@ const UserOrders = () => {
 
                 <div className="flex justify-between font-bold mb-6 border-t border-red-500/20 pt-4">
                   <span>Total</span>
-                  <span className="text-red-500">₹{selectedOrderDetails.total}</span>
+                  <span className="text-red-500">
+                    ₹{selectedOrderDetails.total}
+                  </span>
                 </div>
 
                 {/* TRACK ORDER */}
@@ -343,14 +572,13 @@ const UserOrders = () => {
                   const normalizedStatus = normalizeStatus(rawStatus);
 
                   const stepIndex = ORDER_STEPS.findIndex(
-                    (step) => step === normalizedStatus
+                    (step) => step === normalizedStatus,
                   );
 
                   console.log("🧾 RAW STATUS FROM FIRESTORE 👉", rawStatus);
                   console.log("🧹 NORMALIZED STATUS 👉", normalizedStatus);
                   console.log("📍 ORDER STEPS 👉", ORDER_STEPS);
                   console.log("🔢 STEP INDEX 👉", stepIndex);
-
 
                   const safeStep = stepIndex === -1 ? 0 : stepIndex;
 
@@ -365,12 +593,13 @@ const UserOrders = () => {
                             <div className="flex flex-col items-center min-w-[70px]">
                               <div
                                 className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold
-                  ${isCompleted
-                                    ? "bg-red-600 text-white"
-                                    : isActive
-                                      ? "bg-red-500 text-white animate-pulse"
-                                      : "bg-gray-700 text-gray-400"
-                                  }
+                  ${
+                    isCompleted
+                      ? "bg-red-600 text-white"
+                      : isActive
+                        ? "bg-red-500 text-white animate-pulse"
+                        : "bg-gray-700 text-gray-400"
+                  }
                 `}
                               >
                                 {index + 1}
@@ -383,8 +612,9 @@ const UserOrders = () => {
 
                             {index !== ORDER_STEPS.length - 1 && (
                               <div
-                                className={`flex-1 h-1 mx-2 rounded ${isCompleted ? "bg-red-600" : "bg-gray-700"
-                                  }`}
+                                className={`flex-1 h-1 mx-2 rounded ${
+                                  isCompleted ? "bg-red-600" : "bg-gray-700"
+                                }`}
                               />
                             )}
                           </React.Fragment>
@@ -395,7 +625,9 @@ const UserOrders = () => {
                 })()}
               </>
             ) : (
-              <div className="text-center py-8">Failed to load order details</div>
+              <div className="text-center py-8">
+                Failed to load order details
+              </div>
             )}
           </div>
         </div>
