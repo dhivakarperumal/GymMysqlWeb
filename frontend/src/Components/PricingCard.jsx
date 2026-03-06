@@ -23,30 +23,41 @@ export default function PricingCard({
 
       {/* DESCRIPTION */}
       <p
-  className="text-white/60 text-sm mb-6 leading-relaxed overflow-hidden"
-  style={{
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: 3,
-    minHeight: "72px",
-  }}
->
-  {service.description}
-</p>
+        className="text-white/60 text-sm mb-2 leading-relaxed overflow-hidden"
+        style={{
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 3,
+          minHeight: "72px",
+        }}
+      >
+        {service.description}
+      </p>
 
       {/* PRICE */}
-      <div className="mb-6">
-        <span
-          className="
-            text-4xl font-extrabold text-red-500
-            drop-shadow-[0_0_14px_rgba(255,0,0,0.9)]
-          "
-        >
-          ₹{service.finalPrice ?? service.price ?? 0}
-        </span>
-        <span className="text-sm text-white/60 ml-2">
-          / {service.duration || service.duration_months || "month"}
-        </span>
+      <div className="mb-6 flex flex-col">
+        {/* Final Price + Duration */}
+        <div className="flex items-end gap-2">
+          <span
+            className="
+        text-4xl font-extrabold text-red-500
+        drop-shadow-[0_0_14px_rgba(255,0,0,0.9)]
+      "
+          >
+            ₹{service.final_price ?? service.price ?? 0}
+          </span>
+
+          <span className="text-sm text-white/60 mb-1">
+            / {service.duration || service.duration_months || "month"}
+          </span>
+        </div>
+        {/* Original Price */}
+        {service.price && service.final_price && service.price !== service.final_price && (
+          <span className="text-sm text-white/90 line-through mb-1">
+            ₹{service.price}
+          </span>
+        )}
+
       </div>
 
       {/* TRAINER INCLUDED */}
@@ -64,8 +75,8 @@ export default function PricingCard({
 
       {/* FACILITIES */}
       <ul className="text-sm text-white/75 flex-grow">
-        {(service.facilities && service.facilities.length > 0 
-          ? service.facilities 
+        {(service.facilities && service.facilities.length > 0
+          ? service.facilities
           : service.features || []
         ).slice(0, 4).map((item, i) => (
           <li
