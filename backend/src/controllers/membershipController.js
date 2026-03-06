@@ -1,5 +1,21 @@
 const db = require('../config/db');
 
+/* ================= GET ALL MEMBERSHIPS ================= */
+async function getAllMemberships(req, res) {
+  try {
+    const [rows] = await db.query(`
+      SELECT m.*, u.username, u.email, u.mobile, u.role
+      FROM memberships m
+      LEFT JOIN users u ON m.userId = u.id
+      ORDER BY m.createdAt DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching all memberships:", error);
+    res.status(500).json({ error: "Failed to fetch memberships" });
+  }
+}
+
 
 
 /* ================= CREATE MEMBERSHIP ================= */
@@ -110,4 +126,5 @@ module.exports = {
   createMembership,
   getUserMemberships,
   getMembershipById,
+  getAllMemberships,
 };
