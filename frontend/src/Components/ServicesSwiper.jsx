@@ -27,7 +27,7 @@ export default function ServiceSwiper() {
   }, []);
 
   return (
-    <section className="bg-[#05060c] py-20">
+    <section className="bg-[#05060c] py-15">
       <PageContainer>
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-red-500 tracking-widest">
