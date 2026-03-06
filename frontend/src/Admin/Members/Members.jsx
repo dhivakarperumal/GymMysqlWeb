@@ -69,39 +69,39 @@ const Members = () => {
 
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 px-4 sm:px-0">
-        {/* 🔹 TITLE */}
+  {/* 🔹 TITLE */}
+ 
 
+  {/* 🔹 SEARCH + BUTTON */}
+  <div className="w-full flex flex-col sm:flex-row gap-3">
+    
+    {/* 🔍 SEARCH INPUT */}
+    <div className="relative flex-1">
+      <input
+        type="text"
+        placeholder="Search name or phone"
+        value={search}
+        onChange={(e) => handleSearch(e.target.value)}
+        className="w-1/2 pl-10 pr-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-orange-500"
+      />
 
-        {/* 🔹 SEARCH + BUTTON */}
-        <div className="w-full flex flex-col sm:flex-row gap-3">
+      {/* Search Icon */}
+    
+    </div>
 
-          {/* 🔍 SEARCH INPUT */}
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search name or phone"
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-1/2 pl-10 pr-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-
-            {/* Search Icon */}
-
-          </div>
-
-          {/* ➕ ADD MEMBER BUTTON */}
-          <button
-            onClick={() => navigate("/admin/addmembers")}
-            className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-white 
+    {/* ➕ ADD MEMBER BUTTON */}
+    <button
+      onClick={() => navigate("/admin/addmembers")}
+      className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-white 
       bg-gradient-to-r from-orange-500 to-orange-600 
       hover:scale-105 active:scale-95 transition-all shadow-lg whitespace-nowrap
       w-full sm:w-auto"
-          >
-            <Plus size={16} />
-            Add Member
-          </button>
-        </div>
-      </div>
+    >
+      <Plus size={16} />
+      Add Member
+    </button>
+  </div>
+</div>
 
 
       {/* DESKTOP TABLE */}
@@ -142,10 +142,11 @@ const Members = () => {
                   </td>
                   {/* <th className="p-4 text-left font-medium">Type</th> */}
                   <td className="p-4">
-                    <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${m.source === "users"
-                        ? "bg-blue-500/20 text-blue-400"
+                    <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                      m.source === "users" 
+                        ? "bg-blue-500/20 text-blue-400" 
                         : "bg-purple-500/20 text-purple-400"
-                      }`}>
+                    }`}>
                       {m.source === "users" ? "User" : "Gym Member"}
                     </span>
                   </td>
@@ -158,7 +159,7 @@ const Members = () => {
                     </button>
 
                     <button
-                      onClick={() => handleDelete(m.id)}
+                      onClick={() => handleDelete(m)}
                       className="p-2 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition"
                     >
                       <Trash2 size={16} />
@@ -209,10 +210,11 @@ const Members = () => {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition ${currentPage === page
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                    currentPage === page
                       ? "bg-orange-500 text-white"
                       : "bg-white/10 text-gray-400 border border-white/20 hover:bg-white/20"
-                    }`}
+                  }`}
                 >
                   {page}
                 </button>
@@ -272,7 +274,7 @@ const Members = () => {
                 </button>
 
                 <button
-                  onClick={() => handleDelete(m.id)}
+                  onClick={() => handleDelete(m)}
                   className="flex-1 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition"
                 >
                   Delete
@@ -300,10 +302,11 @@ const Members = () => {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-2 py-1 rounded-lg text-xs font-medium transition ${currentPage === page
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
+                    currentPage === page
                       ? "bg-orange-500 text-white"
                       : "bg-white/10 text-gray-400 border border-white/20 hover:bg-white/20"
-                    }`}
+                  }`}
                 >
                   {page}
                 </button>
