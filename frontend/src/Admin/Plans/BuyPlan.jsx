@@ -152,7 +152,7 @@
 //         weight: form.weight || selectedUser.weight,
 //         bmi: form.bmi || selectedUser.bmi,
 //         plan: selectedPlan.name,
-//         duration: parseInt(selectedPlan.duration) || null,
+//         duration: selectedPlan.duration && !isNaN(parseInt(selectedPlan.duration, 10)) ? parseInt(selectedPlan.duration, 10) : null,
 //         joinDate: form.startDate,
 //         expiryDate: form.endDate,
 //         status: "active",

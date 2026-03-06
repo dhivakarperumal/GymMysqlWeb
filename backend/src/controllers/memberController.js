@@ -102,7 +102,10 @@ async function createMember(req, res) {
     const memberId = `MB${String(nextNumber).padStart(3, "0")}`;
 
     // Parse numeric fields
-    const numDuration = duration ? Number(duration) : null;
+    const numHeight = height != null && !isNaN(height) ? Number(height) : null;
+    const numWeight = weight != null && !isNaN(weight) ? Number(weight) : null;
+    const numBmi = bmi != null && !isNaN(bmi) ? Number(bmi) : null;
+    const numDuration = duration != null && !isNaN(duration) ? Number(duration) : null;
 
     const [result] = await connection.query(
       `INSERT INTO gym_members
@@ -110,7 +113,7 @@ async function createMember(req, res) {
        join_date, expiry_date, status, photo, notes, address)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        memberId, name, phone, email, gender, height, weight, bmi,
+        memberId, name, phone, email, gender, numHeight, numWeight, numBmi,
         plan, numDuration, joinDate, expiryDate, status, photo, notes, address
       ]
     );
@@ -151,7 +154,7 @@ async function createMember(req, res) {
     const member = fetched[0] || {
       id: result.insertId,
       member_id: memberId,
-      name, phone, email, gender, height, weight, bmi, plan, duration: numDuration,
+      name, phone, email, gender, height: numHeight, weight: numWeight, bmi: numBmi, plan, duration: numDuration,
       join_date: joinDate, expiry_date: expiryDate, status, photo, notes, address
     };
 
@@ -179,7 +182,10 @@ async function updateMember(req, res) {
             plan, duration, joinDate, expiryDate, status,
             photo, notes, address, username } = req.body;
     // ensure numeric values are correctly typed
-    const numDuration = duration != null ? Number(duration) : null;
+    const numHeight = height != null && !isNaN(height) ? Number(height) : null;
+    const numWeight = weight != null && !isNaN(weight) ? Number(weight) : null;
+    const numBmi = bmi != null && !isNaN(bmi) ? Number(bmi) : null;
+    const numDuration = duration != null && !isNaN(duration) ? Number(duration) : null;
 
     // Check for duplicate phone if phone is being updated
     if (phone) {
@@ -211,7 +217,7 @@ async function updateMember(req, res) {
         updated_at=CURRENT_TIMESTAMP
        WHERE id=?`;
       updateParams = [
-        name, phone, email, gender, height, weight, bmi,
+        name, phone, email, gender, numHeight, numWeight, numBmi,
         plan, numDuration, joinDate, expiryDate, status,
         photo, notes, address, idNum
       ];
@@ -224,7 +230,7 @@ async function updateMember(req, res) {
         updated_at=CURRENT_TIMESTAMP
        WHERE member_id=?`;
       updateParams = [
-        name, phone, email, gender, height, weight, bmi,
+        name, phone, email, gender, numHeight, numWeight, numBmi,
         plan, numDuration, joinDate, expiryDate, status,
         photo, notes, address, id
       ];
