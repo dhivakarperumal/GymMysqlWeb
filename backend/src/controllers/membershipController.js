@@ -16,7 +16,37 @@ async function getAllMemberships(req, res) {
   }
 }
 
+/* ================= DELETE MEMBERSHIP ================= */
 
+async function deleteMembership(req, res) {
+  try {
+    const { id } = req.params;
+
+    const [result] = await db.query(
+      "DELETE FROM memberships WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Membership not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Membership deleted successfully",
+    });
+
+  } catch (error) {
+    console.error("Delete membership error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete membership",
+    });
+  }
+}
 
 /* ================= CREATE MEMBERSHIP ================= */
 
@@ -127,4 +157,5 @@ module.exports = {
   getUserMemberships,
   getMembershipById,
   getAllMemberships,
+  deleteMembership,
 };

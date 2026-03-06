@@ -5,6 +5,7 @@ const {
   createMembership,
   getUserMemberships,
   getMembershipById,
+  deleteMembership,
 } = require("../controllers/membershipController");
 
 /* CREATE MEMBERSHIP */
@@ -15,5 +16,8 @@ router.get("/user/:userId", getUserMemberships);
 
 /* GET MEMBERSHIP BY ID */
 router.get("/:id", getMembershipById);
+
+// ✅ ADD THIS DELETE ROUTE
+router.delete("/:id", deleteMembership);
 
 module.exports = router;

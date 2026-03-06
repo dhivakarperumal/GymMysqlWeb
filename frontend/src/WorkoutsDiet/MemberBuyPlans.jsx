@@ -31,25 +31,20 @@ const MemberSBuyPlans = () => {
     fetchMemberships();
   }, [user]);
 
-  const handleDelete = async (plan) => {
-    const isExpired = new Date(plan.endDate) < new Date();
+const handleDelete = async (plan) => {
+  const confirmDelete = window.confirm("Delete this plan?");
+  if (!confirmDelete) return;
 
-    if (!isExpired) {
-      alert("You can't delete this plan before it expires.");
-      return;
-    }
+  try {
+    await api.delete(`/memberships/${plan.id}`);
 
-    const confirmDelete = window.confirm("Delete this plan?");
-    if (!confirmDelete) return;
-
-    try {
-      await api.delete(`/memberships/${plan.id}`);
-
-      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
-    } catch (err) {
-      console.error("Delete failed", err);
-    }
-  };
+    setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+  } catch (err) {
+  console.log(err.response?.data);
+  alert("Delete failed");
+}
+  
+};
 
   return (
     <>
@@ -104,7 +99,7 @@ const MemberSBuyPlans = () => {
                   <button
                     onClick={() => handleDelete(plan)}
                     className={`absolute top-4 right-4 transition ${isExpired
-                        ? "text-red-500 hover:text-red-600"
+                        ? "text-red-500 hover:text-red-600 cursor-pointer"
                         : "text-gray-500 cursor-not-allowed"
                       }`}
                   >
