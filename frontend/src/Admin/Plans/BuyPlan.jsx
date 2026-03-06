@@ -514,7 +514,7 @@ Thank you for joining 💪
     try {
       // ===== SAVE MEMBERSHIP HISTORY =====
       const membershipData = {
-        userId: selectedUser.id,
+        userId: selectedUser.u_id || selectedUser.user_id || selectedUser.id,
         planId: selectedPlan.id,
         planName: selectedPlan.name,
         price: selectedPlan.finalPrice ?? selectedPlan.final_price,
