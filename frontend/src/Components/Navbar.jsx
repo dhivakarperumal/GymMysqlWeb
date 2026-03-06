@@ -24,13 +24,17 @@ const Navbar = () => {
 
     const fetchCartCount = async () => {
       if (!user || !user.id) return;
+
       try {
         const response = await api.get(`/cart`, {
           params: { userId: user.id }
         });
+
         const cart = Array.isArray(response.data) ? response.data : [];
-        const count = cart.reduce((total, item) => total + (item.quantity || 0), 0);
-        setCartCount(count);
+
+        // Count number of items instead of quantity
+        setCartCount(cart.length);
+
       } catch (err) {
         console.error("Failed to fetch cart:", err);
         setCartCount(0);
@@ -310,9 +314,9 @@ const Navbar = () => {
             {/* RIGHT */}
             <div className="flex items-center gap-6 text-white">
               {/* NOTIFICATION */}
-              <button className="text-white cursor-pointer">
+              {/* <button className="text-white cursor-pointer">
                 <Bell size={20} />
-              </button>
+              </button> */}
 
               {/* CART */}
               <button
@@ -326,7 +330,7 @@ const Navbar = () => {
                     className="
       absolute -top-2 -right-2
       bg-red-600 text-white text-[10px]
-      w-5 h-5 rounded-full
+      w-4 h-4 rounded-full
       flex items-center justify-center
       font-bold
     "
