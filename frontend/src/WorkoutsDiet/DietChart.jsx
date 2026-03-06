@@ -1,34 +1,56 @@
 import React, { useEffect, useState } from "react";
 import api from "../api";
+import { useAuth } from "../PrivateRouter/AuthContext";
 
-const DietChart = ({ planId }) => {
+const DietChart = () => {
+  const { user } = useAuth();
 
   const [diet, setDiet] = useState(null);
+  const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [activeDay, setActiveDay] = useState(null);
 
-  /* ================= FETCH DIET ================= */
+  const fetchDietPlan = async () => {
+    try {
+      const res = await api.get("/diet-plans");
+      const data = res.data;
 
-  useEffect(() => {
+      const userPlans = data.filter(
+        (item) =>
+          item.member_email &&
+          item.member_email.toLowerCase() === user.email.toLowerCase()
+      );
 
-    if (!planId) return;
+      if (userPlans.length === 0) return;
 
-    const fetchDiet = async () => {
-      try {
+      const latestPlan = userPlans.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      )[0];
 
-        const res = await api.get(`/diet/${planId}`);
+      setTitle(latestPlan.title);
 
-        setDiet(res.data);
+      let daysData = latestPlan.days;
 
-      } catch (err) {
-        console.error("Failed to fetch diet", err);
+      if (typeof daysData === "string") {
+        daysData = JSON.parse(daysData);
       }
 
+      setDiet(daysData);
+
+      // set first day as default
+      const firstDay = Object.keys(daysData)[0];
+      setActiveDay(firstDay);
+
+    } catch (err) {
+      console.error("Diet fetch error:", err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    fetchDiet();
-
-  }, [planId]);
+  useEffect(() => {
+    if (user) fetchDietPlan();
+  }, [user]);
 
   if (loading) {
     return <p className="text-gray-400">Loading diet plan...</p>;
@@ -36,80 +58,65 @@ const DietChart = ({ planId }) => {
 
   if (!diet) {
     return (
-      <div className="text-center p-10">
-        <h2 className="text-red-500 text-xl font-bold">
+      <div className="text-center py-20">
+        <h3 className="text-white text-lg font-semibold">
           No Diet Plan Assigned
-        </h2>
+        </h3>
       </div>
     );
   }
+
+  const days = Object.keys(diet);
+  const meals = diet[activeDay];
 
   return (
     <div className="space-y-6">
 
       <h2 className="text-2xl font-bold text-red-500">
-        Diet Chart
+        {title || "My Diet Plan"}
       </h2>
 
-      <div className="grid md:grid-cols-2 gap-6">
-
-        {/* BREAKFAST */}
-        <div className="bg-gray-900 p-5 rounded-xl border border-red-500/20">
-          <h3 className="text-lg font-bold text-yellow-400 mb-2">
-            Breakfast
-          </h3>
-
-          <p className="text-gray-300">
-            {diet.breakfast || "Not Assigned"}
-          </p>
-        </div>
-
-        {/* SNACK */}
-        <div className="bg-gray-900 p-5 rounded-xl border border-red-500/20">
-          <h3 className="text-lg font-bold text-green-400 mb-2">
-            Morning Snack
-          </h3>
-
-          <p className="text-gray-300">
-            {diet.snack || "Not Assigned"}
-          </p>
-        </div>
-
-        {/* LUNCH */}
-        <div className="bg-gray-900 p-5 rounded-xl border border-red-500/20">
-          <h3 className="text-lg font-bold text-orange-400 mb-2">
-            Lunch
-          </h3>
-
-          <p className="text-gray-300">
-            {diet.lunch || "Not Assigned"}
-          </p>
-        </div>
-
-        {/* EVENING */}
-        <div className="bg-gray-900 p-5 rounded-xl border border-red-500/20">
-          <h3 className="text-lg font-bold text-purple-400 mb-2">
-            Evening Snack
-          </h3>
-
-          <p className="text-gray-300">
-            {diet.eveningSnack || "Not Assigned"}
-          </p>
-        </div>
-
-        {/* DINNER */}
-        <div className="bg-gray-900 p-5 rounded-xl border border-red-500/20 md:col-span-2">
-          <h3 className="text-lg font-bold text-red-400 mb-2">
-            Dinner
-          </h3>
-
-          <p className="text-gray-300">
-            {diet.dinner || "Not Assigned"}
-          </p>
-        </div>
-
+      {/* DAY TABS */}
+      <div className="flex gap-3 flex-wrap">
+        {days.map((day) => (
+          <button
+            key={day}
+            onClick={() => setActiveDay(day)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition
+              ${
+                activeDay === day
+                  ? "bg-red-500 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+          >
+            {day}
+          </button>
+        ))}
       </div>
 
+      {/* MEALS */}
+      <div className="grid md:grid-cols-2 gap-4">
+
+        {Object.entries(meals).map(([meal, value]) => (
+          <div
+            key={meal}
+            className="bg-gray-900 rounded-xl p-5 border border-red-500/20"
+          >
+            <h3 className="text-red-400 text-sm font-semibold mb-2">
+              {meal}
+            </h3>
+
+            <p className="text-gray-300 text-sm">
+              {value.food} ({value.quantity})
+            </p>
+
+            <p className="text-gray-500 text-xs mt-1">
+              {value.calories} calories
+            </p>
+          </div>
+        ))}
+
+      </div>
     </div>
   );
 };
