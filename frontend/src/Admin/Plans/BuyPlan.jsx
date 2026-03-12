@@ -12,9 +12,12 @@ const BuyPlanadmin = () => {
 
   const [members, setMembers] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [trainers, setTrainers] = useState([]);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedTrainer, setSelectedTrainer] = useState(null);
+  const [sessionTime, setSessionTime] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -60,6 +63,25 @@ const BuyPlanadmin = () => {
     };
 
     fetchPlans();
+  }, []);
+
+  // ================= FETCH TRAINERS =================
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/staff?role=trainer");
+        const data = await res.json();
+        const normalized = Array.isArray(data)
+          ? data.map((t) => ({ id: t.id, name: t.name || t.username || "Trainer" }))
+          : [];
+        setTrainers(normalized);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load trainers");
+      }
+    };
+
+    fetchTrainers();
   }, []);
 
   // ================= CALCULATE END DATE =================
@@ -168,6 +190,29 @@ Thank you for joining 💪
         expiryDate: form.endDate,
         status: "active",
       };
+
+      // ===== OPTIONAL ASSIGN TRAINER =====
+      if (selectedTrainer) {
+        const assignPayload = {
+          userId: selectedUser.u_id || selectedUser.id,
+          username: selectedUser.username || selectedUser.name || "",
+          userEmail: selectedUser.userEmail || selectedUser.email || "",
+          planId: selectedPlan.id,
+          planName: selectedPlan.name,
+          planDuration: selectedPlan.duration,
+          planStartDate: form.startDate,
+          planEndDate: form.endDate,
+          planPrice: selectedPlan.finalPrice ?? selectedPlan.final_price,
+          trainerId: selectedTrainer,
+          trainerName:
+            trainers.find((t) => t.id === selectedTrainer)?.name || "",
+          trainerSource: "staff",
+          status: "active",
+          updatedAt: new Date().toISOString(),
+          sessionTime: sessionTime || null,
+        };
+        await api.post("/assignments", { assignments: [assignPayload] });
+      }
 
       const res = await fetch(`${MEMBERS_API}/${selectedUser.id}`, {
         method: "PUT",
@@ -322,6 +367,28 @@ Thank you for joining 💪
             <option value="cash">Cash</option>
             <option value="upi">UPI</option>
           </select>
+
+          {/* TRAINER */}
+          <select
+            className="w-full p-3 bg-gray-900 rounded-lg mt-4"
+            value={selectedTrainer || ""}
+            onChange={(e) => setSelectedTrainer(e.target.value)}
+          >
+            <option value="">Select Trainer (optional)</option>
+            {trainers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          {/* SESSION TIME */}
+          <input
+            type="time"
+            className="w-full p-3 bg-gray-900 rounded-lg mt-4"
+            value={sessionTime}
+            onChange={(e) => setSessionTime(e.target.value)}
+          />
 
           <button
             onClick={handleAssignPlan}
