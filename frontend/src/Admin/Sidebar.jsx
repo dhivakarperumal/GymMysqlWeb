@@ -20,6 +20,7 @@ import {
   Activity,
   HeartPulse,
   Package,
+  MessageSquare,
 } from "lucide-react";
 
 import { useAuth } from "../PrivateRouter/AuthContext";
@@ -58,6 +59,7 @@ const navItems = [
   { path: "/admin/overall-attendance", label: "Attendance", icon: CalendarCheck },
   { path: "/admin/commenworkoutdiet", label: "Workout & Diet", icon: HeartPulse },
   { path: "/admin/reports", label: "Reports & Analytics", icon: BarChart3 },
+  { path: "/admin/enquiry", label: "Enquiry", icon: MessageSquare },
   { path: "/", label: "Back Home", icon: Home },
 ];
 

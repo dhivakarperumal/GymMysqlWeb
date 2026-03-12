@@ -281,6 +281,7 @@ import Billings  from "./Admin/Billing/Billins.jsx";
 import Equipment from "./Admin/Equipment/Equipment.jsx";
 import Reports from "./Admin/Reports/Reports.jsx";
 import Settings from "./Admin/Settingss/Settings.jsx"
+import Enquiry from "./Admin/Enquiry/Enquiry.jsx";
 
 
 
@@ -409,6 +410,7 @@ const router = createBrowserRouter([
 
 
       { path: "reports", element: <Reports /> },
+      { path: "enquiry", element: <Enquiry /> },
       { path: "overall-attendance", element: <OverallAttendance /> },
       { path: "users", element: <Users /> },
       { path: "settings", element: <Settings /> },

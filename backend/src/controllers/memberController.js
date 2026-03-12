@@ -99,27 +99,50 @@ async function createMember(req, res) {
       return res.status(400).json({ message: "Phone already exists" });
     }
 
-    // generate member_id
-    const [countResult] = await connection.query("SELECT COUNT(*) as count FROM gym_members");
-    const nextNumber = Number(countResult[0].count) + 1;
-    const memberId = `MB${String(nextNumber).padStart(3, "0")}`;
-
-    // Parse numeric fields
+    // Parse numeric fields early so they can be used in insert loop
     const numHeight = height != null && !isNaN(height) ? Number(height) : null;
     const numWeight = weight != null && !isNaN(weight) ? Number(weight) : null;
     const numBmi = bmi != null && !isNaN(bmi) ? Number(bmi) : null;
     const numDuration = duration != null && !isNaN(duration) ? Number(duration) : null;
 
-    const [result] = await connection.query(
-      `INSERT INTO gym_members
+    // generate member_id using max numeric suffix, more robust than simple count
+    const [maxResult] = await connection.query(
+      "SELECT MAX(CAST(SUBSTRING(member_id,3) AS UNSIGNED)) as maxnum FROM gym_members"
+    );
+    let nextNumber = (maxResult[0].maxnum || 0) + 1;
+    let memberId = `MB${String(nextNumber).padStart(3, "0")}`;
+
+    // In rare case of duplicate (concurrent inserts), retry once
+    let inserted = false;
+    let result;
+    let insertResult;
+    for (let attempt = 0; attempt < 2 && !inserted; attempt++) {
+      try {
+        [result] = await connection.query(
+          `INSERT INTO gym_members
       (member_id, name, phone, email, gender, height, weight, bmi, plan, duration,
        join_date, expiry_date, status, photo, notes, address)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        memberId, name, phone, email, gender, numHeight, numWeight, numBmi,
-        plan, numDuration, joinDate, expiryDate, status, photo, notes, address
-      ]
-    );
+          [
+            memberId, name, phone, email, gender, numHeight, numWeight, numBmi,
+            plan, numDuration, joinDate, expiryDate, status, photo, notes, address
+          ]
+        );
+        inserted = true;
+        insertResult = result;
+      } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY' && err.sqlMessage.includes('member_id')) {
+          // regenerate memberId and retry
+          nextNumber += 1;
+          memberId = `MB${String(nextNumber).padStart(3, "0")}`;
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!inserted) {
+      throw new Error('Failed to generate unique member_id');
+    }
 
     // create user account for member
     try {

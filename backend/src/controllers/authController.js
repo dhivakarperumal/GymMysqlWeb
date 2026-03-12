@@ -41,14 +41,16 @@ async function register(req, res) {
 async function login(req, res) {
   const { identifier, password } = req.body;
   if (!identifier || !password) {
+    // provide clearer message for missing fields
     return res.status(400).json({ message: 'identifier and password are required' });
   }
 
   try {
     logger.info('login attempt for identifier: %s', identifier);
+    // allow email, username or mobile to be used as identifier
     const [rows] = await pool.query(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [identifier, identifier]
+      'SELECT * FROM users WHERE email = ? OR username = ? OR mobile = ?',
+      [identifier, identifier, identifier]
     );
 
     if (rows.length === 0) {

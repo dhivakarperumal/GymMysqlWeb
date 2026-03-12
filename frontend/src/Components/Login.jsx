@@ -31,9 +31,14 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // if password empty and identifier looks like a phone number, auto-fill password
+      let loginPassword = password;
+      if (!loginPassword && /^\d+$/.test(identifier)) {
+        loginPassword = identifier;
+      }
       const res = await api.post("/auth/login", {
         identifier,
-        password,
+        password: loginPassword,
       });
 
       const userData = res.data.user;
@@ -94,7 +99,7 @@ const Login = () => {
               {/* EMAIL / USERNAME */}
               <input
                 type="text"
-                placeholder="Email or Username"
+                placeholder="Email, Username or Phone"
                 className="w-full bg-gray-900 text-white border border-gray-700 
                            p-3 rounded-lg focus:outline-none 
                            focus:ring-2 focus:ring-red-500"
