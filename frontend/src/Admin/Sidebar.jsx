@@ -30,6 +30,13 @@ import { useAuth } from "../PrivateRouter/AuthContext";
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
 
+  { path: "/admin/enquiry", label: "Enquiry", icon: MessageSquare },
+
+  { path: "/admin/members", label: "Members", icon: Users },
+  { path: "/admin/buyplanadmin", label: "Buy Plans", icon: CreditCard },
+
+  { path: "/admin/send-message", label: "Send Message", icon: Send },
+
   {
     label: "Plans & Products",
     icon: Package,
@@ -41,11 +48,11 @@ const navItems = [
     ],
   },
 
-  { path: "/admin/members", label: "Members", icon: Users },
-  { path: "/admin/buyplanadmin", label: "Buy Plans", icon: CreditCard },
+{ path: "/admin/billing", label: "Billing", icon: Receipt },
+  
   { path: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { path: "/admin/payments", label: "Payments", icon: CreditCard },
-  { path: "/admin/billing", label: "Billing", icon: Receipt },
+  
 
   {
     label: "Trainers & Staff",
@@ -60,8 +67,8 @@ const navItems = [
   { path: "/admin/overall-attendance", label: "Attendance", icon: CalendarCheck },
   { path: "/admin/commenworkoutdiet", label: "Workout & Diet", icon: HeartPulse },
   { path: "/admin/reports", label: "Reports & Analytics", icon: BarChart3 },
-  { path: "/admin/enquiry", label: "Enquiry", icon: MessageSquare },
-  { path: "/admin/send-message", label: "Send Message", icon: Send },
+  
+  
   { path: "/", label: "Back Home", icon: Home },
 ];
 
