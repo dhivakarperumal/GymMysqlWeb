@@ -19,7 +19,6 @@
 // import AdminPanel from "./Admin/AdminPanel.jsx";
 // import Dashboard from "./Admin/Dashboard/Dashboard.jsx";
 
-// import Billings  from "./Admin/Billing/Billins.jsx";
 // import Equipment from "./Admin/Equipment/Equipment.jsx";
 // import Reports from "./Admin/Reports/Reports.jsx";
 // import Settings from "./Admin/Settingss/Settings.jsx"
