@@ -172,12 +172,11 @@ const Enquiry = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Enquiries</h1>
-          <p className="text-white/60">Manage customer enquiries and support requests</p>
+         
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Enquiry
@@ -193,11 +192,11 @@ const Enquiry = () => {
             placeholder="Search enquiries..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-1/4 pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-white/40" />
+         
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -217,6 +216,7 @@ const Enquiry = () => {
           <table className="w-full">
             <thead className="bg-white/5">
               <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-white/60 uppercase tracking-wider">S No</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-white/60 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-white/60 uppercase tracking-wider">Subject</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-white/60 uppercase tracking-wider">Location</th>
@@ -227,8 +227,11 @@ const Enquiry = () => {
             </thead>
             <tbody className="divide-y divide-white/10">
               {filteredEnquiries && filteredEnquiries.length > 0 ? (
-                filteredEnquiries.map((enquiry) => (
+                filteredEnquiries.map((enquiry,ind) => (
                 <tr key={enquiry.id} className="hover:bg-white/5">
+                   <td className="px-6 py-4">
+                    <div className="text-sm text-white">{ ind+1 }</div>
+                  </td>
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-white">{enquiry.name}</div>
