@@ -3,6 +3,7 @@ import DietChart from "../WorkoutsDiet/DietChart";
 import Workouts from "../WorkoutsDiet/Workouts";
 import UserOrders from "./UserOrders";
 import UserAddresses from "./UserAddresses";
+import UserNotifications from "./UserNotifications"; // Added
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -72,6 +73,7 @@ const Account = () => {
 
     { key: "orders", label: "My Orders" },
     { key: "address", label: "Address" },
+    { key: "notifications", label: "Notifications" }, // Added
   ];
 
   /* ================= CONTENT ================= */
@@ -121,6 +123,9 @@ const Account = () => {
 
       case "workouts":
         return <Workouts />;
+
+      case "notifications": // Added
+        return <UserNotifications userEmail={userInfo.email} />;
 
       default:
         return null;
