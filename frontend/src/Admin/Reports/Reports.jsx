@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  FaFileAlt,
-  FaCalendarAlt,
-  FaBox,
-  FaEye,
-  FaTimes,
-} from "react-icons/fa";
+  Users, ShoppingCart, CreditCard, MessageSquare,
+  Download, Eye, X, TrendingUp, FileText,
+} from "lucide-react";
 import api from "../../api";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
@@ -13,354 +10,278 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
 /* ========================
-   HELPERS
-======================== */
-
-const groupByMonth = (data, dateKey = "createdAt") => {
-  const map = {};
-  data.forEach(item => {
-    const val = item[dateKey] || item.createdAt || item.date || item.check_in || item.payment_date;
-    if (!val) return;
-    // support Firestore Timestamp (.toDate), Date objects, and strings
-    const d = (typeof val === 'object' && typeof val.toDate === 'function') ? val.toDate() : new Date(val);
-    const month = dayjs(d).format("YYYY-MM");
-    if (!map[month]) map[month] = [];
-    map[month].push(item);
-  });
-  return map;
-};
-
-const getDownloadRows = (report) => {
-  switch (report.type) {
-    case "Appointments":
-      return report.items.map(a => ({
-        AppointmentID: a.appointmentId,
-        Patient: a.patientName,
-        Doctor: a.doctorName,
-        Date: a.date,
-        Time: a.time,
-        Status: a.status,
-      }));
-    case "Inventory":
-      return report.items.map(i => ({
-        Item: i.itemName,
-        Category: i.category,
-        StockQty: i.stockQty,
-        Supplier: i.supplier,
-      }));
-    case "Treatment":
-      return report.items.map(t => ({
-        TreatmentID: t.treatmentId,
-        Patient: t.patientSnapshot?.name,
-        Doctor: t.assignedDoctor,
-        Cost: t.totalVariantCost,
-        Date: dayjs(t.createdAt).format("DD MMM YYYY"),
-      }));
-    default:
-      return [];
-  }
-};
-
-/* ========================
    STAT CARD
 ======================== */
-const Stat = ({ title, value, icon }) => (
-  <div className="
-    rounded-2xl p-5 flex justify-between items-center
-    bg-white/5 backdrop-blur-xl
-    border border-white/10
-    shadow-[0_0_40px_rgba(255,140,0,0.08)]
-  ">
+const Stat = ({ title, value, icon: Icon, color }) => (
+  <div className="rounded-2xl p-5 flex justify-between items-center bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg">
     <div>
       <p className="text-sm text-white/60">{title}</p>
-      <h2 className="text-2xl font-bold text-white">{value}</h2>
+      <h2 className="text-3xl font-bold text-white mt-1">{value}</h2>
     </div>
-    <div className="p-3 rounded-xl bg-orange-500/20 text-orange-400 text-xl">
-      {icon}
+    <div className={`p-3 rounded-xl ${color} text-2xl`}>
+      <Icon size={24} />
     </div>
   </div>
 );
 
 /* ========================
+   DOWNLOAD HELPERS
+======================== */
+const downloadPDF = (title, headers, rows) => {
+  const doc = new jsPDF();
+  doc.setFontSize(14);
+  doc.text(title, 14, 15);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${dayjs().format("DD MMM YYYY, h:mm A")}`, 14, 22);
+  autoTable(doc, {
+    startY: 28,
+    head: [headers],
+    body: rows,
+    theme: "striped",
+    headStyles: { fillColor: [239, 68, 68] },
+  });
+  doc.save(`${title}-${dayjs().format("YYYY-MM-DD")}.pdf`);
+};
+
+const downloadExcel = (title, headers, rows) => {
+  const data = rows.map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i]; });
+    return obj;
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Report");
+  XLSX.writeFile(wb, `${title}-${dayjs().format("YYYY-MM-DD")}.xlsx`);
+};
+
+/* ========================
    MAIN
 ======================== */
 const Reports = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [inventory, setInventory] = useState([]);
-  const [treatments, setTreatments] = useState([]);
-  const [typeFilter, setTypeFilter] = useState("All");
-  const [monthFilter, setMonthFilter] = useState("All");
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [memberships, setMemberships] = useState([]);
+  const [enquiries, setEnquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("members");
+  const [preview, setPreview] = useState(null);
 
   /* ========================
-     LOAD FROM BACKEND API
+     FETCH DATA
   ======================== */
   useEffect(() => {
-    let mounted = true;
-    api.get('/reports').then(res => {
-      if (!mounted) return;
-      const { appointments = [], inventory = [], treatments = [] } = res.data || {};
-
-      // normalize createdAt for frontend
-      setAppointments(appointments.map(a => ({ id: a.id || a.ID || a.id, ...a, createdAt: a.createdAt || a.check_in || a.created_at || a.payment_date })));
-      setInventory(inventory.map(i => ({ id: i.id || i.ID, ...i, createdAt: i.createdAt || i.created_at || i.updated_at })));
-      setTreatments(treatments.map(t => ({ id: t.id || t.ID, ...t, createdAt: t.createdAt || t.payment_date || t.created_at })));
-    }).catch(err => {
-      console.error('reports fetch error', err);
-    });
-    return () => { mounted = false; };
+    const fetchAll = async () => {
+      try {
+        const [mRes, oRes, pRes, eRes] = await Promise.allSettled([
+          api.get("/members"),
+          api.get("/orders"),
+          api.get("/memberships"),
+          api.get("/enquiries"),
+        ]);
+        if (mRes.status === "fulfilled") setMembers(Array.isArray(mRes.value.data) ? mRes.value.data : []);
+        if (oRes.status === "fulfilled") setOrders(Array.isArray(oRes.value.data) ? oRes.value.data : []);
+        if (pRes.status === "fulfilled") setMemberships(Array.isArray(pRes.value.data) ? pRes.value.data : []);
+        if (eRes.status === "fulfilled") setEnquiries(Array.isArray(eRes.value.data) ? eRes.value.data : []);
+      } catch (err) {
+        console.error("Reports fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
   }, []);
 
   /* ========================
-     REPORTS
+     TABLE CONFIGS
   ======================== */
-  const reports = useMemo(() => {
-    const rows = [];
-    const push = (grouped, type, title) => {
-      Object.entries(grouped).forEach(([month, items]) => {
-        rows.push({
-          name: `${title} (${dayjs(month).format("MMM YYYY")})`,
-          type,
-          month,
-          items,
-        });
-      });
-    };
-    push(groupByMonth(appointments), "Appointments", "Appointments");
-    push(groupByMonth(inventory, "updatedAt"), "Inventory", "Inventory");
-    push(groupByMonth(treatments), "Treatment", "Treatment");
-    return rows.sort((a, b) => b.month.localeCompare(a.month));
-  }, [appointments, inventory, treatments]);
+  const tabs = [
+    {
+      key: "members",
+      label: "Members",
+      icon: Users,
+      color: "bg-blue-500/20 text-blue-400",
+      data: members,
+      headers: ["#", "Name", "Email", "Phone", "Plan", "Status", "Join Date"],
+      rows: members.map((m, i) => [
+        i + 1,
+        m.name || "N/A",
+        m.email || m.user_email || "-",
+        m.phone || "-",
+        m.plan || m.role || "Member",
+        m.status || "Active",
+        m.join_date ? dayjs(m.join_date).format("DD MMM YYYY") : "-",
+      ]),
+    },
+    {
+      key: "orders",
+      label: "Orders",
+      icon: ShoppingCart,
+      color: "bg-orange-500/20 text-orange-400",
+      data: orders,
+      headers: ["#", "Order ID", "Customer", "Total", "Status", "Date"],
+      rows: orders.map((o, i) => [
+        i + 1,
+        o.id || o.order_id || "-",
+        o.name || o.user_name || o.customer_name || "-",
+        `₹${parseFloat(o.total || o.total_amount || 0).toFixed(2)}`,
+        o.status || "-",
+        o.created_at ? dayjs(o.created_at).format("DD MMM YYYY") : "-",
+      ]),
+    },
+    {
+      key: "payments",
+      label: "Plans / Payments",
+      icon: CreditCard,
+      color: "bg-green-500/20 text-green-400",
+      data: memberships,
+      headers: ["#", "Member", "Email", "Plan", "Amount", "Mode", "Status", "Start", "End"],
+      rows: memberships.map((p, i) => [
+        i + 1,
+        p.userName || p.username || "-",
+        p.userEmail || p.email || "-",
+        p.planName || "-",
+        p.pricePaid != null ? `₹${parseFloat(p.pricePaid).toFixed(2)}` : "-",
+        p.paymentMode || p.paymentId ? (p.paymentMode || "Razorpay") : "-",
+        p.status || "active",
+        p.startDate ? dayjs(p.startDate).format("DD MMM YYYY") : "-",
+        p.endDate ? dayjs(p.endDate).format("DD MMM YYYY") : "-",
+      ]),
+    },
+    {
+      key: "enquiries",
+      label: "Enquiries",
+      icon: MessageSquare,
+      color: "bg-purple-500/20 text-purple-400",
+      data: enquiries,
+      headers: ["#", "Name", "Email", "Phone", "Subject", "Status", "Date"],
+      rows: enquiries.map((e, i) => [
+        i + 1,
+        e.name || "-",
+        e.email || "-",
+        e.phone || "-",
+        e.subject || "-",
+        e.status || "pending",
+        e.created_at ? dayjs(e.created_at).format("DD MMM YYYY") : "-",
+      ]),
+    },
+  ];
 
-  const availableMonths = [...new Set(reports.map(r => r.month))];
-
-  const filteredReports = reports.filter(r =>
-    (typeFilter === "All" || r.type === typeFilter) &&
-    (monthFilter === "All" || r.month === monthFilter)
-  );
-
-  /* ========================
-     DOWNLOADS
-  ======================== */
-  const downloadPDF = (report) => {
-    const rows = getDownloadRows(report);
-    if (!rows.length) return;
-    const doc = new jsPDF();
-    doc.text(report.name, 14, 15);
-    autoTable(doc, {
-      startY: 25,
-      head: [Object.keys(rows[0])],
-      body: rows.map(r => Object.values(r)),
-    });
-    doc.save(`${report.name}.pdf`);
-  };
-
-  const downloadExcel = (report) => {
-    const rows = getDownloadRows(report);
-    if (!rows.length) return;
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Report");
-    XLSX.writeFile(wb, `${report.name}.xlsx`);
-  };
+  const currentTab = tabs.find(t => t.key === activeTab);
 
   /* ========================
      UI
   ======================== */
   return (
     <div className="p-0 min-h-screen space-y-6">
-      <div>
-        <h1 className="page-title text-2xl font-bold text-white mb-2">Reports</h1>
-      </div>
-
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Stat title="Appointments" value={appointments.length} icon={<FaCalendarAlt />} />
-        <Stat title="Treatments" value={treatments.length} icon={<FaFileAlt />} />
-        <Stat title="Inventory Items" value={inventory.length} icon={<FaBox />} />
-      </div>
-
-      {/* FILTER BAR */}
-     <div
-  className="
-    bg-white/5 backdrop-blur-xl
-    border border-white/10
-    rounded-2xl p-4
-    flex flex-col sm:flex-row
-    gap-4 w-full
-  "
->
-  {/* Type Filter */}
-  <select
-    value={typeFilter}
-    onChange={(e) => setTypeFilter(e.target.value)}
-    className="
-      w-full sm:w-48
-      px-4 py-3 rounded-lg
-      bg-white/10 text-white
-      border border-white/10
-      focus:outline-none focus:ring-2 focus:ring-orange-500
-      [&>option]:bg-white [&>option]:text-black
-    "
-  >
-    <option value="All">All Types</option>
-    <option value="Appointments">Appointments</option>
-    <option value="Inventory">Inventory</option>
-    <option value="Treatment">Treatment</option>
-  </select>
-
-  {/* Month Filter */}
-  <select
-    value={monthFilter}
-    onChange={(e) => setMonthFilter(e.target.value)}
-    className="
-      w-full sm:w-48
-      px-4 py-3 rounded-lg
-      bg-white/10 text-white
-      border border-white/10
-      focus:outline-none focus:ring-2 focus:ring-orange-500
-      [&>option]:bg-white [&>option]:text-black
-    "
-  >
-    <option value="All">All Months</option>
-    {availableMonths.map((m) => (
-      <option key={m} value={m}>
-        {dayjs(m).format("MMM YYYY")}
-      </option>
-    ))}
-  </select>
-</div>
-
-
-      {/* TABLE (desktop) */}
-      <div className="hidden sm:block
-        rounded-2xl overflow-hidden
-        bg-white/5 backdrop-blur-xl
-        border border-white/10
-      ">
-        <table className="min-w-full text-sm text-white">
-          <thead className="bg-white/10">
-            <tr>
-              {["S No", "Report Name", "Type", "Month", "Actions"].map(h => (
-                <th key={h} className="px-4 py-4 text-left font-semibold">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredReports.map((r, i) => (
-              <tr key={i} className="border-b border-white/10 hover:bg-white/5">
-                <td className="px-4 py-4">{i + 1}</td>
-                <td className="px-4 py-4">{r.name}</td>
-                <td className="px-4 py-4">{r.type}</td>
-                <td className="px-4 py-4">
-                  {dayjs(r.month).format("MMM YYYY")}
-                </td>
-                <td className="px-4 py-4 flex gap-2">
-                  <button
-                    onClick={() => setSelectedReport(r)}
-                    className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs flex gap-2"
-                  >
-                    <FaEye /> View
-                  </button>
-                  <button
-                    onClick={() => downloadPDF(r)}
-                    className="px-3 py-1.5 rounded bg-white/10 text-white text-xs"
-                  >
-                    PDF
-                  </button>
-                  <button
-                    onClick={() => downloadExcel(r)}
-                    className="px-3 py-1.5 rounded bg-white/10 text-white text-xs"
-                  >
-                    Excel
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredReports.length === 0 && (
-          <p className="text-center py-6 text-white/50">
-            No reports found
-          </p>
-        )}
-      </div>
-
-      {/* MOBILE CARDS */}
-      <div className="sm:hidden space-y-3">
-        {filteredReports.length === 0 ? (
-          <p className="text-center py-6 text-white/50">No reports found</p>
-        ) : (
-          filteredReports.map((r, i) => (
-            <div key={i} className="bg-white/5 p-4 rounded-xl border border-white/10">
-              <div className="flex justify-between">
-                <div>
-                  <p className="font-semibold text-white">{r.name}</p>
-                  <p className="text-xs text-gray-400">{r.type} • {dayjs(r.month).format('MMM YYYY')}</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <button onClick={() => setSelectedReport(r)} className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs flex gap-2">View</button>
-                  <div className="flex gap-2">
-                    <button onClick={() => downloadPDF(r)} className="px-3 py-1.5 rounded bg-white/10 text-white text-xs">PDF</button>
-                    <button onClick={() => downloadExcel(r)} className="px-3 py-1.5 rounded bg-white/10 text-white text-xs">Excel</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* MODAL */}
-      {selectedReport && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="
-            bg-white/5 backdrop-blur-xl
-            border border-white/10
-            rounded-2xl p-6 w-[90%] max-w-5xl
-          ">
-            <div className="flex justify-between mb-4">
-              <h2 className="text-xl font-semibold text-white">
-                {selectedReport.name}
-              </h2>
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="text-white/60 hover:text-white"
-              >
-                <FaTimes />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-white">
-                <thead className="bg-white/10">
-                  <tr>
-                    <th className="px-4 py-3">S No</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedReport.items.map((i, idx) => (
-                    <tr key={idx} className="border-b border-white/10">
-                      <td className="px-4 py-3">{idx + 1}</td>
-                      <td className="px-4 py-3">
-                        {dayjs(i.createdAt).format("DD MMM YYYY")}
-                      </td>
-                      <td className="px-4 py-3">
-                        {i.patientName || i.itemName || i.name}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-orange-500/20 text-orange-400">
+            <FileText size={22} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Reports & Analytics</h1>
+            <p className="text-white/50 text-sm">Download and view gym data reports</p>
           </div>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => downloadPDF(currentTab.label, currentTab.headers, currentTab.rows)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition"
+          >
+            <Download size={15} /> PDF
+          </button>
+          <button
+            onClick={() => downloadExcel(currentTab.label, currentTab.headers, currentTab.rows)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition"
+          >
+            <Download size={15} /> Excel
+          </button>
+        </div>
+      </div>
+
+      {/* STAT CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat title="Total Members" value={members.length} icon={Users} color="bg-blue-500/20 text-blue-400" />
+        <Stat title="Total Orders" value={orders.length} icon={ShoppingCart} color="bg-orange-500/20 text-orange-400" />
+        <Stat title="Plan Purchases" value={memberships.length} icon={CreditCard} color="bg-green-500/20 text-green-400" />
+        <Stat title="Enquiries" value={enquiries.length} icon={MessageSquare} color="bg-purple-500/20 text-purple-400" />
+      </div>
+
+      {/* TABS */}
+      <div className="flex gap-2 flex-wrap">
+        {tabs.map(t => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
+                activeTab === t.key
+                  ? "bg-orange-500 text-white shadow-lg"
+                  : "bg-white/10 text-white/70 hover:bg-white/20"
+              }`}
+            >
+              <Icon size={16} /> {t.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === t.key ? "bg-white/20" : "bg-white/10"}`}>
+                {t.data.length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* TABLE */}
+      <div className="rounded-2xl overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-white/50 animate-pulse text-sm">Loading report data...</p>
+          </div>
+        ) : currentTab.rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-white/40">
+            <TrendingUp size={48} className="mb-4 opacity-30" />
+            <p className="text-lg font-medium">No {currentTab.label} data found</p>
+            <p className="text-sm mt-1">Data will appear here once added</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-white">
+              <thead className="bg-white/10 border-b border-white/10">
+                <tr>
+                  {currentTab.headers.map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-white/80 whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {currentTab.rows.map((row, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-white/5 hover:bg-white/5 transition"
+                  >
+                    {row.map((cell, j) => (
+                      <td key={j} className="px-4 py-3 whitespace-nowrap text-white/80">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER COUNT */}
+      {!loading && currentTab.rows.length > 0 && (
+        <p className="text-white/40 text-xs text-right">
+          Showing {currentTab.rows.length} {currentTab.label.toLowerCase()} records
+        </p>
       )}
     </div>
   );
