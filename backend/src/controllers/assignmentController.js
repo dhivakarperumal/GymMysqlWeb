@@ -5,9 +5,9 @@ function normalizeAssignment(row) {
   return {
     id: row.id,
     userId: row.user_id,
-    username: row.username,
-    userEmail: row.user_email,
-    userMobile: row.user_mobile || row.user_mobile,
+    username: row.member_name || row.username,
+    userEmail: row.member_email || row.user_email,
+    userMobile: row.member_mobile || row.user_mobile,
     planId: row.plan_id,
     planName: row.plan_name,
     planDuration: row.plan_duration,
@@ -15,8 +15,9 @@ function normalizeAssignment(row) {
     planEndDate: row.plan_end_date,
     planPrice: row.plan_price,
     trainerId: row.trainer_id,
-    trainerName: row.trainer_name,
+    trainerName: row.current_trainer_name || row.trainer_name,
     trainerSource: row.trainer_source,
+    sessionTime: row.session_time || null,
     status: row.status,
     updatedAt: row.updated_at,
   };
@@ -25,11 +26,17 @@ function normalizeAssignment(row) {
 async function getAllAssignments(req, res) {
   try {
     const [rows] = await db.query(`
-      SELECT a.*, m.name as username, m.email as user_email, m.phone as user_mobile,
-             s.name as trainer_name, s.role as trainer_source
+      SELECT a.*, 
+             m.name as member_name, 
+             m.email as member_email, 
+             m.phone as member_mobile,
+             s.name as current_trainer_name, 
+             s.role as trainer_source
       FROM trainer_assignments a
-      LEFT JOIN gym_members m ON m.id = a.user_id
+      LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN gym_members m ON (m.id = a.user_id OR m.email = u.email OR m.phone = u.mobile)
       LEFT JOIN staff s ON s.id = a.trainer_id
+      GROUP BY a.id
       ORDER BY a.updated_at DESC
     `);
     res.json(rows.map(normalizeAssignment));
@@ -66,13 +73,14 @@ async function upsertAssignments(req, res) {
           a.trainerId,
           a.trainerName || null,
           a.trainerSource || 'unknown',
+          a.sessionTime || null,
           a.status || 'active',
         ];
 
         const sql = `
           INSERT INTO trainer_assignments
-          (user_id, username, user_email, plan_id, plan_name, plan_duration, plan_start_date, plan_end_date, plan_price, trainer_id, trainer_name, trainer_source, status)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+          (user_id, username, user_email, plan_id, plan_name, plan_duration, plan_start_date, plan_end_date, plan_price, trainer_id, trainer_name, trainer_source, session_time, status)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON DUPLICATE KEY UPDATE
             username=VALUES(username),
             user_email=VALUES(user_email),
@@ -84,6 +92,7 @@ async function upsertAssignments(req, res) {
             trainer_id=VALUES(trainer_id),
             trainer_name=VALUES(trainer_name),
             trainer_source=VALUES(trainer_source),
+            session_time=VALUES(session_time),
             status=VALUES(status),
             updated_at=CURRENT_TIMESTAMP
         `;

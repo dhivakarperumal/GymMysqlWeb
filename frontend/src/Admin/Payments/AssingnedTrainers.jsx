@@ -14,65 +14,38 @@ const AssingnedTrainers = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, assigned, unassigned
 
-  /* ================= FETCH MEMBERS + PLANS ================= */
+  /* ================= FETCH MEMBERSHIPS ================= */
   useEffect(() => {
     const fetchMembers = async () => {
       setLoading(true);
       try {
-        // get gym_members and user accounts, then combine
-        const [mRes, uRes] = await Promise.all([
-          api.get("/members"),
-          api.get("/users"),
-        ]);
-        const mData = Array.isArray(mRes.data) ? mRes.data : [];
-        const uData = Array.isArray(uRes.data) ? uRes.data : [];
+        const res = await api.get("/memberships");
+        const membershipsData = Array.isArray(res.data) ? res.data : [];
 
-        const map = new Map();
+        // Group memberships by user or treat Each membership as a unique row
+        // User wants to see based on membership table
+        const usersData = membershipsData.map((m) => ({
+          uid: m.userId || `m_${m.id}`,
+          membershipId: m.id,
+          username: m.username || m.userName || "No Name",
+          email: m.email || m.userEmail || "",
+          userEmail: m.userEmail || m.email || "",
+          workoutCount: 0, 
+          dietCount: 0,
+          plans: [{
+            id: m.id.toString(),
+            planName: m.planName,
+            duration: m.duration,
+            startDate: m.startDate,
+            endDate: m.endDate,
+            pricePaid: m.pricePaid,
+          }],
+          source: "memberships",
+        }));
 
-        mData.forEach((m) => {
-          const plans = [
-            {
-              id: m.id ? m.id.toString() : "",
-              planName: m.plan || "",
-              duration: m.duration || "",
-              startDate: m.join_date || "",
-              endDate: m.expiry_date || "",
-              pricePaid: m.price || 0,
-            },
-          ];
-          const uid = m.id ? m.id.toString() : "";
-          map.set(uid, {
-            uid,
-            username: m.name,
-            email: m.email || m.user_email || "",
-            userEmail: m.user_email || m.email || "",
-            workoutCount: m.workout_count || m.workoutCount || 0,
-            dietCount: m.diet_count || m.dietCount || 0,
-            plans,
-            source: "members",
-          });
-        });
-
-        uData.forEach((u) => {
-          const uid = u.id ? u.id.toString() : "";
-          if (!map.has(uid)) {
-            map.set(uid, {
-              uid,
-              username: u.username || u.email || "",
-              email: u.email || "",
-              userEmail: u.email || "",
-              workoutCount: 0,
-              dietCount: 0,
-              plans: [],
-              source: "users",
-            });
-          }
-        });
-
-        const usersData = Array.from(map.values());
         setMembers(usersData);
       } catch (error) {
-        console.error("Error fetching members:", error);
+        console.error("Error fetching memberships:", error);
       } finally {
         setLoading(false);
       }
@@ -194,9 +167,6 @@ const AssingnedTrainers = () => {
 
   /* ================= FILTER & SEARCH LOGIC ================= */
   const filteredMembers = members.filter((m) => {
-    // Only show members with plans
-    if (!m.plans || m.plans.length === 0) return false;
-
     // Search filter
     const searchLower = search.toLowerCase();
     const matchesSearch =
@@ -210,6 +180,9 @@ const AssingnedTrainers = () => {
       return assignments[m.uid] && assignments[m.uid].length > 0;
     }
     if (filterType === "unassigned") {
+      // Check if this specific membership is unassigned
+      // Since we map memberships 1:1 to members in this view, we check if the user has ANY assignment
+      // Or more precisely if there's an assignment matching this membershipId if we had it
       return !assignments[m.uid] || assignments[m.uid].length === 0;
     }
     return true; // all
@@ -458,11 +431,11 @@ const AssingnedTrainers = () => {
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Select Members (Only members with active plans):</label>
               <div className="max-h-56 overflow-y-auto space-y-2 pr-1 bg-black/20 rounded-xl p-3 border border-white/10">
-                {members.filter((m) => (m.plans?.length || 0) > 0).length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">No members with plans found</p>
+                {members.filter((m) => (m.plans?.length || 0) > 0 && (!assignments[m.uid] || assignments[m.uid].length === 0)).length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No unassigned members with plans found</p>
                 ) : (
                   members
-                    .filter((m) => (m.plans?.length || 0) > 0)
+                    .filter((m) => (m.plans?.length || 0) > 0 && (!assignments[m.uid] || assignments[m.uid].length === 0))
                     .map((m) => (
                     <label
                       key={m.uid}

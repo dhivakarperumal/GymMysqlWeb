@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import api from "../../api";
 
-const MEMBERS_API = "http://localhost:5000/api/members";
-const PLANS_API = "http://localhost:5000/api/plans";
-const MEMBERSHIP_API = "http://localhost:5000/api/memberships";
+const MEMBERS_API = "/members";
+const PLANS_API = "/plans";
+const MEMBERSHIP_API = "/memberships";
 
 const BuyPlanadmin = () => {
   const navigate = useNavigate();
@@ -37,9 +38,8 @@ const BuyPlanadmin = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const res = await fetch(MEMBERS_API);
-        const data = await res.json();
-        setMembers(data);
+        const res = await api.get(MEMBERS_API);
+        setMembers(res.data || []);
       } catch (err) {
         console.error(err);
         alert("Failed to load members");
@@ -53,9 +53,8 @@ const BuyPlanadmin = () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await fetch(PLANS_API);
-        const data = await res.json();
-        setPlans(data.filter((p) => p.active));
+        const res = await api.get(PLANS_API);
+        setPlans((res.data || []).filter((p) => p.active));
       } catch (err) {
         console.error(err);
         alert("Failed to load plans");
@@ -69,8 +68,8 @@ const BuyPlanadmin = () => {
   useEffect(() => {
     const fetchTrainers = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/staff?role=trainer");
-        const data = await res.json();
+        const res = await api.get("/staff", { params: { role: "trainer" } });
+        const data = res.data || [];
         const normalized = Array.isArray(data)
           ? data.map((t) => ({ id: t.id, name: t.name || t.username || "Trainer" }))
           : [];
@@ -157,6 +156,9 @@ Thank you for joining 💪
       // ===== SAVE MEMBERSHIP HISTORY =====
       const membershipData = {
         userId: selectedUser.u_id || selectedUser.user_id || selectedUser.id,
+        userName: selectedUser.name || selectedUser.username,
+        userEmail: form.email,
+        userPhone: form.phone,
         planId: selectedPlan.id,
         planName: selectedPlan.name,
         price: selectedPlan.finalPrice ?? selectedPlan.final_price,
@@ -167,13 +169,7 @@ Thank you for joining 💪
         status: "active",
       };
 
-      await fetch(MEMBERSHIP_API, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(membershipData),
-      });
+      await api.post("/memberships", membershipData);
 
       // ===== UPDATE MEMBER =====
       const updatedMember = {
@@ -214,15 +210,13 @@ Thank you for joining 💪
         await api.post("/assignments", { assignments: [assignPayload] });
       }
 
-      const res = await fetch(`${MEMBERS_API}/${selectedUser.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedMember),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.message || "Plan assign failed");
+      // update member with assigned plan
+      try {
+        await api.put(`${MEMBERS_API}/${selectedUser.id}`, updatedMember);
+      } catch (error) {
+        const errMsg =
+          error?.response?.data?.message || error?.message || "Plan assign failed";
+        alert(errMsg);
         return;
       }
 
@@ -372,7 +366,10 @@ Thank you for joining 💪
           <select
             className="w-full p-3 bg-gray-900 rounded-lg mt-4"
             value={selectedTrainer || ""}
-            onChange={(e) => setSelectedTrainer(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedTrainer(val === "" ? null : Number(val));
+            }}
           >
             <option value="">Select Trainer (optional)</option>
             {trainers.map((t) => (

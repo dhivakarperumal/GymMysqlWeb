@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import api from "../api";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../PrivateRouter/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 
 const Login = () => {
   const [identifier, setIdentifier] = useState(""); // email OR username
@@ -53,6 +55,39 @@ const Login = () => {
       toast.error(err?.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSuccess = async (credentialResponse) => {
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+
+      const googleUser = {
+        name: decoded.name,
+        email: decoded.email,
+        picture: decoded.picture,
+        googleId: decoded.sub
+      };
+
+      // send to backend
+      const res = await api.post(
+        "/auth/google-login",
+        googleUser
+      );
+
+      login(res.data.user, res.data.token);
+
+      toast.success("Google Login Successful!");
+
+      if (res.data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+
+    } catch (error) {
+      console.error("Google Login Error:", error);
+      toast.error(error.response?.data?.message || error.message || "Google Login Failed");
     }
   };
 
@@ -141,6 +176,13 @@ const Login = () => {
                 {loading ? "Logging in..." : "Login"}
               </button>
             </form>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleSuccess}
+                onError={() => console.log("Login Failed")}
+              />
+            </div>
 
             <p className="text-sm mt-5 text-center text-gray-400">
               New member? <Link to="/register" className="text-red-500 font-semibold hover:underline">Join Now</Link>

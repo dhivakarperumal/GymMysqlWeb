@@ -109,7 +109,7 @@
 //       { path: "productdetail/:id", element: <ProductDetail /> },
 //       { path: "addproducts", element: <AddProducts /> },
 //       { path: "addproducts/:id", element: <AddProducts /> },
-     
+
 
 //       { path: "stockdetails", element: <StockDetails /> },
 //       { path: "add-stock", element: <AddStock /> },
@@ -119,21 +119,21 @@
 //       { path: "members", element: <Members /> },
 //       { path: "addmembers", element: <AddMember /> },
 //       { path: "addmembers/:id", element: <AddMember /> },
-      
+
 
 //       { path: "billing", element: <Billings /> },
-      
+
 
 //       { path: "plansall", element: <PlansAll /> },
 //       { path: "addplan", element: <AddEditGymPlan /> },
 //       { path: "addplan/:id", element: <AddEditGymPlan /> },
-      
+
 //       { path: "fecilities", element: <FacilitiesAll /> },
 //       { path: "addfecilities", element: <AddEditFacility /> },
 //       { path: "addfecilities/:id", element: <AddEditFacility /> },
 
 
-     
+
 
 //       { path: "equipment", element: <Equipment /> },
 //       { path: "addequipment", element: <AddEditEquipment /> },
@@ -151,8 +151,8 @@
 //       { path: "addservice/:id", element: <AddServices /> },
 
 //       { path: "commenworkoutdiet", element: <GymWorkoutManager /> },
-     
-      
+
+
 //       { path: "settings/usermanagement", element: <UserManagement /> },
 //       { path: "settings/reviews", element: <ReviewsSettings /> },
 
@@ -185,18 +185,18 @@
 //       { path: "adddietplans", element: <AddDietPlans /> },
 //       { path: "adddietplans/:id", element: <AddDietPlans /> },
 //       { path: "alladddietplans", element: <AllDietPlans /> },
-      
+
 //       { path: "settings", element: <Settings /> },
 //       { path: "settings/profile", element: <ProfileSettings /> },
-      
-     
-      
+
+
+
 //       { path: "settings/usermanagement", element: <UserManagement /> },
 //       { path: "settings/reviews", element: <ReviewsSettings /> },
 
-      
 
-      
+
+
 //       { path: "member-attendance", element: <MemberAttendance /> },
 
 
@@ -251,6 +251,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./Home/Home.jsx";
 import { AuthProvider } from "./PrivateRouter/AuthContext.jsx";
 import PrivateRoute from "./PrivateRouter/PrivateRouter.jsx";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { Toaster, toast } from "react-hot-toast";
 import Login from "./Components/Login.jsx";
@@ -277,7 +278,7 @@ import Checkout from "./Components/Checkout.jsx";
 import AdminPanel from "./Admin/AdminPanel.jsx";
 import Dashboard from "./Admin/Dashboard/Dashboard.jsx";
 
-import Billings  from "./Admin/Billing/Billins.jsx";
+import Billings from "./Admin/Billing/Billins.jsx";
 import Equipment from "./Admin/Equipment/Equipment.jsx";
 import Reports from "./Admin/Reports/Reports.jsx";
 import Settings from "./Admin/Settingss/Settings.jsx"
@@ -290,7 +291,7 @@ import ViewEquipment from "./Admin/Equipment/ViewEquipment.jsx";
 import ProfileSettings from "./Admin/Settingss/ProfileSettings.jsx";
 
 // import BillingSettings from "./Admin/Settingss/BillingSettings.jsx";
-import UserManagement  from "./Admin/Settingss/UserManagement.jsx";
+import UserManagement from "./Admin/Settingss/UserManagement.jsx";
 
 import Staffs from "./Admin/Staff/Staffs.jsx";
 import AddEditStaff from "./Admin/Staff/AddStaff.jsx";
@@ -344,23 +345,24 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Home /> },
       { path: "/trainers", element: <Trainers /> },
-      { path:"trainersdetails/:id", element: <TrainerDetails /> },
-      { path:"facilities", element: <Facilities /> },
-      { path:"account", element: <Account /> },
-      { path:"facilities/:slug", element: <FacilityDetail /> },
-      { path:"pricing", element: <Pricing /> },
-      { path:"buy-plan", element: <BuyPlan /> },
+      { path: "trainersdetails/:id", element: <TrainerDetails /> },
+      { path: "facilities", element: <Facilities /> },
+      { path: "account", element: <Account /> },
+      { path: "facilities/:slug", element: <FacilityDetail /> },
+      { path: "pricing", element: <Pricing /> },
+      { path: "buy-plan", element: <BuyPlan /> },
       { path: "products", element: <Products /> },
       { path: "/cart", element: <Cart /> },
       { path: "/checkout", element: <Checkout /> },
       { path: "/products/:id", element: <ProductDetails /> },
-      { path:"/services", element: <Services /> },
-      { path:"/services/:slug", element: <ServicesDetails /> },
-      { path:"/calendar", element: <ClassesTable /> },
-      { path:"/contact", element: <Contact /> },
+      { path: "/services", element: <Services /> },
+      { path: "/services/:slug", element: <ServicesDetails /> },
+      { path: "/calendar", element: <ClassesTable /> },
+      { path: "/contact", element: <Contact /> },
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
-]},
+    ]
+  },
 
 
   {
@@ -377,7 +379,7 @@ const router = createBrowserRouter([
       { path: "productdetail/:id", element: <ProductDetail /> },
       { path: "addproducts", element: <AddProducts /> },
       { path: "addproducts/:id", element: <AddProducts /> },
-     
+
 
       { path: "stockdetails", element: <StockDetails /> },
       { path: "add-stock", element: <AddStock /> },
@@ -387,21 +389,21 @@ const router = createBrowserRouter([
       { path: "members", element: <Members /> },
       { path: "addmembers", element: <AddMember /> },
       { path: "addmembers/:id", element: <AddMember /> },
-      
+
 
       { path: "billing", element: <Billings /> },
-      
+
 
       { path: "plansall", element: <PlansAll /> },
       { path: "addplan", element: <AddEditGymPlan /> },
       { path: "addplan/:id", element: <AddEditGymPlan /> },
-      
+
       { path: "fecilities", element: <FacilitiesAll /> },
       { path: "addfecilities", element: <AddEditFacility /> },
       { path: "addfecilities/:id", element: <AddEditFacility /> },
 
 
-     
+
 
       { path: "equipment", element: <Equipment /> },
       { path: "addequipment", element: <AddEditEquipment /> },
@@ -420,8 +422,8 @@ const router = createBrowserRouter([
       { path: "addservice/:id", element: <AddServices /> },
 
       { path: "commenworkoutdiet", element: <GymWorkoutManager /> },
-     
-      
+
+
       { path: "settings/usermanagement", element: <UserManagement /> },
       { path: "settings/reviews", element: <ReviewsSettings /> },
 
@@ -454,18 +456,18 @@ const router = createBrowserRouter([
       { path: "adddietplans", element: <AddDietPlans /> },
       { path: "adddietplans/:id", element: <AddDietPlans /> },
       { path: "alladddietplans", element: <AllDietPlans /> },
-      
+
       { path: "settings", element: <Settings /> },
       { path: "settings/profile", element: <ProfileSettings /> },
-      
-     
-      
+
+
+
       { path: "settings/usermanagement", element: <UserManagement /> },
       { path: "settings/reviews", element: <ReviewsSettings /> },
 
-      
 
-      
+
+
       { path: "member-attendance", element: <MemberAttendance /> },
 
 
@@ -473,15 +475,16 @@ const router = createBrowserRouter([
     ],
   },
 
-//   { path: "/*", element: <NotFound /> },
+  //   { path: "/*", element: <NotFound /> },
 
 
 ])
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
+    <GoogleOAuthProvider clientId="788596465962-h22auho4kp5sfnuc59udl0k10e8uu6ra.apps.googleusercontent.com">
       <AuthProvider>
-         {/* 🔔 GLOBAL TOASTER */}
+        {/* 🔔 GLOBAL TOASTER */}
         <Toaster
           position="top-left"
           reverseOrder={false}
@@ -507,6 +510,7 @@ createRoot(document.getElementById("root")).render(
         />
         <RouterProvider router={router} />
       </AuthProvider>
-    </StrictMode>
+    </GoogleOAuthProvider>
+  </StrictMode>
 );
 

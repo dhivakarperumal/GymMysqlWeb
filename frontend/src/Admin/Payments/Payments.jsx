@@ -3,8 +3,8 @@ import { Search } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // backend API
+const MEMBERSHIPS_API = "http://localhost:5000/api/memberships";
 const MEMBERS_API = "http://localhost:5000/api/members";
-const PLANS_API = "http://localhost:5000/api/plans";
 
 const Payments = () => {
   const [members, setMembers] = useState([]);
@@ -21,48 +21,35 @@ const Payments = () => {
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        // fetch members and plans in parallel
-        const [memRes, planRes] = await Promise.all([
-          fetch(MEMBERS_API),
-          fetch(PLANS_API),
-        ]);
-        const [membersData, plansData] = await Promise.all([
-          memRes.json(),
-          planRes.json(),
-        ]);
+        const res = await fetch(MEMBERSHIPS_API);
+        const membershipsData = await res.json();
 
-        const planMap = new Map(
-          plansData.map((p) => [p.name, p])
-        );
+        // Group memberships by user to match the existing UI shape
+        const usersMap = new Map();
 
-        // convert backend rows to same shape used by UI
-        const usersData = membersData
-          .filter((m) => m.plan) // only members with a plan
-          .map((m) => {
-            const planObj = planMap.get(m.plan);
+        membershipsData.forEach((m) => {
+          const uId = m.userId || `guest_${m.id}`;
+          if (!usersMap.has(uId)) {
+            usersMap.set(uId, {
+              uid: uId,
+              username: m.username || m.userName || "No Name",
+              email: m.email || m.userEmail || "",
+              plans: [],
+            });
+          }
 
-            const pricePaid =
-              m.amount ?? planObj?.finalPrice ?? planObj?.final_price ?? 0;
-
-            return {
-              ...m,
-              uid: m.id,
-              username: m.username || m.name,
-              plans: [
-                {
-                  id: m.id,
-                  planName: m.plan,
-                  pricePaid,
-                  startDate: m.join_date,
-                  endDate: m.expiry_date,
-                  status: m.status,
-                  paymentStatus: m.payment_status || "Paid",
-                },
-              ],
-            };
+          usersMap.get(uId).plans.push({
+            id: m.id,
+            planName: m.planName,
+            pricePaid: m.pricePaid || 0,
+            startDate: m.startDate,
+            endDate: m.endDate,
+            status: m.status || "active",
+            paymentStatus: m.paymentId ? "Paid" : "Paid",
           });
+        });
 
-        setMembers(usersData);
+        setMembers(Array.from(usersMap.values()));
       } catch (error) {
         console.error(error);
         alert("Failed to load payment data");
@@ -90,7 +77,7 @@ const Payments = () => {
 
     try {
       // update via API
-      const res = await fetch(`${MEMBERS_API}/${memberId}`, {
+      const res = await fetch(`${MEMBERSHIPS_API}/${planId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "inactive" }),

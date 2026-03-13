@@ -4,7 +4,11 @@ const db = require('../config/db');
 async function getAllMemberships(req, res) {
   try {
     const [rows] = await db.query(`
-      SELECT m.*, u.username, u.email, u.mobile, u.role
+      SELECT m.*, 
+             COALESCE(m.userName, u.username) as username, 
+             COALESCE(m.userEmail, u.email) as email, 
+             COALESCE(m.userPhone, u.mobile) as mobile, 
+             u.role
       FROM memberships m
       LEFT JOIN users u ON m.userId = u.id
       ORDER BY m.createdAt DESC
@@ -54,6 +58,9 @@ async function createMembership(req, res) {
   try {
     const {
       userId,
+      userName,
+      userEmail,
+      userPhone,
       planId,
       planName,
       pricePaid,
@@ -70,12 +77,15 @@ async function createMembership(req, res) {
 
     const query = `
       INSERT INTO memberships
-      (userId, planId, planName, pricePaid, duration, startDate, endDate, paymentId, paymentMode, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (userId, userName, userEmail, userPhone, planId, planName, pricePaid, duration, startDate, endDate, paymentId, paymentMode, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       userId,
+      userName || null,
+      userEmail || null,
+      userPhone || null,
       planId,
       planName,
       actualPricePaid,
@@ -152,10 +162,33 @@ async function getMembershipById(req, res) {
   }
 }
 
+/* ================= UPDATE MEMBERSHIP ================= */
+async function updateMembership(req, res) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const [result] = await db.query(
+      "UPDATE memberships SET status = ? WHERE id = ?",
+      [status, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+
+    res.json({ success: true, message: "Membership updated successfully" });
+  } catch (error) {
+    console.error("Update membership error:", error);
+    res.status(500).json({ success: false, message: "Failed to update membership" });
+  }
+}
+
 module.exports = {
   createMembership,
   getUserMemberships,
   getMembershipById,
   getAllMemberships,
+  updateMembership,
   deleteMembership,
 };
