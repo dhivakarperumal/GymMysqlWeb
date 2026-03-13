@@ -242,7 +242,7 @@
 
 
 
-import { StrictMode } from "react";
+import { StrictMode, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
@@ -253,88 +253,76 @@ import PrivateRoute from "./PrivateRouter/PrivateRouter.jsx";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { Toaster, toast } from "react-hot-toast";
-import Login from "./Components/Login.jsx";
-import Register from "./Components/Register.jsx";
-import TrainerDetails from "./Components/TrainersDetails.jsx";
-import Trainers from "./Components/Trainers.jsx";
-import Facilities from "./Components/Facilities.jsx";
-import FacilityDetail from "./Components/FacilityDetail.jsx";
-import Pricing from "./Components/Pricing.jsx";
 
-import BuyPlan from "./Components/BuyPlan.jsx";
-import Products from "./Pages/Products.jsx";
-import Services from "./Components/Services.jsx";
-import ServicesDetails from "./Components/ServicesDetails.jsx";
-import ProductDetails from "./Components/ProductDetails.jsx";
-import Cart from "./Components/Cart.jsx";
-import ClassesTable from "./Components/ClassesTable.jsx";
-import Contact from "./Components/Contact.jsx";
-
-import Account from "./Components/Account.jsx";
-import Checkout from "./Components/Checkout.jsx";
+// Lazy load components
+const Login = lazy(() => import("./Components/Login.jsx"));
+const Register = lazy(() => import("./Components/Register.jsx"));
+const TrainerDetails = lazy(() => import("./Components/TrainersDetails.jsx"));
+const Trainers = lazy(() => import("./Components/Trainers.jsx"));
+const Facilities = lazy(() => import("./Components/Facilities.jsx"));
+const FacilityDetail = lazy(() => import("./Components/FacilityDetail.jsx"));
+const Pricing = lazy(() => import("./Components/Pricing.jsx"));
+const BuyPlan = lazy(() => import("./Components/BuyPlan.jsx"));
+const Products = lazy(() => import("./Pages/Products.jsx"));
+const Services = lazy(() => import("./Components/Services.jsx"));
+const ServicesDetails = lazy(() => import("./Components/ServicesDetails.jsx"));
+const ProductDetails = lazy(() => import("./Components/ProductDetails.jsx"));
+const Cart = lazy(() => import("./Components/Cart.jsx"));
+const ClassesTable = lazy(() => import("./Components/ClassesTable.jsx"));
+const Contact = lazy(() => import("./Components/Contact.jsx"));
+const Account = lazy(() => import("./Components/Account.jsx"));
+const Checkout = lazy(() => import("./Components/Checkout.jsx"));
 
 // // Admin
-import AdminPanel from "./Admin/AdminPanel.jsx";
-import Dashboard from "./Admin/Dashboard/Dashboard.jsx";
+const AdminPanel = lazy(() => import("./Admin/AdminPanel.jsx"));
+const Dashboard = lazy(() => import("./Admin/Dashboard/Dashboard.jsx"));
+const Billings = lazy(() => import("./Admin/Billing/Billing.jsx"));
+const Equipment = lazy(() => import("./Admin/Equipment/Equipment.jsx"));
+const Reports = lazy(() => import("./Admin/Reports/Reports.jsx"));
+const Settings = lazy(() => import("./Admin/Settingss/Settings.jsx"));
+const Enquiry = lazy(() => import("./Admin/Enquiry/Enquiry.jsx"));
 
-import Billings from "./Admin/Billing/Billing.jsx";
-import Equipment from "./Admin/Equipment/Equipment.jsx";
-import Reports from "./Admin/Reports/Reports.jsx";
-import Settings from "./Admin/Settingss/Settings.jsx"
-import Enquiry from "./Admin/Enquiry/Enquiry.jsx";
+const AddEditEquipment = lazy(() => import("./Admin/Equipment/AddEquipments.jsx"));
+const ViewEquipment = lazy(() => import("./Admin/Equipment/ViewEquipment.jsx"));
+const ProfileSettings = lazy(() => import("./Admin/Settingss/ProfileSettings.jsx"));
+const UserManagement = lazy(() => import("./Admin/Settingss/UserManagement.jsx"));
+const Staffs = lazy(() => import("./Admin/Staff/Staffs.jsx"));
+const AddEditStaff = lazy(() => import("./Admin/Staff/AddStaff.jsx"));
+const ViewStaff = lazy(() => import("./Admin/Staff/ViewStaff.jsx"));
+const Users = lazy(() => import("./Admin/Users/Users.jsx"));
+const ReviewsSettings = lazy(() => import("./Admin/Settingss/Review.jsx"));
 
-
-
-import AddEditEquipment from "./Admin/Equipment/AddEquipments.jsx";
-import ViewEquipment from "./Admin/Equipment/ViewEquipment.jsx";
-import ProfileSettings from "./Admin/Settingss/ProfileSettings.jsx";
-
-// import BillingSettings from "./Admin/Settingss/BillingSettings.jsx";
-import UserManagement from "./Admin/Settingss/UserManagement.jsx";
-
-import Staffs from "./Admin/Staff/Staffs.jsx";
-import AddEditStaff from "./Admin/Staff/AddStaff.jsx";
-import ViewStaff from "./Admin/Staff/ViewStaff.jsx";
-import Users from "./Admin/Users/Users.jsx";
-
-import ReviewsSettings from "./Admin/Settingss/Review.jsx";
-
-
-
-
-import OverallAttendance from "./Admin/Attendance/OverallAttendance.jsx";
-import AllProducts from "./Admin/Products/AllProducts.jsx";
-import AddProducts from "./Admin/Products/AddProducts.jsx";
-import AllOrders from "./Admin/Orders/All Orders.jsx";
-import Members from "./Admin/Members/Members.jsx"
-import AddMember from "./Admin/Members/AddMembers.jsx";
-import AddStock from "./Admin/Products/AddStock.jsx";
-import StockDetails from "./Admin/Products/Stockdetails.jsx";
-import PlansAll from "./Admin/Plans/PlansPage.jsx";
-import AddEditGymPlan from "./Admin/Plans/AddPlans.jsx";
-import AddEditFacility from "./Admin/Fecilieties/Addfecilities.jsx";
-import FacilitiesAll from "./Admin/Fecilieties/Fecilitiesall.jsx";
-import ServicesList from "./Admin/Servicess/servicesAll.jsx";
-import AddServices from "./Admin/Servicess/AddService.jsx";
-import OrderDetails from "./Admin/Orders/OrderDetails.jsx";
-import ProductDetail from "./Admin/Products/ProductDetail.jsx";
-import MemberAttendance from "./Admin/Staff/Memberattendance.jsx";
-
-import BuyPlanadmin from "./Admin/Plans/BuyPlan.jsx";
-
+const OverallAttendance = lazy(() => import("./Admin/Attendance/OverallAttendance.jsx"));
+const AllProducts = lazy(() => import("./Admin/Products/AllProducts.jsx"));
+const AddProducts = lazy(() => import("./Admin/Products/AddProducts.jsx"));
+const AllOrders = lazy(() => import("./Admin/Orders/All Orders.jsx"));
+const Members = lazy(() => import("./Admin/Members/Members.jsx"));
+const AddMember = lazy(() => import("./Admin/Members/AddMembers.jsx"));
+const AddStock = lazy(() => import("./Admin/Products/AddStock.jsx"));
+const StockDetails = lazy(() => import("./Admin/Products/Stockdetails.jsx"));
+const PlansAll = lazy(() => import("./Admin/Plans/PlansPage.jsx"));
+const AddEditGymPlan = lazy(() => import("./Admin/Plans/AddPlans.jsx"));
+const AddEditFacility = lazy(() => import("./Admin/Fecilieties/Addfecilities.jsx"));
+const FacilitiesAll = lazy(() => import("./Admin/Fecilieties/Fecilitiesall.jsx"));
+const ServicesList = lazy(() => import("./Admin/Servicess/servicesAll.jsx"));
+const AddServices = lazy(() => import("./Admin/Servicess/AddService.jsx"));
+const OrderDetails = lazy(() => import("./Admin/Orders/OrderDetails.jsx"));
+const ProductDetail = lazy(() => import("./Admin/Products/ProductDetail.jsx"));
+const MemberAttendance = lazy(() => import("./Admin/Staff/Memberattendance.jsx"));
+const BuyPlanadmin = lazy(() => import("./Admin/Plans/BuyPlan.jsx"));
 
 // Trainer Admin Panel
-import TrainerAdminPanel from "./TrainerAdminPanel/TrainerAdminPanel.jsx";
-import TrainerDashboard from "./TrainerAdminPanel/TrainerDashboard/TrainerDashboard.jsx";
-import Payments from "./Admin/Payments/Payments.jsx";
-import AddWorkout from "./TrainerAdminPanel/AddWrokouts/AddWorkout.jsx";
-import AllWorkouts from "./TrainerAdminPanel/AddWrokouts/AllWorkouts.jsx";
-import AddDietPlans from "./TrainerAdminPanel/DietPlans/AddDietPlans.jsx";
-import AllDietPlans from "./TrainerAdminPanel/DietPlans/AllDietPlans.jsx";
-import TrainerOverallAttendance from "./TrainerAdminPanel/TrainerAttendance/OverallAttendance.jsx";
-import TrainerReports from "./TrainerAdminPanel/TrainerReports/Reports.jsx";
-import AssingnedTrainers from "./Admin/Payments/AssingnedTrainers.jsx";
-import GymWorkoutManager from "./Admin/CommenWorkDiet/CommenWorkDiet.jsx";
+const TrainerAdminPanel = lazy(() => import("./TrainerAdminPanel/TrainerAdminPanel.jsx"));
+const TrainerDashboard = lazy(() => import("./TrainerAdminPanel/TrainerDashboard/TrainerDashboard.jsx"));
+const Payments = lazy(() => import("./Admin/Payments/Payments.jsx"));
+const AddWorkout = lazy(() => import("./TrainerAdminPanel/AddWrokouts/AddWorkout.jsx"));
+const AllWorkouts = lazy(() => import("./TrainerAdminPanel/AddWrokouts/AllWorkouts.jsx"));
+const AddDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AddDietPlans.jsx"));
+const AllDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AllDietPlans.jsx"));
+const TrainerOverallAttendance = lazy(() => import("./TrainerAdminPanel/TrainerAttendance/OverallAttendance.jsx"));
+const TrainerReports = lazy(() => import("./TrainerAdminPanel/TrainerReports/Reports.jsx"));
+const AssingnedTrainers = lazy(() => import("./Admin/Payments/AssingnedTrainers.jsx"));
+const GymWorkoutManager = lazy(() => import("./Admin/CommenWorkDiet/CommenWorkDiet.jsx"));
 
 
 const router = createBrowserRouter([

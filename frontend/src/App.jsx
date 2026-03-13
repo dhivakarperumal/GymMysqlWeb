@@ -24,21 +24,21 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
+    // Speed up loading: 10ms instead of 15ms, fewer steps if needed
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-
-          // ✅ wait so user sees 100%
+          // Reduce timeout from 300ms to 100ms
           setTimeout(() => {
             setLoading(false);
-          }, 300);
-
+          }, 100);
           return 100;
         }
-        return prev + 1;
+        // Increment by 2 for faster progress
+        return prev + 2;
       });
-    }, 15);
+    }, 10);
 
     return () => clearInterval(interval);
   }, []);
@@ -107,7 +107,13 @@ function App() {
             {!hideLayout && <Navbar />}
             <ScrollToTop />
             <ScrollNavigator />
-            <Outlet />
+            <React.Suspense fallback={
+              <div className="flex items-center justify-center p-20">
+                <PacmanLoader color="#ef4444" size={25} />
+              </div>
+            }>
+              <Outlet />
+            </React.Suspense>
           </motion.div>
         </motion.div>
       </AnimatePresence>

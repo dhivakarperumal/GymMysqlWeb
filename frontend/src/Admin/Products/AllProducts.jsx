@@ -45,6 +45,7 @@ const AllProducts = () => {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,12 +57,15 @@ const AllProducts = () => {
 
   const loadProducts = async () => {
     try {
+      setLoading(true);
       const res = await fetch(API);
       const data = await res.json();
       setProducts(data);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load products");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -185,8 +189,16 @@ const AllProducts = () => {
           </select>
         </div>
 
+        {/* LOADING STATE */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-400">Loading your products...</p>
+          </div>
+        )}
+
         {/* CARD VIEW */}
-        {viewMode === "card" && (
+        {!loading && viewMode === "card" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {paginated.map((p) => (
               <div
@@ -261,7 +273,7 @@ const AllProducts = () => {
         )}
 
         {/* TABLE VIEW */}
-        {viewMode === "table" && (
+        {!loading && viewMode === "table" && (
           <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="min-w-full text-sm text-left">
               <thead className="bg-white/10 text-gray-300">

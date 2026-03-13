@@ -90,9 +90,13 @@ export default function Dashboard() {
     totalProducts: 0,
   });
 
+  /* ---------- LOADING STATE ---------- */
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true);
         const [membersRes, plansRes, ordersRes, staffRes, equipmentRes, productsRes] = await Promise.all([
           api.get('/members'),
           api.get('/plans'),
@@ -111,7 +115,7 @@ export default function Dashboard() {
 
         setStats({
           members: members.length,
-          checkinsToday: 0, // Will be calculated separately
+          checkinsToday: 0, 
           activePlans: plans.length,
           pendingPayments: orders.filter(o => o.status === 'pending').length,
           trainers: staff.length,
@@ -122,53 +126,54 @@ export default function Dashboard() {
       } catch (err) {
         console.error('Error fetching stats:', err);
         toast.error('Failed to load dashboard stats');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchStats();
   }, []);
 
-
   /* ---------- WEEKLY CHECK-IN CHART ---------- */
   const [checkinData, setCheckinData] = useState([]);
 
   useEffect(() => {
     const loadWeeklyAttendance = async () => {
-      const temp = [];
+      const daysToFetch = Array.from({ length: 7 }, (_, i) => 6 - i);
+      
+      try {
+        const attendancePromises = daysToFetch.map(async (i) => {
+          const date = dayjs().subtract(i, "day");
+          const dateStr = date.format("YYYY-MM-DD");
+          const dayData = {
+            day: date.format("ddd"),
+            present: 0,
+            absent: 0,
+            late: 0,
+            leave: 0,
+          };
 
-      for (let i = 6; i >= 0; i--) {
-        const date = dayjs().subtract(i, "day");
-        const dateStr = date.format("YYYY-MM-DD");
+          try {
+            const res = await api.get('/attendance', { params: { date: dateStr } });
+            const records = res.data || [];
+            records.forEach((record) => {
+              const status = record.status || '';
+              if (status.toLowerCase().includes('present')) dayData.present++;
+              else if (status.toLowerCase().includes('absent')) dayData.absent++;
+              else if (status.toLowerCase().includes('late')) dayData.late++;
+              else if (status.toLowerCase().includes('leave')) dayData.leave++;
+            });
+          } catch (err) {
+            console.log("No attendance data for:", dateStr);
+          }
+          return dayData;
+        });
 
-        const dayData = {
-          day: date.format("ddd"),
-          present: 0,
-          absent: 0,
-          late: 0,
-          leave: 0,
-        };
-
-        try {
-          // Fetch attendance for this date
-          const res = await api.get('/attendance', { params: { date: dateStr } });
-          const records = res.data || [];
-
-          records.forEach((record) => {
-            const status = record.status || '';
-
-            if (status === 'Present' || status === 'present') dayData.present++;
-            else if (status === 'Absent' || status === 'absent') dayData.absent++;
-            else if (status === 'Late' || status === 'late') dayData.late++;
-            else if (status === 'On Leave' || status === 'on_leave') dayData.leave++;
-          });
-        } catch (err) {
-          console.log("No attendance data for:", dateStr);
-        }
-
-        temp.push(dayData);
+        const results = await Promise.all(attendancePromises);
+        setCheckinData(results);
+      } catch (err) {
+        console.error("Error loading weekly attendance:", err);
       }
-
-      setCheckinData(temp);
     };
 
     loadWeeklyAttendance();
@@ -283,6 +288,15 @@ export default function Dashboard() {
 
 
   /* -------------------- UI -------------------- */
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-pulse">
+        <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-400 text-lg font-medium">Loading your dashboard data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 space-y-8">

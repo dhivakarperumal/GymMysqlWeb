@@ -12,14 +12,19 @@ const Members = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const navigate = useNavigate();
 
+  const [loading, setLoading] = useState(false);
+
   // 🔄 FETCH MEMBERS
   const fetchMembers = async () => {
     try {
+      setLoading(true);
       const res = await fetch(API);
       const data = await res.json();
       setMembers(data);
     } catch {
       toast.error("Failed to load members");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,9 +114,18 @@ const Members = () => {
   </div>
 </div>
 
-
-      {/* DESKTOP TABLE */}
-      <div className="hidden sm:block backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl overflow-x-auto">
+      {/* LOADING STATE */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Loading members data...</p>
+        </div>
+      )}
+      {/* DATA CONTENT */}
+      {!loading && (
+        <>
+          {/* DESKTOP TABLE */}
+          <div className="hidden sm:block backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl overflow-x-auto">
         <table className="w-full min-w-[700px] text-sm text-gray-200">
           <thead className="border-b border-white/10">
             <tr>
@@ -347,6 +361,8 @@ const Members = () => {
         </div>
       )}
 
+        </>
+      )}
     </div>
   );
 };

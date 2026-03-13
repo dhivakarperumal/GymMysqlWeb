@@ -34,7 +34,7 @@ const navItems = [
     icon: Package,
     children: [
       { path: "/admin/products", label: "Products", icon: Dumbbell },
-      { path: "/admin/plansall", label: "Membership Plans", icon: ClipboardList },
+      { path: "/admin/plansall", label: "Plans", icon: ClipboardList },
       { path: "/admin/fecilities", label: "Facilities", icon: Activity },
       { path: "/admin/stockdetails", label: "Supplements Stock", icon: Boxes },
     ],

@@ -163,7 +163,10 @@ const PlansAll = () => {
 
       {/* PLANS LIST */}
       {loading ? (
-        <p className="text-center text-gray-300">Loading plans…</p>
+        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Fetching membership plans...</p>
+        </div>
       ) : filteredPlans.length === 0 ? (
         <p className="text-center text-gray-400">No plans found</p>
       ) : (
