@@ -300,6 +300,7 @@ const Members = lazy(() => import("./Admin/Members/Members.jsx"));
 const AddMember = lazy(() => import("./Admin/Members/AddMembers.jsx"));
 const AddStock = lazy(() => import("./Admin/Products/AddStock.jsx"));
 const StockDetails = lazy(() => import("./Admin/Products/Stockdetails.jsx"));
+const SendMessage = lazy(() => import("./Admin/Members/SendMessage.jsx"));
 const PlansAll = lazy(() => import("./Admin/Plans/PlansPage.jsx"));
 const AddEditGymPlan = lazy(() => import("./Admin/Plans/AddPlans.jsx"));
 const AddEditFacility = lazy(() => import("./Admin/Fecilieties/Addfecilities.jsx"));
@@ -321,6 +322,7 @@ const AddDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AddDietPla
 const AllDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AllDietPlans.jsx"));
 const TrainerOverallAttendance = lazy(() => import("./TrainerAdminPanel/TrainerAttendance/OverallAttendance.jsx"));
 const TrainerReports = lazy(() => import("./TrainerAdminPanel/TrainerReports/Reports.jsx"));
+const TrainerSendMessage = lazy(() => import("./TrainerAdminPanel/TrainerSendMessage/TrainerSendMessage.jsx"));
 const AssingnedTrainers = lazy(() => import("./Admin/Payments/AssingnedTrainers.jsx"));
 const GymWorkoutManager = lazy(() => import("./Admin/CommenWorkDiet/CommenWorkDiet.jsx"));
 
@@ -376,7 +378,7 @@ const router = createBrowserRouter([
       { path: "members", element: <Members /> },
       { path: "addmembers", element: <AddMember /> },
       { path: "addmembers/:id", element: <AddMember /> },
-
+      { path: "send-message", element: <SendMessage /> },
 
       { path: "billing", element: <Billings /> },
 
@@ -443,6 +445,7 @@ const router = createBrowserRouter([
       { path: "adddietplans", element: <AddDietPlans /> },
       { path: "adddietplans/:id", element: <AddDietPlans /> },
       { path: "alladddietplans", element: <AllDietPlans /> },
+      { path: "send-message", element: <TrainerSendMessage /> },
 
       { path: "settings", element: <Settings /> },
       { path: "settings/profile", element: <ProfileSettings /> },

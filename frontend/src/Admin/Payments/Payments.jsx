@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Users, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // backend API
@@ -71,20 +71,20 @@ const Payments = () => {
   const getSerialNumber = (index) =>
     (currentPage - 1) * itemsPerPage + index + 1;
 
-  /* ================= MARK INACTIVE ================= */
-  const handleMarkInactive = async (memberId, planId) => {
-    if (!window.confirm("Mark this plan as inactive?")) return;
+  /* ================= MARK STATUS ================= */
+  const handleStatusChange = async (memberId, planId, newStatus) => {
+    if (!window.confirm(`Mark this plan as ${newStatus}?`)) return;
 
     try {
       // update via API
       const res = await fetch(`${MEMBERSHIPS_API}/${planId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "inactive" }),
+        body: JSON.stringify({ status: newStatus }),
       });
-      const updated = await res.json();
+      
       if (!res.ok) {
-        console.error("mark inactive failed", updated);
+        console.error("status update failed");
         alert("Update failed");
         return;
       }
@@ -94,14 +94,13 @@ const Payments = () => {
           m.uid !== memberId
             ? m
             : {
-              ...m,
-              status: "inactive",
-              plans: m.plans.map((p) =>
-                p.id === planId
-                  ? { ...p, status: "inactive", paymentStatus: "Unpaid" }
-                  : p
-              ),
-            }
+                ...m,
+                plans: m.plans.map((p) =>
+                  p.id === planId
+                    ? { ...p, status: newStatus, paymentStatus: newStatus === "active" ? "Paid" : "Unpaid" }
+                    : p
+                ),
+              }
         )
       );
     } catch (err) {
@@ -110,7 +109,55 @@ const Payments = () => {
     }
   };
 
+  /* ================= PRINT RECEIPT ================= */
+  const handlePrintReceipt = (member, plan) => {
+    const receiptContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="text-align: center; color: #f97316; margin-bottom: 5px;">Gym Admin</h2>
+        <h3 style="text-align: center; border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-top: 0; color: #555;">Payment Receipt</h3>
+        <p style="margin-top: 20px;"><strong>Member Name:</strong> ${member.username}</p>
+        <p><strong>Email:</strong> ${member.email}</p>
+        <p><strong>Plan:</strong> ${plan.planName}</p>
+        <p><strong>Amount Paid:</strong> ₹${plan.pricePaid}</p>
+        <p><strong>Start Date:</strong> ${formatDate(plan.startDate)}</p>
+        <p><strong>End Date:</strong> ${formatDate(plan.endDate)}</p>
+        <p><strong>Status:</strong> <span style="text-transform: capitalize;">${plan.status}</span></p>
+        <div style="border-top: 2px dashed #ddd; margin-top: 30px; padding-top: 15px; text-align: center; color: #777;">
+          <p>Thank you for choosing us!</p>
+        </div>
+      </div>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=600,height=600');
+    if (printWindow) {
+      printWindow.document.write('<html><head><title>Print Receipt</title></head><body>');
+      printWindow.document.write(receiptContent);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 300);
+    }
+  };
+
   /* ================= FILTER ================= */
+  // Get flat list of all plans for counting
+  const allInitialPlans = [];
+  members.forEach((member) => {
+    member.plans.forEach((plan) => {
+      allInitialPlans.push(plan);
+    });
+  });
+
+  const counts = {
+    all: allInitialPlans.length,
+    active: allInitialPlans.filter((p) => p.status === "active").length,
+    inactive: allInitialPlans.filter((p) => p.status === "inactive").length,
+    expiry: allInitialPlans.filter((p) => isExpiringPlan(p.endDate)).length,
+  };
+
   const filteredMembers = members
     .map((member) => ({
       ...member,
@@ -372,6 +419,49 @@ const Payments = () => {
 
       </div>
 
+      {/* ================= SUMMARY CARDS ================= */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-400 mb-1">Total Plans</p>
+            <p className="text-2xl font-bold">{counts.all}</p>
+          </div>
+          <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+            <Users size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-400 mb-1">Active</p>
+            <p className="text-2xl font-bold">{counts.active}</p>
+          </div>
+          <div className="p-3 bg-green-500/20 text-green-400 rounded-xl">
+            <CheckCircle size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-400 mb-1">Inactive</p>
+            <p className="text-2xl font-bold">{counts.inactive}</p>
+          </div>
+          <div className="p-3 bg-red-500/20 text-red-400 rounded-xl">
+            <XCircle size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-400 mb-1">Expiring Soon</p>
+            <p className="text-2xl font-bold">{counts.expiry}</p>
+          </div>
+          <div className="p-3 bg-yellow-500/20 text-yellow-400 rounded-xl">
+            <AlertTriangle size={24} />
+          </div>
+        </div>
+      </div>
+
 
       {/* ================= GRID VIEW ================= */}
       {viewType === "card" && (
@@ -423,20 +513,27 @@ const Payments = () => {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  onClick={() => handlePrintReceipt(member, plan)}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm transition"
+                >
+                  Print Receipt
+                </button>
                 {plan.status === "active" ? (
                   <button
-                    onClick={() =>
-                      handleMarkInactive(member.uid, plan.id)
-                    }
-                    className="px-4 py-2 bg-orange-500 rounded-lg text-sm"
+                    onClick={() => handleStatusChange(member.uid, plan.id, "inactive")}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm transition"
                   >
                     Refund & Inactive
                   </button>
                 ) : (
-                  <span className="px-4 py-2 bg-gray-500/20 rounded-lg text-sm">
-                    Inactive
-                  </span>
+                  <button
+                    onClick={() => handleStatusChange(member.uid, plan.id, "active")}
+                    className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-sm transition"
+                  >
+                    Mark Active
+                  </button>
                 )}
               </div>
             </div>
@@ -495,18 +592,27 @@ const Payments = () => {
                       ? "Active"
                       : "Inactive"}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 flex flex-wrap items-center gap-2">
+			<button
+                      onClick={() => handlePrintReceipt(member, plan)}
+                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition whitespace-nowrap"
+                    >
+                      Print Receipt
+                    </button>
                     {plan.status === "active" ? (
                       <button
-                        onClick={() =>
-                          handleMarkInactive(member.uid, plan.id)
-                        }
-                        className="px-3 py-1 bg-orange-500 rounded text-sm"
+                        onClick={() => handleStatusChange(member.uid, plan.id, "inactive")}
+                        className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition whitespace-nowrap"
                       >
                         Refund & Inactive
                       </button>
                     ) : (
-                      "—"
+                      <button
+                        onClick={() => handleStatusChange(member.uid, plan.id, "active")}
+                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm transition whitespace-nowrap"
+                      >
+                        Mark Active
+                      </button>
                     )}
                   </td>
                 </tr>

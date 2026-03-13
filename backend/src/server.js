@@ -30,6 +30,7 @@ const enquiryRoutes = require("./routes/enquiryRoutes");
 const dietRoutes = require("./routes/dietRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const addressRoutes = require("./routes/addressRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 const membershipRoutes = require("./routes/membershipRoutes");
 
@@ -111,6 +112,7 @@ app.use("/api/cart", require("./routes/cartRoutes"));
 app.use('/api/enquiries', enquiryRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/addresses", addressRoutes);
+app.use("/api/send-message", messageRoutes);
 
 app.use("/api/memberships", membershipRoutes);
 
