@@ -523,14 +523,23 @@ ${items
 
             {selectedOrder ? (
               <>
-                <div className="flex justify-between mb-4">
+                <div className="flex justify-between mb-2">
                   <p>
                     <b>Order ID:</b> {selectedOrder.order_id}
                   </p>
-                  <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
-                    {formatStatus(normalizeStatus(selectedOrder.status))}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
+                      {formatStatus(normalizeStatus(selectedOrder.status))}
+                    </span>
+                    {selectedOrder.courier_name && (
+                      <div className="text-[10px] bg-white/10 px-3 py-1 rounded-full text-gray-300">
+                        <span className="text-red-500 font-bold">{selectedOrder.courier_name}</span>
+                        {selectedOrder.docket_number && <span> | {selectedOrder.docket_number}</span>}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
 
                 {/* ADDRESS */}
                 {(() => {

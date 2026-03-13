@@ -76,10 +76,10 @@ async function getOrder(req, res) {
   }
 }
 
-// update order status and optionally cancelled reason
+// update order status and optionally cancelled reason or shipping info
 async function updateOrderStatus(req, res) {
   const { id } = req.params;
-  const { status, cancelledReason } = req.body;
+  const { status, cancelledReason, courierName, docketNumber } = req.body;
   if (!status) return res.status(400).json({ message: 'status required' });
   try {
     // Get the current order_track
@@ -100,10 +100,23 @@ async function updateOrderStatus(req, res) {
     // Add new status to track
     trackArray.push({ status, time: new Date() });
 
-    await pool.query(
-      `UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP, order_track = ? WHERE order_id = ?`,
-      [status, JSON.stringify(trackArray), id]
-    );
+    // Build update query dynamically to avoid overwriting existing tracking info if not provided
+    let query = 'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP, order_track = ?';
+    let params = [status, JSON.stringify(trackArray)];
+
+    if (courierName) {
+      query += ', courier_name = ?';
+      params.push(courierName);
+    }
+    if (docketNumber) {
+      query += ', docket_number = ?';
+      params.push(docketNumber);
+    }
+
+    query += ' WHERE order_id = ?';
+    params.push(id);
+
+    await pool.query(query, params);
     
     const [updated] = await pool.query('SELECT * FROM orders WHERE order_id = ?', [id]);
     res.json(parseOrder(updated[0]));
@@ -112,6 +125,7 @@ async function updateOrderStatus(req, res) {
     res.status(500).json({ message: 'Server error' });
   }
 }
+
 
 // create new order
 async function createOrder(req, res) {

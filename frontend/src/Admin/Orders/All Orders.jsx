@@ -88,6 +88,14 @@ const AllOrders = () => {
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [view, setView] = useState("table");
   const navigate=useNavigate();
+  
+  /* MODALS */
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [modalType, setModalType] = useState(""); // "cancelled" or "shipped"
+  const [pendingStatus, setPendingStatus] = useState(null); // { orderId, newStatus }
+  const [modalInput, setModalInput] = useState({ reason: "", courier: "", docket: "" });
+  const [submitting, setSubmitting] = useState(false);
+
 
   /* PAGINATION */
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,15 +178,36 @@ const AllOrders = () => {
 
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async (orderId, newStatus) => {
-    let reason = null;
-
     if (newStatus === "cancelled") {
-      reason = window.prompt("Enter cancel reason:");
-      if (reason === null) return;
+      setModalType("cancelled");
+      setPendingStatus({ orderId, newStatus });
+      setModalInput({ reason: "", courier: "", docket: "" });
+      setShowStatusModal(true);
+      return;
     }
 
+    if (newStatus === "shipped") {
+      setModalType("shipped");
+      setPendingStatus({ orderId, newStatus });
+      setModalInput({ reason: "", courier: "", docket: "" });
+      setShowStatusModal(true);
+      return;
+    }
+
+    // Direct update for other statuses
+    confirmAndSendStatus(orderId, newStatus);
+  };
+
+  const confirmAndSendStatus = async (orderId, newStatus, extra = {}) => {
     try {
-      await api.patch(`/orders/${orderId}/status`, { status: newStatus, cancelledReason: reason });
+      setSubmitting(true);
+      await api.patch(`/orders/${orderId}/status`, { 
+        status: newStatus, 
+        cancelledReason: extra.reason,
+        courierName: extra.courier,
+        docketNumber: extra.docket
+      });
+      
       const res = await api.get("/orders");
       const raw = res.data || [];
       const formatted = raw.map((o) => ({
@@ -191,20 +220,12 @@ const AllOrders = () => {
         createdAt: o.created_at,
       }));
       setOrders(formatted);
+      setShowStatusModal(false);
     } catch (err) {
       console.error("updateStatus error:", err);
-      
-      // Better error messaging
-      let errorMessage = "Failed to update status";
-      if (err.code === "ERR_NETWORK" || !err.response) {
-        errorMessage = "Cannot connect to server. Please check:\n1. Backend server is running on localhost:5000\n2. Network connectivity";
-      } else if (err.response?.status === 401) {
-        errorMessage = "Unauthorized. Please login again.";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      }
-      
-      alert(errorMessage);
+      alert(err.response?.data?.message || "Failed to update status");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -514,7 +535,87 @@ const AllOrders = () => {
           Next
         </button>
       </div>
+
+      {/* ================= STATUS UPDATE MODAL ================= */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 border border-white/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div className="p-6">
+              <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                {modalType === "cancelled" ? (
+                  <span className="text-red-500">Cancel Order</span>
+                ) : (
+                  <span className="text-orange-500">Shipping Details</span>
+                )}
+              </h3>
+              <p className="text-sm text-gray-400 mb-6">
+                {modalType === "cancelled" 
+                  ? "Please provide a reason for cancelling this order." 
+                  : "Enter the tracking information for this shipment."}
+              </p>
+
+              <div className="space-y-4">
+                {modalType === "cancelled" ? (
+                   <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Reason</label>
+                    <textarea 
+                      autoFocus
+                      value={modalInput.reason}
+                      onChange={(e) => setModalInput({...modalInput, reason: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-red-500/50 outline-none min-h-[100px]"
+                      placeholder="Customer changed their mind..."
+                    />
+                   </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Courier Name</label>
+                      <input 
+                        autoFocus
+                        value={modalInput.courier}
+                        onChange={(e) => setModalInput({...modalInput, courier: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none"
+                        placeholder="e.g. BlueDart, DTDC"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Docket Number</label>
+                      <input 
+                        value={modalInput.docket}
+                        onChange={(e) => setModalInput({...modalInput, docket: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none"
+                        placeholder="e.g. 123456789"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-8">
+                <button 
+                  onClick={() => setShowStatusModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-2xl font-bold text-sm transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => confirmAndSendStatus(pendingStatus.orderId, pendingStatus.newStatus, modalInput)}
+                  disabled={submitting}
+                  className={`flex-1 py-3 rounded-2xl font-bold text-sm transition shadow-lg ${
+                    modalType === "cancelled" 
+                      ? "bg-red-600 hover:bg-red-700 shadow-red-600/20" 
+                      : "bg-orange-600 hover:bg-orange-700 shadow-orange-600/20"
+                  } disabled:opacity-50`}
+                >
+                  {submitting ? "Updating..." : "Confirm Update"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 };
 

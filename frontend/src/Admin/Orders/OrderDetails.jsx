@@ -170,7 +170,10 @@ const OrderDetails = () => {
               color: item.color,
               image: item.image,
             })),
+            courierName: o.courier_name,
+            docketNumber: o.docket_number,
           });
+
         }
       } catch (err) {
         console.error("failed to load order", err);
@@ -203,7 +206,7 @@ const OrderDetails = () => {
       </div>
 
       {/* ================= STATUS ================= */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap items-center">
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${statusBadge(
             order.status
@@ -212,10 +215,21 @@ const OrderDetails = () => {
           {order.status}
         </span>
 
-      
-
-       
+        {order.courierName && (
+           <div className="flex gap-4 text-xs bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full shadow-lg shadow-emerald-500/5">
+             <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+               <FaTruck className="text-[10px]" /> {order.courierName}
+             </span>
+             {order.docketNumber && (
+               <span className="text-emerald-200 border-l border-emerald-500/30 pl-4">
+                 Docket: <span className="text-white font-black tracking-wider uppercase ml-1">{order.docketNumber}</span>
+               </span>
+             )}
+           </div>
+        )}
       </div>
+
+
 
       {/* ================= ORDER TRACK ================= */}
       <div className="bg-white/10 border border-white/20 rounded-2xl p-6">
