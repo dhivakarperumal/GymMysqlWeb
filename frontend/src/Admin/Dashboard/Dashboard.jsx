@@ -289,29 +289,18 @@ export default function Dashboard() {
 
   /* -------------------- UI -------------------- */
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] animate-pulse">
-        <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-400 text-lg font-medium">Loading your dashboard data...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-0 space-y-8">
-
+    <div className="p-0 space-y-8 relative min-h-[80vh]">
       {/* STAT CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard title="Total Members" value={stats.members} icon={<FaUsers />} color="from-blue-500 to-cyan-500" />
-        <StatCard title="Today's Check-ins" value={stats.checkinsToday} icon={<FaCalendarCheck />} color="from-emerald-500 to-teal-500" />
-        <StatCard title="Active Plans" value={stats.activePlans} icon={<FaDumbbell />} color="from-purple-500 to-pink-500" />
-        <StatCard title="Pending Payments" value={stats.pendingPayments} icon={<FaFileInvoiceDollar />} color="from-amber-500 to-orange-500" />
-        <StatCard title="Available Trainers" value={stats.trainers} icon={<FaUserTie />} color="from-indigo-500 to-violet-500" />
-        <StatCard title="Equipment Due" value={stats.equipmentDue} icon={<FaBox />} color="from-green-500 to-emerald-500" />
-        <StatCard title="Total Products" value={stats.totalProducts} icon={<FaBox />} color="from-green-500 to-emerald-500" />
-        <StatCard title="Total Orders" value={stats.totalOrders} icon={<FaTools />} color="from-red-500 to-rose-500" />
-
+        <StatCard title="Total Members" value={loading ? "..." : stats.members} icon={<FaUsers />} color="from-blue-500 to-cyan-500" />
+        <StatCard title="Today's Check-ins" value={loading ? "..." : stats.checkinsToday} icon={<FaCalendarCheck />} color="from-emerald-500 to-teal-500" />
+        <StatCard title="Active Plans" value={loading ? "..." : stats.activePlans} icon={<FaDumbbell />} color="from-purple-500 to-pink-500" />
+        <StatCard title="Pending Payments" value={loading ? "..." : stats.pendingPayments} icon={<FaFileInvoiceDollar />} color="from-amber-500 to-orange-500" />
+        <StatCard title="Available Trainers" value={loading ? "..." : stats.trainers} icon={<FaUserTie />} color="from-indigo-500 to-violet-500" />
+        <StatCard title="Equipment Due" value={loading ? "..." : stats.equipmentDue} icon={<FaBox />} color="from-green-500 to-emerald-500" />
+        <StatCard title="Total Products" value={loading ? "..." : stats.totalProducts} icon={<FaBox />} color="from-green-500 to-emerald-500" />
+        <StatCard title="Total Orders" value={loading ? "..." : stats.totalOrders} icon={<FaTools />} color="from-red-500 to-rose-500" />
       </div>
 
 

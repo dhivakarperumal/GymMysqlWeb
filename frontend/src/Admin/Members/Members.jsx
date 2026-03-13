@@ -114,16 +114,9 @@ const Members = () => {
   </div>
 </div>
 
-      {/* LOADING STATE */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-400">Loading members data...</p>
-        </div>
-      )}
       {/* DATA CONTENT */}
-      {!loading && (
-        <>
+      <div className="relative min-h-[400px]">
+      <React.Fragment>
           {/* DESKTOP TABLE */}
           <div className="hidden sm:block backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl overflow-x-auto">
         <table className="w-full min-w-[700px] text-sm text-gray-200">
@@ -360,10 +353,9 @@ const Members = () => {
           </div>
         </div>
       )}
-
-        </>
-      )}
-    </div>
+    </React.Fragment>
+  </div>
+</div>
   );
 };
 

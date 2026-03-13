@@ -189,17 +189,12 @@ const AllProducts = () => {
           </select>
         </div>
 
-        {/* LOADING STATE */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-400">Loading your products...</p>
-          </div>
-        )}
-
-        {/* CARD VIEW */}
-        {!loading && viewMode === "card" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        {/* CONTENT AREA */}
+        <div className="relative min-h-[400px]">
+          <React.Fragment>
+            {/* CARD VIEW */}
+            {viewMode === "card" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {paginated.map((p) => (
               <div
                 key={p.id}
@@ -273,7 +268,7 @@ const AllProducts = () => {
         )}
 
         {/* TABLE VIEW */}
-        {!loading && viewMode === "table" && (
+        {viewMode === "table" && (
           <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="min-w-full text-sm text-left">
               <thead className="bg-white/10 text-gray-300">
@@ -362,8 +357,10 @@ const AllProducts = () => {
             </table>
           </div>
         )}
-      </div>
+          </React.Fragment>
     </div>
+  </div>
+</div>
   );
 };
 

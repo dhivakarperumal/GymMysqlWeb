@@ -13,110 +13,91 @@ import { useAuth } from "./PrivateRouter/AuthContext";
 import PercentageSpinner from "./Components/PercentageSpinner";
 
 function App() {
-  const { user } = useAuth(); // ✅ SAFE
-  const [progress, setProgress] = useState(0);
+  const { user } = useAuth();
+  const location = useLocation();
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // 🔄 Initial App Setup Logic
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
+    
+    // Simulate initial asset check/auth check
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 1200);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const location = useLocation();
-
+  // 🚀 Route Change Indicator Logic
   useEffect(() => {
-    // Speed up loading: 10ms instead of 15ms, fewer steps if needed
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          // Reduce timeout from 300ms to 100ms
-          setTimeout(() => {
-            setLoading(false);
-          }, 100);
-          return 100;
-        }
-        // Increment by 2 for faster progress
-        return prev + 2;
-      });
-    }, 10);
+    setIsTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTransitioning(false);
+    }, 400); // Match transition speed
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
-  if (loading) {
+  if (initialLoading) {
     return (
-      <div
-        className="h-screen w-full flex flex-col items-center justify-center text-white"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)), url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        {/* Pacman Loader */}
-        <PacmanLoader color="#ef4444" size={40} speedMultiplier={1.2} />
-
-        {/* Percentage */}
-        <p className="mt-4 text-2xl font-bold text-red-500">{progress}%</p>
-
-        {/* Text */}
-        <p className="mt-2 text-white text-4xl tracking-widest uppercase text-center lg:text-left mx-auto lg:mx-0">
-          Preparing Workout
+      <div className="fixed inset-0 z-[10000] bg-black flex flex-col items-center justify-center">
+        <div className="relative">
+          <PacmanLoader color="#ef4444" size={35} speedMultiplier={1.5} />
+          <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+            <motion.div 
+              className="h-full bg-gradient-to-r from-red-600 to-orange-500"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 1.1, ease: "easeInOut" }}
+            />
+          </div>
+        </div>
+        <p className="mt-20 text-white/40 text-xs uppercase tracking-[0.3em] animate-pulse">
+          Starting LifeStyle Pro
         </p>
       </div>
     );
   }
+
   // 🔐 Hide layout on auth pages
   const hideLayout = ["/login", "/register"].includes(location.pathname);
 
   return (
-    <section>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location.pathname}
-          className="relative overflow-hidden"
-        >
-          {/* LEFT PAGE */}
-          <motion.div
-            className="absolute top-0 left-0 w-1/2 h-full bg-black z-20"
-            initial={{ scaleX: 1 }}
-            animate={{ scaleX: 0 }}
-            exit={{ scaleX: 1 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            style={{ transformOrigin: "left" }}
-          />
-
-          {/* RIGHT PAGE */}
-          <motion.div
-            className="absolute top-0 right-0 w-1/2 h-full bg-black z-20"
-            initial={{ scaleX: 1 }}
-            animate={{ scaleX: 0 }}
-            exit={{ scaleX: 1 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            style={{ transformOrigin: "right" }}
-          />
-
-          {/* ACTUAL PAGE CONTENT */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+    <section className="min-h-screen bg-black overflow-x-hidden relative">
+      {/* ⚡ ROUTE PROGRESS BAR */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div 
+            initial={{ width: "0%", opacity: 1 }}
+            animate={{ width: "100%", opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="fixed top-0 left-0 h-[3px] bg-gradient-to-r from-red-600 to-orange-500 z-[99999] shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+          />
+        )}
+      </AnimatePresence>
+
+      {!hideLayout && <Navbar />}
+      <ScrollToTop />
+      <ScrollNavigator />
+
+      <main className="relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            {!hideLayout && <Navbar />}
-            <ScrollToTop />
-            <ScrollNavigator />
-            <React.Suspense fallback={
-              <div className="flex items-center justify-center p-20">
-                <PacmanLoader color="#ef4444" size={25} />
-              </div>
-            }>
+            <React.Suspense fallback={null}>
               <Outlet />
             </React.Suspense>
           </motion.div>
-        </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </main>
 
       {!hideLayout && <Footer />}
     </section>
