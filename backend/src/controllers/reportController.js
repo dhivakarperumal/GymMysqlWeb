@@ -24,7 +24,14 @@ async function getReports(req, res) {
       createdAt: r.payment_date || r.created_at || r.createdAt,
     }));
 
-    res.json({ appointments, inventory, treatments });
+    // Enquiries
+    const [enquiryRows] = await db.query('SELECT * FROM enquiries ORDER BY created_at DESC');
+    const enquiries = enquiryRows.map(r => ({
+      ...r,
+      createdAt: r.created_at || r.createdAt,
+    }));
+
+    res.json({ appointments, inventory, treatments, enquiries });
   } catch (err) {
     console.error('getReports error', err);
     res.status(500).json({ error: 'Failed to fetch reports' });
