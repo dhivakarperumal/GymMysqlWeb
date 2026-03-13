@@ -3,17 +3,56 @@ const bcrypt = require('bcryptjs');
 
 async function getAllMembers(req, res) {
   try {
-    // join with users to pull the email stored in accounts, and also
-    // compute how many workouts / diet plans each member has.
+    // We want a list that includes:
+    // 1. All records from gym_members (joined with their user account)
+    // 2. All records from users (role='user') that don't have a gym_member record yet
     const sql = `
-      SELECT gm.*,
-             u.id AS u_id,
-             u.email AS user_email,
-             (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
-             (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count
+      SELECT 
+        gm.id, 
+        gm.member_id, 
+        gm.name, 
+        gm.phone, 
+        gm.email, 
+        gm.gender,
+        gm.plan,
+        gm.status,
+        u.id AS u_id, 
+        u.email AS user_email, 
+        u.role,
+        (SELECT COUNT(*) FROM workout_programs wp WHERE wp.member_id = gm.id) AS workout_count,
+        (SELECT COUNT(*) FROM diet_plans dp WHERE dp.member_id = gm.id) AS diet_count,
+        gm.created_at,
+        'members' as source
       FROM gym_members gm
-      LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
-      ORDER BY gm.created_at DESC
+      LEFT JOIN users u ON (u.email = gm.email AND gm.email IS NOT NULL AND gm.email != '') 
+                        OR (u.mobile = gm.phone AND gm.phone IS NOT NULL AND gm.phone != '')
+      
+      UNION ALL
+      
+      SELECT 
+        NULL as id, 
+        NULL as member_id, 
+        u.username as name, 
+        u.mobile as phone, 
+        u.email, 
+        NULL as gender,
+        NULL as plan,
+        'active' as status,
+        u.id AS u_id, 
+        u.email AS user_email, 
+        u.role,
+        0 AS workout_count,
+        0 AS diet_count,
+        u.created_at,
+        'users' as source
+      FROM users u
+      WHERE u.role = 'user' AND NOT EXISTS (
+        SELECT 1 FROM gym_members gm2 
+        WHERE (gm2.email = u.email AND u.email IS NOT NULL AND u.email != '') 
+           OR (gm2.phone = u.mobile AND u.mobile IS NOT NULL AND u.mobile != '')
+      )
+      
+      ORDER BY created_at DESC
     `;
     const [rows] = await db.query(sql);
     res.json(rows);

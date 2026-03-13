@@ -4,15 +4,17 @@ import toast from "react-hot-toast";
 import api from "../api";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../PrivateRouter/AuthContext";
-import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
 const Login = () => {
   const [identifier, setIdentifier] = useState(""); // email OR username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
   const navigate = useNavigate();
+  const { login: contextLogin } = useAuth();
 
   // 🔹 Redirect by role
   const redirectByRole = (role) => {
@@ -25,79 +27,102 @@ const Login = () => {
     }
   };
 
-  const { login: contextLogin } = useAuth();
-
+  // 🔹 Normal Login
   const handleLogin = async (e) => {
     e.preventDefault();
+
     if (loading) return;
     setLoading(true);
 
     try {
-      // if password empty and identifier looks like a phone number, auto-fill password
       let loginPassword = password;
+
+      // phone number login auto password
       if (!loginPassword && /^\d+$/.test(identifier)) {
         loginPassword = identifier;
       }
+
       const res = await api.post("/auth/login", {
         identifier,
         password: loginPassword,
       });
 
       const userData = res.data.user;
-      localStorage.setItem("token", res.data.token);
+      const token = res.data.token;
+
+      localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
 
-      // update context too
-      contextLogin(userData, res.data.token);
+      contextLogin(userData, token);
+
+      toast.success("Login successful");
 
       redirectByRole(userData.role);
+
     } catch (err) {
-      toast.error(err?.response?.data?.message || err.message || "Login failed");
+      toast.error(
+        err?.response?.data?.message ||
+        err.message ||
+        "Login failed"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSuccess = async (credentialResponse) => {
-    try {
-      const decoded = jwtDecode(credentialResponse.credential);
+  // 🔹 Custom Google Login Hook (More Robust Popup)
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setLoading(true);
+        // Get user info from Google API using the access token
+        const userInfo = await axios.get(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
+        );
 
-      const googleUser = {
-        name: decoded.name,
-        email: decoded.email,
-        picture: decoded.picture,
-        googleId: decoded.sub
-      };
+        const googleUser = {
+          name: userInfo.data.name,
+          email: userInfo.data.email,
+          picture: userInfo.data.picture,
+          googleId: userInfo.data.sub
+        };
 
-      // send to backend
-      const res = await api.post(
-        "/auth/google-login",
-        googleUser
-      );
+        // Send to our backend
+        const res = await api.post("/auth/google-login", googleUser);
 
-      login(res.data.user, res.data.token);
+        const userData = res.data.user;
+        const token = res.data.token;
 
-      toast.success("Google Login Successful!");
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(userData));
 
-      if (res.data.user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/");
+        contextLogin(userData, token);
+
+        toast.success("Google Login Successful");
+        redirectByRole(userData.role);
+
+      } catch (error) {
+        console.error("Google Success Error:", error);
+        toast.error("Google Authentication Failed");
+      } finally {
+        setLoading(false);
       }
-
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Google Login Error:", error);
-      toast.error(error.response?.data?.message || error.message || "Google Login Failed");
+      toast.error("Google Login Failed - Check Pop-up Blocker");
     }
-  };
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-black px-4">
+
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 
                       bg-black/70 backdrop-blur-xl border border-gray-800 
                       rounded-3xl shadow-2xl overflow-hidden">
 
-        {/* LEFT – BRAND */}
+        {/* LEFT SIDE */}
         <div className="hidden md:flex flex-col justify-center px-12 
                         bg-gradient-to-br from-red-600 to-orange-500 text-white">
 
@@ -114,10 +139,12 @@ const Login = () => {
             <li>✔ Membership & attendance</li>
             <li>✔ Progress tracking</li>
           </ul>
+
         </div>
 
-        {/* RIGHT – FORM */}
+        {/* RIGHT SIDE */}
         <div className="flex items-center justify-center px-6 py-10">
+
           <div className="w-full max-w-md">
 
             <h2 className="text-3xl font-bold text-center text-white mb-2">
@@ -128,10 +155,9 @@ const Login = () => {
               Enter your credentials to continue
             </p>
 
-            {/* FORM */}
             <form onSubmit={handleLogin} className="space-y-4">
 
-              {/* EMAIL / USERNAME */}
+              {/* Identifier */}
               <input
                 type="text"
                 placeholder="Email, Username or Phone"
@@ -143,8 +169,9 @@ const Login = () => {
                 required
               />
 
-              {/* PASSWORD */}
+              {/* Password */}
               <div className="relative">
+
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
@@ -160,46 +187,66 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-3 flex items-center 
-                             text-gray-400 hover:text-red-500 cursor-pointer"
+                             text-gray-400 hover:text-red-500"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+
               </div>
 
-              {/* LOGIN */}
+              {/* Login Button */}
               <button
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-red-600 to-orange-500 
                            text-white py-3 rounded-lg font-bold tracking-wide 
-                           hover:opacity-90 transition disabled:opacity-50 cursor-pointer"
+                           hover:opacity-90 transition disabled:opacity-50"
               >
                 {loading ? "Logging in..." : "Login"}
               </button>
+
             </form>
 
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={handleSuccess}
-                onError={() => console.log("Login Failed")}
-              />
+            <div className="flex items-center my-6">
+              <div className="flex-1 h-px bg-gray-800"></div>
+              <span className="px-4 text-gray-500 text-sm">OR</span>
+              <div className="flex-1 h-px bg-gray-800"></div>
             </div>
 
+            {/* Google Login Custom Button */}
+            <button 
+              onClick={() => googleLogin()}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-black py-3 rounded-lg font-bold transition mb-4 disabled:opacity-50"
+            >
+              <img 
+                src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" 
+                alt="Google" 
+                className="w-6 h-6"
+              />
+              Continue with Google
+            </button>
+
             <p className="text-sm mt-5 text-center text-gray-400">
-              New member? <Link to="/register" className="text-red-500 font-semibold hover:underline">Join Now</Link>
+              New member?{" "}
+              <Link to="/register" className="text-red-500 font-semibold hover:underline">
+                Join Now
+              </Link>
             </p>
 
             <p className="text-sm mt-5 text-center text-gray-400">
-              <Link to="/" className="text-red-500 font-semibold hover:underline">Back to Home</Link>
+              <Link to="/" className="text-red-500 font-semibold hover:underline">
+                Back to Home
+              </Link>
             </p>
 
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 };
 
 export default Login;
-
-
-

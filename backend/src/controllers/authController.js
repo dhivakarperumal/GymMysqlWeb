@@ -78,4 +78,53 @@ async function login(req, res) {
   }
 }
 
-module.exports = { register, login };
+// Google login
+async function googleLogin(req, res) {
+  const { name, email, googleId, picture } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required from Google' });
+  }
+
+  try {
+    // Check if user exists
+    let [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    let user;
+
+    if (rows.length === 0) {
+      // Create user if not exists
+      const [result] = await pool.query(
+        `INSERT INTO users (email, username, role, google_id, picture)
+         VALUES (?, ?, ?, ?, ?)`,
+        [email, name || email.split('@')[0], 'user', googleId, picture]
+      );
+      
+      const [newRows] = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      user = newRows[0];
+    } else {
+      user = rows[0];
+      // Update google ID and picture if not present
+      if (!user.google_id || !user.picture) {
+        await pool.query(
+          'UPDATE users SET google_id = ?, picture = ? WHERE id = ?',
+          [googleId, picture, user.id]
+        );
+      }
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '7d' }
+    );
+
+    const { password_hash, ...userData } = user;
+    res.json({ token, user: userData });
+
+  } catch (err) {
+    logger.error('googleLogin error: %O', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+module.exports = { register, login, googleLogin };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import imageCompression from "browser-image-compression";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 
 const API = "http://localhost:5000/api/members";
@@ -32,38 +32,60 @@ const AddMember = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = Boolean(id);
 
-  // ✏️ FETCH MEMBER (EDIT)
+  // ✏️ FETCH MEMBER (EDIT) OR USER (NEW)
   useEffect(() => {
-    if (!isEdit) return;
+    const queryParams = new URLSearchParams(location.search);
+    const userId = queryParams.get("user_id");
 
-    const fetchMember = async () => {
-      try {
-        const res = await fetch(`${API}/${id}`);
-        const data = await res.json();
+    if (isEdit) {
+      const fetchMember = async () => {
+        try {
+          const res = await fetch(`${API}/${id}`);
+          const data = await res.json();
 
-        setForm({
-          ...data,
-          username: data.email ? data.email.split('@')[0] : '',
-          password: '', // don't prefill
-          height: data.height || "",
-          weight: data.weight || "",
-          bmi: data.bmi || "",
-          notes: data.notes || "",
-          address: data.address || "",
-          joinDate: dayjs(data.join_date).format("YYYY-MM-DD"),
-          expiryDate: data.expiry_date
-            ? dayjs(data.expiry_date).format("YYYY-MM-DD")
-            : "",
-        });
-      } catch {
-        toast.error("Failed to load member");
-      }
-    };
-
-    fetchMember();
-  }, [id]);
+          setForm({
+            ...data,
+            username: data.email ? data.email.split('@')[0] : '',
+            password: '', // don't prefill
+            height: data.height || "",
+            weight: data.weight || "",
+            bmi: data.bmi || "",
+            notes: data.notes || "",
+            address: data.address || "",
+            joinDate: dayjs(data.join_date).format("YYYY-MM-DD"),
+            expiryDate: data.expiry_date
+              ? dayjs(data.expiry_date).format("YYYY-MM-DD")
+              : "",
+          });
+        } catch {
+          toast.error("Failed to load member");
+        }
+      };
+      fetchMember();
+    } else if (userId) {
+      // Fetch user info to prefill
+      const fetchUser = async () => {
+        try {
+          const res = await fetch(`http://localhost:5000/api/users/${userId}`);
+          const data = await res.json();
+          setForm(prev => ({
+            ...prev,
+            name: data.username || "",
+            username: data.username || "",
+            phone: data.mobile || "",
+            email: data.email || "",
+            password: data.mobile || "", // Default password to mobile
+          }));
+        } catch {
+          console.error("Failed to load user info");
+        }
+      };
+      fetchUser();
+    }
+  }, [id, isEdit, location.search]);
 
   // 📏 BMI
   useEffect(() => {

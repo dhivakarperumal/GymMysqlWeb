@@ -45,11 +45,17 @@ const Members = () => {
   };
 
   // 🗑 DELETE MEMBER
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this member?")) return;
+  const handleDelete = async (m) => {
+    const idToDelete = m.id || m.member_id;
+    if (!idToDelete && m.source === "users") {
+      toast.error("Cannot delete a registered user from here. Use user management.");
+      return;
+    }
+
+    if (!window.confirm(`Delete ${m.name || "this member"}?`)) return;
 
     try {
-      const res = await fetch(`${API}/${id}`, {
+      const res = await fetch(`${API}/${idToDelete}`, {
         method: "DELETE",
       });
 
@@ -128,16 +134,16 @@ const Members = () => {
               </tr>
             ) : (
               paginatedData.map((m, index) => (
-                <tr key={`${m.source}-${m.id}`} className="border-b border-white/5 hover:bg-white/5 transition">
+                <tr key={m.id || `u-${m.u_id}`} className="border-b border-white/5 hover:bg-white/5 transition">
                   <td className="p-4 font-medium text-white">{startIndex + index + 1}</td>
                   <td className="p-4 font-medium text-white">{m.name || "N/A"}</td>
                   <td className="p-4">{m.phone || "N/A"}</td>
                   <td className="p-4">{m.email || m.user_email || "-"}</td>
-                  <td className="p-4">{m.workout_count || m.workoutCount || 0}</td>
-                  <td className="p-4">{m.diet_count || m.dietCount || 0}</td>
+                  <td className="p-4">{m.workout_count || 0}</td>
+                  <td className="p-4">{m.diet_count || 0}</td>
                   <td className="p-4">
                     <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-orange-500/20 text-orange-400">
-                      {m.role || m.plan || "Member"}
+                      {m.plan || m.role || "Member"}
                     </span>
                   </td>
                   {/* <th className="p-4 text-left font-medium">Type</th> */}
@@ -152,8 +158,15 @@ const Members = () => {
                   </td>
                   <td className="p-4 flex gap-2">
                     <button
-                      onClick={() => navigate(`/admin/addmembers/${m.id}`)}
+                      onClick={() => {
+                        if (m.source === "users") {
+                          navigate(`/admin/addmembers?user_id=${m.u_id}`);
+                        } else {
+                          navigate(`/admin/addmembers/${m.id}`);
+                        }
+                      }}
                       className="p-2 rounded-lg bg-yellow-500/80 hover:bg-yellow-500 text-white transition"
+                      title={m.source === "users" ? "Convert to Gym Member" : "Edit Member"}
                     >
                       <Pencil size={16} />
                     </button>
@@ -241,7 +254,7 @@ const Members = () => {
         ) : (
           paginatedData.map((m, index) => (
             <div
-              key={`${m.source}-${m.id}`}
+              key={m.id || `u-mob-${m.u_id}`}
               className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-lg space-y-3"
             >
               <div className="flex items-start justify-between gap-3">
@@ -267,10 +280,16 @@ const Members = () => {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => navigate(`/admin/addmembers/${m.id}`)}
+                  onClick={() => {
+                    if (m.source === "users") {
+                      navigate(`/admin/addmembers?user_id=${m.u_id}`);
+                    } else {
+                      navigate(`/admin/addmembers/${m.id}`);
+                    }
+                  }}
                   className="flex-1 px-3 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium transition"
                 >
-                  Edit
+                  {m.source === "users" ? "Convert" : "Edit"}
                 </button>
 
                 <button

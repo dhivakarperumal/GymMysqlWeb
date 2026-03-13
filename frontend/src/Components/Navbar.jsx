@@ -3,7 +3,8 @@ import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { Bell, ShoppingCart, ChevronDown } from "lucide-react";
-import logo from "../../public/images/logo-dark.png";
+// import logo from "../../public/images/logo-dark.png";
+const logo = "/images/logo-dark.png";
 
 import { Menu, X } from "lucide-react";
 import { FaUser } from "react-icons/fa";

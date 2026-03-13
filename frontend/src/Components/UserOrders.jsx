@@ -254,7 +254,7 @@ color:#dc2626;
 
 <div class="header">
 <div class="logo">
-<img src="/public/images/logo-dark.png" style="height:50px; object-fit:contain;" />
+<img src="/images/logo-dark.png" style="height:50px; object-fit:contain;" />
 </div>
 <div class="invoice-title">INVOICE</div>
 </div>
