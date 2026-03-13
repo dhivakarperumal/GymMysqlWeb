@@ -64,23 +64,23 @@ export default function ProductDetails() {
   const currentVariant = variantKey ? product?.stock?.[variantKey] : null;
 
   const pricing = (() => {
-    if (!currentVariant) return null;
+    if (!product) return null;
 
-    if (product.category === "Food") {
+    // 1. If we have a selected variant, prioritize its price but fallback to product base
+    if (currentVariant) {
       return {
-        mrp: currentVariant.mrp,
-        offerPrice:
-          currentVariant.offerPrice ?? currentVariant.offer_price ?? 0,
-        offer: currentVariant.offer || 0,
+        mrp: currentVariant.mrp || product.mrp,
+        offerPrice: currentVariant.offerPrice ?? currentVariant.offer_price ?? product.offer_price ?? product.offerPrice ?? 0,
+        offer: currentVariant.offer || product.offer || 0,
       };
     }
 
-    const prodMrp = product.mrp ?? product.mrp;
+    // 2. If no variant selected/available, use product base prices
+    const prodMrp = product.mrp;
     const prodOffer = product.offer || 0;
-    const prodOfferPrice =
-      product.offerPrice ?? product.offer_price ?? 0;
+    const prodOfferPrice = product.offer_price ?? product.offerPrice ?? 0;
 
-    if (prodMrp && prodOfferPrice) {
+    if (prodMrp || prodOfferPrice) {
       return {
         mrp: prodMrp,
         offerPrice: prodOfferPrice,
@@ -244,9 +244,18 @@ export default function ProductDetails() {
               {product.name}
             </h1>
 
-            <p className="uppercase tracking-widest text-white/80 mb-5 text-xs font-medium">
-              {product.category}
+            <p className="uppercase tracking-widest text-white/80 mb-2 text-xs font-medium">
+              {product.category} {product.subcategory && `• ${product.subcategory}`}
             </p>
+
+            <div className="flex items-center gap-1 mb-5">
+              {[...Array(5)].map((_, i) => (
+                <span key={i} className={i < (product.ratings || 5) ? 'text-yellow-500' : 'text-gray-600'}>
+                  ★
+                </span>
+              ))}
+              <span className="text-xs text-gray-400 ml-2">({product.ratings || 5}.0)</span>
+            </div>
 
             {/* PRICE */}
             <div className="flex items-center gap-4 mb-4 bg-[#0e1016] p-3 rounded-2xl border border-red-500/30 shadow">

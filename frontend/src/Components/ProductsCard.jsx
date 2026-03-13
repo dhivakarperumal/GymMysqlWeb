@@ -16,42 +16,36 @@ const makeImageUrl = (img) => {
 const getProductPricing = (product) => {
   if (!product) return null;
 
-  // 🥤 Food products (price inside stock)
-  if (product.stock) {
+  // 1. Try variant stock prices first (for products with variants like food/sizes)
+  if (product.stock && Object.keys(product.stock).length > 0) {
     const stockValues = Object.values(product.stock);
-    if (stockValues.length) {
-      const stock = stockValues[0];
+    const stock = stockValues[0]; // Take the first variant for preview
 
-      if (stock.mrp || stock.offerPrice) {
-        return {
-          mrp: stock.mrp ?? stock.offerPrice,
-          offerPrice: stock.offerPrice ?? stock.mrp,
-          offer: stock.offer || 0,
-        };
-      }
+    if (stock.offer_price || stock.offerPrice || stock.mrp) {
+      return {
+        mrp: stock.mrp || stock.offer_price || stock.offerPrice,
+        offerPrice: stock.offer_price ?? stock.offerPrice ?? stock.mrp,
+        offer: stock.offer || 0,
+      };
     }
   }
 
-  // 👕 Dress / Accessories (product level)
-  if (product.mrp || product.offerPrice) {
+  // 2. Try product level prices (for simple products)
+  const mrp = product.mrp;
+  const offerPrice = product.offer_price ?? product.offerPrice;
+
+  if (mrp || offerPrice) {
     return {
-      mrp: product.mrp ?? product.offerPrice,
-      offerPrice: product.offerPrice ?? product.mrp,
+      mrp: mrp || offerPrice,
+      offerPrice: offerPrice ?? mrp,
       offer: product.offer || 0,
     };
   }
 
-  // 🆕 API structure you used in addToCart
-  const price =
-    Number(product.offer_price ?? product.mrp ?? product.offerPrice ?? product.price ?? 0) ||
-    0;
-
-  if (price) {
-    return {
-      mrp: price,
-      offerPrice: price,
-      offer: 0,
-    };
+  // 3. Last resort fallback
+  const fallback = Number(product.price || 0);
+  if (fallback > 0) {
+    return { mrp: fallback, offerPrice: fallback, offer: 0 };
   }
 
   return null;

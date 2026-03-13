@@ -248,4 +248,39 @@ async function generateOrderId(req, res) {
   }
 }
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, createOrder, generateOrderId };
+// fetch all orders for a specific user with their items
+async function getUserOrders(req, res) {
+  const { userId } = req.params;
+  try {
+    const [orders] = await pool.query(
+      'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+
+    if (orders.length === 0) {
+      return res.json([]);
+    }
+
+    // Get all items for all orders of this user in one go
+    const orderIds = orders.map(o => o.order_id);
+    const [items] = await pool.query(
+      'SELECT * FROM order_items WHERE order_id IN (?)',
+      [orderIds]
+    );
+
+    // Group items by order_id
+    const ordersWithItems = orders.map(order => {
+      return {
+        ...parseOrder(order),
+        items: items.filter(item => item.order_id === order.order_id)
+      };
+    });
+
+    return res.json(ordersWithItems);
+  } catch (err) {
+    console.error('getUserOrders error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+module.exports = { getAllOrders, getOrder, updateOrderStatus, createOrder, generateOrderId, getUserOrders };

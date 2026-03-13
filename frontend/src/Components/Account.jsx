@@ -108,7 +108,7 @@ const Account = () => {
         return <UserOrders />;
 
       case "plans":
-        return <MemberSBuyPlans />
+        return <MemberSBuyPlans preFetchedPlans={plans} />
 
       case "diet":
         return hasActivePlan ? (

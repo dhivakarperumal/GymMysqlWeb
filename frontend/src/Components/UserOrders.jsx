@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiPrinter } from "react-icons/fi";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import api from "../api";
+import { ShoppingCart } from "lucide-react";
 
 // helper to produce usable image URL or data URI
 const makeImageUrl = (img) => {
@@ -57,6 +58,7 @@ const UserOrders = () => {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const shipping =
@@ -71,12 +73,10 @@ const UserOrders = () => {
 
     const fetchOrders = async () => {
       try {
-        const res = await api.get("/orders");
-        const allOrders = res.data || [];
-        // Filter orders for current user
-        const userOrders = allOrders.filter(
-          (order) => order.user_id === userId,
-        );
+        // High-performance single request to get all orders + items
+        const res = await api.get(`/orders/user/${userId}`);
+        const userOrders = Array.isArray(res.data) ? res.data : [];
+        
         setOrders(userOrders);
         setLoading(false);
       } catch (err) {
@@ -85,30 +85,19 @@ const UserOrders = () => {
       }
     };
 
-    fetchOrders();
-  }, [userId]);
-
-  /* ---------------- FETCH ORDER DETAILS ---------------- */
-  useEffect(() => {
-    if (!selectedOrder) {
-      setSelectedOrderDetails(null);
-      return;
-    }
-
-    const fetchOrderDetails = async () => {
-      setLoadingDetails(true);
+    const fetchFeatured = async () => {
       try {
-        const res = await api.get(`/orders/${selectedOrder.order_id}`);
-        setSelectedOrderDetails(res.data);
+        const res = await api.get("/products");
+        const list = Array.isArray(res.data) ? res.data : [];
+        setFeaturedProducts(list.slice(0, 4)); // Show top 4
       } catch (err) {
-        console.error("Failed to fetch order details", err);
-      } finally {
-        setLoadingDetails(false);
+        console.error("Failed to fetch featured", err);
       }
     };
 
-    fetchOrderDetails();
-  }, [selectedOrder]);
+    fetchOrders();
+    fetchFeatured();
+  }, [userId]);
 
   /* ---------------- PRINT ---------------- */
   const handlePrint = async (order) => {
@@ -372,19 +361,57 @@ ${items
   /* ---------------- EMPTY ---------------- */
   if (orders.length === 0) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
-        <div className="flex flex-col items-center text-center bg-gray-900 border border-red-500/30 rounded-xl p-12 text-white space-y-4">
-          <div className="text-5xl">🛒</div>
-          <h2 className="text-xl font-bold text-red-500">No Orders Yet</h2>
-          <p className="text-gray-400 max-w-md">
-            Looks like you haven’t purchased anything yet.
+      <div className="min-h-screen bg-black/50 px-4 py-8 rounded-3xl border border-red-500/10">
+        <div className="flex flex-col items-center text-center p-12 mb-12">
+          <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6 shadow-inner">
+            <ShoppingCart className="text-red-500" size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">No Order History</h2>
+          <p className="text-gray-400 max-w-sm mb-8">
+            You haven't purchased any items yet. Check out our store for supplements, gear, and more!
           </p>
           <button
             onClick={() => navigate("/products")}
-            className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-full font-semibold"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-full transition shadow-lg shadow-red-600/20"
           >
-            🏋️ Browse Products
+            🏋️ Visit Store
           </button>
+        </div>
+
+        {/* RECENTLY VIEWED / FEATURED ("products all show") */}
+        <div className="mt-12">
+          <h3 className="text-xl font-bold text-white mb-6">Must-Have Gear</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {featuredProducts.length > 0 ? (
+              featuredProducts.map((prod) => (
+                <div 
+                  key={prod.id} 
+                  onClick={() => navigate(`/products/${prod.id}`)}
+                  className="bg-gray-900/60 border border-white/5 p-4 rounded-2xl cursor-pointer hover:border-red-500/40 transition group"
+                >
+                  <div className="w-full aspect-square bg-black/40 rounded-xl mb-4 overflow-hidden">
+                    <img 
+                      src={makeImageUrl(prod.image || prod.images?.[0]) || "https://via.placeholder.com/150"} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                      alt={prod.name}
+                    />
+                  </div>
+                  <p className="text-sm font-bold text-white truncate">{prod.name}</p>
+                  <p className="text-xs text-red-500 font-black mt-1">
+                    ₹{prod.offer_price || prod.offerPrice || prod.mrp || "0"}
+                  </p>
+                </div>
+              ))
+            ) : (
+              [1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-gray-900/60 border border-white/5 p-4 rounded-2xl">
+                  <div className="w-full aspect-square bg-black/40 rounded-xl mb-4 animate-pulse"></div>
+                  <div className="h-3 bg-white/5 w-3/4 rounded mb-2"></div>
+                  <div className="h-2 bg-white/5 w-1/2 rounded"></div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     );
@@ -427,12 +454,32 @@ ${items
               </div>
             </div>
 
-            <div className="flex justify-between items-center mt-4">
-              <p className="font-semibold">Total: ₹{order.total}</p>
+            <div className="flex justify-between items-center mt-4 border-t border-red-500/10 pt-4">
+              <p className="font-semibold text-lg">Total: ₹{order.total}</p>
               <p className="text-sm text-gray-400">
                 Payment: {order.payment_status}
               </p>
             </div>
+
+            {/* SHOW PRODUCTS DIRECTLY ("products all show") */}
+            {order.items && order.items.length > 0 && (
+              <div className="mt-4 space-y-3 bg-black/40 p-3 rounded-lg border border-red-500/5">
+                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Items Purchased</p>
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <img 
+                      src={makeImageUrl(item.image) || "https://via.placeholder.com/40"} 
+                      className="w-10 h-10 object-cover rounded border border-white/10"
+                      alt={item.product_name}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.product_name}</p>
+                      <p className="text-[10px] text-gray-400">Qty: {item.qty} | ₹{item.price}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -452,41 +499,41 @@ ${items
               Order Details
             </h3>
 
-            {loadingDetails ? (
-              <div className="text-center py-8">Loading order details...</div>
-            ) : selectedOrderDetails ? (
+            {selectedOrder ? (
               <>
                 <div className="flex justify-between mb-4">
                   <p>
-                    <b>Order ID:</b> {selectedOrderDetails.order_id}
+                    <b>Order ID:</b> {selectedOrder.order_id}
                   </p>
                   <span className="px-4 py-1 rounded-full bg-red-600 text-white text-sm">
-                    {formatStatus(normalizeStatus(selectedOrderDetails.status))}
+                    {formatStatus(normalizeStatus(selectedOrder.status))}
                   </span>
                 </div>
 
                 {/* ADDRESS */}
-                {shipping && (
-                  <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
-                    <h4 className="font-semibold mb-2 text-red-500">
-                      Delivery Address
-                    </h4>
+                {(() => {
+                  const ship = typeof selectedOrder.shipping === "string" 
+                    ? JSON.parse(selectedOrder.shipping || "{}") 
+                    : selectedOrder.shipping;
+                  
+                  return ship && (
+                    <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
+                      <h4 className="font-semibold mb-2 text-red-500">
+                        Delivery Address
+                      </h4>
 
-                    <p className="font-medium">{shipping.name}</p>
-                    <p className="text-sm text-gray-400">{shipping.email}</p>
-                    <p className="text-sm text-gray-400">{shipping.phone}</p>
-
-                    <p className="text-sm text-gray-400">
-                      {shipping.address}, {shipping.city}
-                    </p>
-
-                    <p className="text-sm text-gray-400">
-                      {shipping.state} - {shipping.zip}
-                    </p>
-
-                    <p className="text-sm text-gray-400">{shipping.country}</p>
-                  </div>
-                )}
+                      <p className="font-medium">{ship.name}</p>
+                      <p className="text-sm text-gray-400">{ship.email}</p>
+                      <p className="text-sm text-gray-400">{ship.phone}</p>
+                      <p className="text-sm text-gray-400">
+                        {ship.address}, {ship.city}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {ship.state} - {ship.zip}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* ITEMS */}
                 <table className="w-full text-sm mb-4">
@@ -498,7 +545,7 @@ ${items
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedOrderDetails.items || []).map((item, i) => (
+                    {(selectedOrder.items || []).map((item, i) => (
                       <tr key={i} className="border-b border-red-500/20">
                         <td className="p-3 flex items-center gap-3">
                           {/* PRODUCT IMAGE */}
@@ -558,7 +605,7 @@ ${items
                 <div className="flex justify-between font-bold mb-6 border-t border-red-500/20 pt-4">
                   <span>Total</span>
                   <span className="text-red-500">
-                    ₹{selectedOrderDetails.total}
+                    ₹{selectedOrder.total}
                   </span>
                 </div>
 
@@ -568,7 +615,7 @@ ${items
                 </h4>
 
                 {(() => {
-                  const rawStatus = selectedOrderDetails.status;
+                  const rawStatus = selectedOrder.status;
                   const normalizedStatus = normalizeStatus(rawStatus);
 
                   const stepIndex = ORDER_STEPS.findIndex(
