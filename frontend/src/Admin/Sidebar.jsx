@@ -21,6 +21,7 @@ import {
   HeartPulse,
   Package,
   MessageSquare,
+  Send,
 } from "lucide-react";
 
 import { useAuth } from "../PrivateRouter/AuthContext";
@@ -60,6 +61,7 @@ const navItems = [
   { path: "/admin/commenworkoutdiet", label: "Workout & Diet", icon: HeartPulse },
   { path: "/admin/reports", label: "Reports & Analytics", icon: BarChart3 },
   { path: "/admin/enquiry", label: "Enquiry", icon: MessageSquare },
+  { path: "/admin/send-message", label: "Send Message", icon: Send },
   { path: "/", label: "Back Home", icon: Home },
 ];
 
