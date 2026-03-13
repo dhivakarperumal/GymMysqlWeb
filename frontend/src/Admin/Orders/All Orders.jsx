@@ -337,7 +337,7 @@ const AllOrders = () => {
                   <th className="px-4 py-4 text-left">Amount</th>
                   <th className="px-4 py-4 text-left">Payment</th>
                   <th className="px-4 py-4 text-left">Status</th>
-                  <th className="px-4 py-4 text-left">Products</th>
+                 
                   <th className="px-4 py-4 text-left">Actions</th>
 
                 </tr>
@@ -365,26 +365,7 @@ const AllOrders = () => {
                     <td className="px-4 py-3">
                       {statusBadge(o.status)}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2 max-w-[200px]">
-                        {(o.items || []).map((item, idx) => (
-                          <div 
-                            key={idx} 
-                            className="bg-white/5 border border-white/10 rounded-lg p-1 flex items-center gap-2 group relative cursor-help"
-                            title={`${item.product_name} x ${item.qty}`}
-                          >
-                             {item.image && (
-                               <img 
-                                 src={makeImageUrl(item.image)} 
-                                 className="w-6 h-6 object-cover rounded" 
-                                 alt="" 
-                               />
-                             )}
-                             <span className="text-[10px] bg-orange-500/20 text-orange-300 px-1 rounded">x{item.qty}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
+                   
                     <td className="px-4 py-3 flex gap-2">
                        <select
                         value={normalizeKey(o.status)}
