@@ -11,18 +11,39 @@ const parseOrder = (order) => {
   };
 };
 
-// fetch all orders (most recent first)
+// fetch all orders (most recent first) with their items
 async function getAllOrders(req, res) {
   try {
-    const [rows] = await pool.query(
+    const [orders] = await pool.query(
       'SELECT * FROM orders ORDER BY created_at DESC'
     );
-    return res.json(rows.map(parseOrder));
+    
+    if (orders.length === 0) {
+      return res.json([]);
+    }
+
+    // Get all items for these orders in one go
+    const orderIds = orders.map(o => o.order_id);
+    const [items] = await pool.query(
+      'SELECT * FROM order_items WHERE order_id IN (?)',
+      [orderIds]
+    );
+
+    // Group items by order_id
+    const ordersWithItems = orders.map(order => {
+      return {
+        ...parseOrder(order),
+        items: items.filter(item => item.order_id === order.order_id)
+      };
+    });
+
+    return res.json(ordersWithItems);
   } catch (err) {
     console.error('getAllOrders error', err);
     res.status(500).json({ message: 'Server error' });
   }
 }
+
 
 // fetch single order by order_id
 async function getOrder(req, res) {

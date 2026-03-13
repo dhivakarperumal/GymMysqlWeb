@@ -31,12 +31,31 @@ const formatStatusLabel = (status) => {
     orderplaced: "Order Placed",
     processing: "Processing",
     packing: "Packing",
+    shipped: "Shipped",
     outfordelivery: "Out for Delivery",
     delivered: "Delivered",
     cancelled: "Cancelled",
   };
   return map[k] || status || "-";
 };
+
+const STATUS_SEQUENCE = [
+  "orderplaced",
+  "processing",
+  "packing",
+  "shipped",
+  "outfordelivery",
+  "delivered",
+];
+
+
+const makeImageUrl = (img) => {
+  if (!img) return "";
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  const base = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
+
 
 const getCustomerDetails = (o) => {
   if (normalizeKey(o.orderType) === "pickup") {
@@ -82,6 +101,7 @@ const AllOrders = () => {
         const raw = res.data || [];
         const formatted = raw.map((o) => ({
           ...o,
+          orderId: o.order_id,
           paymentStatus: o.payment_status,
           orderType: o.order_type,
           shipping: o.shipping,
@@ -121,7 +141,7 @@ const AllOrders = () => {
     const customer = getCustomerDetails(o);
 
     const matchSearch =
-      o.orderId?.toLowerCase().includes(search.toLowerCase()) ||
+      String(o.order_id || o.orderId || "").toLowerCase().includes(search.toLowerCase()) ||
       customer.name?.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus =
@@ -163,6 +183,7 @@ const AllOrders = () => {
       const raw = res.data || [];
       const formatted = raw.map((o) => ({
         ...o,
+        orderId: o.order_id,
         paymentStatus: o.payment_status,
         orderType: o.order_type,
         shipping: o.shipping,
@@ -206,9 +227,11 @@ const AllOrders = () => {
     const base =
       key === "delivered"
         ? "bg-emerald-500/20 text-emerald-300"
-        : key === "cancelled"
-          ? "bg-red-500/20 text-red-300"
-          : "bg-amber-500/20 text-amber-300";
+        : key === "shipped"
+          ? "bg-blue-500/20 text-blue-300"
+          : key === "cancelled"
+            ? "bg-red-500/20 text-red-300"
+            : "bg-amber-500/20 text-amber-300";
 
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${base}`}>
@@ -255,6 +278,7 @@ const AllOrders = () => {
             <option value="orderplaced">Order Placed</option>
             <option value="processing">Processing</option>
             <option value="packing">Packing</option>
+            <option value="shipped">Shipped</option>
             <option value="outfordelivery">Out for Delivery</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
@@ -313,7 +337,9 @@ const AllOrders = () => {
                   <th className="px-4 py-4 text-left">Amount</th>
                   <th className="px-4 py-4 text-left">Payment</th>
                   <th className="px-4 py-4 text-left">Status</th>
+                  <th className="px-4 py-4 text-left">Products</th>
                   <th className="px-4 py-4 text-left">Actions</th>
+
                 </tr>
               </thead>
               <tbody>
@@ -337,22 +363,51 @@ const AllOrders = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusBadge(o.status)}`}>
-                        {o.status}
-                      </span>
+                      {statusBadge(o.status)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2 max-w-[200px]">
+                        {(o.items || []).map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            className="bg-white/5 border border-white/10 rounded-lg p-1 flex items-center gap-2 group relative cursor-help"
+                            title={`${item.product_name} x ${item.qty}`}
+                          >
+                             {item.image && (
+                               <img 
+                                 src={makeImageUrl(item.image)} 
+                                 className="w-6 h-6 object-cover rounded" 
+                                 alt="" 
+                               />
+                             )}
+                             <span className="text-[10px] bg-orange-500/20 text-orange-300 px-1 rounded">x{item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3 flex gap-2">
-                      <select
+                       <select
                         value={normalizeKey(o.status)}
                         onChange={(e) => updateStatus(o.order_id, e.target.value)}
-                        className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs"
+                        className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-orange-500 outline-none"
                       >
-                        <option value="orderplaced">Order Placed</option>
-                        <option value="processing">Processing</option>
-                        <option value="packing">Packing</option>
-                        <option value="outfordelivery">Out for Delivery</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
+                        {normalizeKey(o.status) === "cancelled" ? (
+                          <option value="cancelled">Cancelled</option>
+                        ) : (
+                          <>
+                            {STATUS_SEQUENCE.map((step, idx) => {
+                              const currentIdx = STATUS_SEQUENCE.indexOf(normalizeKey(o.status));
+                              // Only show current and future statuses
+                              if (idx < currentIdx && currentIdx !== -1) return null;
+                              return <option key={step} value={step}>{formatStatusLabel(step)}</option>;
+                            })}
+                            
+                            {/* Only show Cancelled if NOT yet shipped or beyond */}
+                            {(STATUS_SEQUENCE.indexOf(normalizeKey(o.status)) < STATUS_SEQUENCE.indexOf("shipped")) && (
+                              <option value="cancelled">Cancelled</option>
+                            )}
+                          </>
+                        )}
                       </select>
 
                       <button
@@ -378,14 +433,32 @@ const AllOrders = () => {
               key={o.order_id}
               className="bg-white/10 border border-white/20 rounded-2xl p-4 space-y-2"
             >
-              <div onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="flex justify-between">
-                <h3 className="font-bold">{formatOrderId(o.orderId)}</h3>
+              <div onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="flex justify-between items-center">
+                <h3 className="font-bold">{formatOrderId(o.order_id || o.orderId)}</h3>
                 {statusBadge(o.status)}
               </div>
 
               <p onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="text-sm text-gray-300">
                 {o.shipping?.name || o.pickup?.name || "-"}
               </p>
+
+              <div className="flex flex-wrap gap-2 py-2">
+                {(o.items || []).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-black/20 p-1.5 rounded-xl border border-white/5">
+                     {item.image && (
+                       <img 
+                         src={makeImageUrl(item.image)} 
+                         className="w-8 h-8 object-cover rounded-lg" 
+                         alt="" 
+                       />
+                     )}
+                     <div className="min-w-0">
+                       <p className="text-[10px] font-medium truncate w-[100px]">{item.product_name}</p>
+                       <p className="text-[9px] text-gray-400">Qty: {item.qty} | ₹{item.price}</p>
+                     </div>
+                  </div>
+                ))}
+              </div>
 
               <p onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="font-semibold">
                 ₹ {Number(o.total).toLocaleString("en-IN")}
@@ -397,14 +470,24 @@ const AllOrders = () => {
                 <select
                   value={normalizeKey(o.status)}
                   onChange={(e) => updateStatus(o.order_id, e.target.value)}
-                  className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs w-full"
+                  className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs w-full focus:ring-1 focus:ring-orange-500 outline-none"
                 >
-                  <option value="orderplaced">Order Placed</option>
-                  <option value="processing">Processing</option>
-                  <option value="packing">Packing</option>
-                  <option value="outfordelivery">Out for Delivery</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
+                  {normalizeKey(o.status) === "cancelled" ? (
+                    <option value="cancelled">Cancelled</option>
+                  ) : (
+                    <>
+                      {STATUS_SEQUENCE.map((step, idx) => {
+                        const currentIdx = STATUS_SEQUENCE.indexOf(normalizeKey(o.status));
+                        if (idx < currentIdx && currentIdx !== -1) return null;
+                        return <option key={step} value={step}>{formatStatusLabel(step)}</option>;
+                      })}
+                      
+                      {/* Hide Cancelled if Shipped/Delivered */}
+                      {(STATUS_SEQUENCE.indexOf(normalizeKey(o.status)) < STATUS_SEQUENCE.indexOf("shipped")) && (
+                        <option value="cancelled">Cancelled</option>
+                      )}
+                    </>
+                  )}
                 </select>
 
                 <button

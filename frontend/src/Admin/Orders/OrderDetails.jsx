@@ -37,6 +37,10 @@ const statusBadge = (status) => {
       return "bg-amber-500/20 text-amber-300";
     case "shipped":
       return "bg-blue-500/20 text-blue-300";
+    case "packing":
+      return "bg-amber-500/20 text-amber-300";
+    case "outfordelivery":
+      return "bg-purple-500/20 text-purple-300";
     default:
       return "bg-gray-500/20 text-gray-300";
   }
@@ -59,7 +63,7 @@ const formatStatusLabel = (status) => {
     packing: "Packing",
     paking: "Packing",
     packed: "Packing",
-    shipped: "Packing",
+    shipped: "Shipped",
     outfordelivery: "Out for Delivery",
     outofdelivery: "Out for Delivery",
     outdelivery: "Out for Delivery",
@@ -76,6 +80,7 @@ const trackIcon = (status) => {
   if (k === "orderplaced" || k === "ordered") return <FaClock />;
   if (k === "processing" || k === "procceing") return <FaClipboardList />;
   if (k === "packing" || k === "paking" || k === "packed") return <FaBoxOpen />;
+  if (k === "shipped") return <FaTruck />;
   if (k === "outfordelivery" || k === "outofdelivery" || k === "outdelivery") return <FaTruck />;
   if (k === "delivered") return <FaCheckCircle />;
   if (k === "cancelled" || k === "canceled") return <FaTimesCircle />;
@@ -226,8 +231,10 @@ const OrderDetails = () => {
                 "orderplaced",
                 "processing",
                 "packing",
+                "shipped",
                 "outfordelivery",
                 "delivered",
+                "cancelled",
               ];
 
               const currentKey = normalizeKey(order.status);
@@ -238,8 +245,22 @@ const OrderDetails = () => {
                   (t) => normalizeKey(t.status) === stepKey
                 );
 
-                const completed = !!entry?.time || (currentIndex >= 0 && idx <= currentIndex);
-                const connectorCompleted = currentIndex > idx || !!entry?.time;
+                // Correct backfilling logic
+                const isCancelled = currentKey === "cancelled";
+                const stepIsCancelled = stepKey === "cancelled";
+                
+                let completed = !!entry?.time;
+                if (!completed && currentIndex >= 0 && idx <= currentIndex) {
+                  // If we are at/past this step and it's not cancelled, it's completed
+                  if (!isCancelled || stepKey === "orderplaced") {
+                     completed = true;
+                  }
+                }
+                
+                // Special case for cancelled dot
+                const isCancelledDot = stepIsCancelled && isCancelled;
+
+                const connectorCompleted = (currentIndex > idx && !isCancelled) || !!entry?.time;
                 const isLast = idx === arr.length - 1;
 
                 return (
@@ -247,10 +268,11 @@ const OrderDetails = () => {
                     <div className="flex flex-col items-center text-center w-full md:w-28">
                       <div
                         className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg ${
+                          isCancelledDot ? "bg-red-500 text-white" :
                           completed ? "bg-yellow-400 text-black" : "bg-white/5 text-gray-300"
                         }`}
                       >
-                        {completed ? <FaCheckCircle /> : trackIcon(stepKey)}
+                        {isCancelledDot ? <FaTimesCircle /> : completed ? <FaCheckCircle /> : trackIcon(stepKey)}
                       </div>
 
                       <div className={`mt-3 font-semibold text-sm capitalize ${completed ? "text-white" : "text-gray-300"}`}>

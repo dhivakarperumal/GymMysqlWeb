@@ -25,6 +25,7 @@ const ORDER_STEPS = [
   "OrderPlaced",
   "Processing",
   "Packing",
+  "Shipped",
   "OutForDelivery",
   "Delivered",
 ];
@@ -43,10 +44,12 @@ const normalizeStatus = (status) => {
 
   // ⚠️ Order matters — most specific first
   if (clean === "delivered") return "Delivered";
-  if (clean === "outfordelivery") return "OutForDelivery";
-  if (clean === "packing") return "Packing";
-  if (clean === "processing") return "Processing";
-  if (clean === "orderplaced") return "OrderPlaced";
+  if (clean === "cancelled" || clean === "canceled") return "Cancelled";
+  if (clean === "shipped") return "Shipped";
+  if (clean === "outfordelivery" || clean === "outdelivery" || clean === "outofdelivery") return "OutForDelivery";
+  if (clean === "packing" || clean === "paking" || clean === "packed") return "Packing";
+  if (clean === "processing" || clean === "procceing") return "Processing";
+  if (clean === "orderplaced" || clean === "ordered" || clean === "orderplace") return "OrderPlaced";
 
   return "OrderPlaced";
 };
@@ -76,7 +79,7 @@ const UserOrders = () => {
         // High-performance single request to get all orders + items
         const res = await api.get(`/orders/user/${userId}`);
         const userOrders = Array.isArray(res.data) ? res.data : [];
-        
+
         setOrders(userOrders);
         setLoading(false);
       } catch (err) {
@@ -89,7 +92,8 @@ const UserOrders = () => {
       try {
         const res = await api.get("/products");
         const list = Array.isArray(res.data) ? res.data : [];
-        setFeaturedProducts(list.slice(0, 4)); // Show top 4
+        setFeaturedProducts(list.slice(0, 12)); // Show up to 12
+
       } catch (err) {
         console.error("Failed to fetch featured", err);
       }
@@ -259,9 +263,8 @@ color:#dc2626;
 <p><b>Payment Status:</b> ${orderDetails.payment_status}</p>
 </div>
 
-${
-  shipping
-    ? `
+${shipping
+          ? `
 <div class="card">
 <p class="label">Shipping Address</p>
 <p>${shipping.name}</p>
@@ -273,8 +276,8 @@ ${
 <p>${shipping.country || ""}</p>
 </div>
 `
-    : ""
-}
+          : ""
+        }
 
 </div>
 
@@ -293,8 +296,8 @@ ${
 </tr>
 
 ${items
-  .map(
-    (i) => `
+          .map(
+            (i) => `
 <tr>
 
 <td>
@@ -314,8 +317,8 @@ ${items
 
 </tr>
 `,
-  )
-  .join("")}
+          )
+          .join("")}
 
 </table>
 </div>
@@ -384,14 +387,14 @@ ${items
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {featuredProducts.length > 0 ? (
               featuredProducts.map((prod) => (
-                <div 
-                  key={prod.id} 
+                <div
+                  key={prod.id}
                   onClick={() => navigate(`/products/${prod.id}`)}
                   className="bg-gray-900/60 border border-white/5 p-4 rounded-2xl cursor-pointer hover:border-red-500/40 transition group"
                 >
                   <div className="w-full aspect-square bg-black/40 rounded-xl mb-4 overflow-hidden">
-                    <img 
-                      src={makeImageUrl(prod.image || prod.images?.[0]) || "https://via.placeholder.com/150"} 
+                    <img
+                      src={makeImageUrl(prod.image || prod.images?.[0]) || "https://via.placeholder.com/150"}
                       className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                       alt={prod.name}
                     />
@@ -463,23 +466,42 @@ ${items
 
             {/* SHOW PRODUCTS DIRECTLY ("products all show") */}
             {order.items && order.items.length > 0 && (
-              <div className="mt-4 space-y-3 bg-black/40 p-3 rounded-lg border border-red-500/5">
-                <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Items Purchased</p>
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <img 
-                      src={makeImageUrl(item.image) || "https://via.placeholder.com/40"} 
-                      className="w-10 h-10 object-cover rounded border border-white/10"
-                      alt={item.product_name}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.product_name}</p>
-                      <p className="text-[10px] text-gray-400">Qty: {item.qty} | ₹{item.price}</p>
+              <div className="mt-4 space-y-3 bg-black/40 p-4 rounded-xl border border-red-500/10 shadow-inner">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-black mb-2 flex items-center gap-2">
+                  <span className="w-4 h-px bg-gray-800"></span>
+                  Items Purchased
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-4 bg-gray-900/40 p-2 rounded-lg border border-white/5 hover:border-red-500/20 transition group">
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <img
+                          src={makeImageUrl(item.image) || "https://via.placeholder.com/60"}
+                          className="w-full h-full object-cover rounded-lg border border-white/10 group-hover:scale-105 transition"
+                          alt={item.product_name}
+                        />
+                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-lg">
+                          x{item.qty}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-100 truncate group-hover:text-white transition">{item.product_name}</p>
+                        <div className="flex flex-wrap gap-2 items-center mt-1">
+                          <p className="text-[10px] text-red-500 font-bold">₹{item.price}</p>
+                          {(item.size || item.color) && (
+                            <div className="flex gap-1.5">
+                              {item.size && <span className="text-[9px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded uppercase">{item.size}</span>}
+                              {item.color && <span className="text-[9px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded uppercase">{item.color}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
+
           </div>
         ))}
       </div>
@@ -512,10 +534,10 @@ ${items
 
                 {/* ADDRESS */}
                 {(() => {
-                  const ship = typeof selectedOrder.shipping === "string" 
-                    ? JSON.parse(selectedOrder.shipping || "{}") 
+                  const ship = typeof selectedOrder.shipping === "string"
+                    ? JSON.parse(selectedOrder.shipping || "{}")
                     : selectedOrder.shipping;
-                  
+
                   return ship && (
                     <div className="border border-red-500/20 rounded-xl p-4 mb-6 bg-black">
                       <h4 className="font-semibold mb-2 text-red-500">
@@ -627,27 +649,29 @@ ${items
                   console.log("📍 ORDER STEPS 👉", ORDER_STEPS);
                   console.log("🔢 STEP INDEX 👉", stepIndex);
 
-                  const safeStep = stepIndex === -1 ? 0 : stepIndex;
+                  const currentIndex = stepIndex === -1 ? 0 : stepIndex;
+                  const isCancelled = rawStatus?.toLowerCase() === "cancelled";
 
                   return (
                     <div className="flex items-center justify-between w-full mt-6">
                       {ORDER_STEPS.map((step, index) => {
-                        const isCompleted = index < safeStep;
-                        const isActive = index === safeStep;
+                        const completed = !isCancelled && index < currentIndex;
+                        const isActive = index === currentIndex;
 
                         return (
                           <React.Fragment key={step}>
                             <div className="flex flex-col items-center min-w-[70px]">
                               <div
                                 className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold
-                  ${
-                    isCompleted
-                      ? "bg-red-600 text-white"
-                      : isActive
-                        ? "bg-red-500 text-white animate-pulse"
-                        : "bg-gray-700 text-gray-400"
-                  }
-                `}
+                   ${isCancelled && index === currentIndex
+                                    ? "bg-red-600 text-white"
+                                    : isActive
+                                      ? "bg-red-500 text-white animate-pulse"
+                                      : completed
+                                        ? "bg-red-600 text-white"
+                                        : "bg-gray-700 text-gray-400"
+                                  }
+                 `}
                               >
                                 {index + 1}
                               </div>
@@ -659,9 +683,8 @@ ${items
 
                             {index !== ORDER_STEPS.length - 1 && (
                               <div
-                                className={`flex-1 h-1 mx-2 rounded ${
-                                  isCompleted ? "bg-red-600" : "bg-gray-700"
-                                }`}
+                                className={`flex-1 h-1 mx-2 rounded ${completed ? "bg-red-600" : "bg-gray-700"
+                                  }`}
                               />
                             )}
                           </React.Fragment>
