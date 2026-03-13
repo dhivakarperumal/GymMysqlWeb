@@ -51,7 +51,7 @@ const Billing = () => {
       });
       return;
     }
-    
+
     const m = members.find((m) => (m.id || m.member_id || m.u_id || "").toString() === id.toString());
     if (m) {
       setShipping({
@@ -114,22 +114,22 @@ const Billing = () => {
   }, [createdOrderId]); // Reload when a new order is created
 
   /* ================= GENERATE ORDER NUMBER ================= */
-const generateOrderNumber = async () => {
-  try {
-    const res = await fetch(`${API_BASE}/orders/generate-order-id`, {
-      method: "POST",
-    });
+  const generateOrderNumber = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/generate-order-id`, {
+        method: "POST",
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    return data.order_id;
+      return data.order_id;
 
-  } catch (err) {
-    console.error(err);
-    const timestamp = Date.now();
-    return `ORD${String(timestamp).slice(-6)}`;
-  }
-};
+    } catch (err) {
+      console.error(err);
+      const timestamp = Date.now();
+      return `ORD${String(timestamp).slice(-6)}`;
+    }
+  };
 
   /* ================= ADD TO CART ================= */
   const addToCart = () => {
@@ -143,7 +143,7 @@ const generateOrderNumber = async () => {
 
     // Determine price: use offer_price if available and > 0, otherwise use mrp
     let price = 0;
-    
+
     if (product.offer_price && Number(product.offer_price) > 0) {
       price = Number(product.offer_price);
     } else if (product.mrp && Number(product.mrp) > 0) {
@@ -158,8 +158,8 @@ const generateOrderNumber = async () => {
     // Get product image and normalize URL
     const images = product.images ? (Array.isArray(product.images) ? product.images : JSON.parse(product.images)) : [];
     let image = images.length > 0 ? images[0] : null;
-    if (image && !image.match(/^(https?:\/\/|data:)/) ) {
-      image = `${API_BASE}/${image.replace(/^\//,"")}`;
+    if (image && !image.match(/^(https?:\/\/|data:)/)) {
+      image = `${API_BASE}/${image.replace(/^\//, "")}`;
     }
 
     setCart((prev) => [
@@ -190,128 +190,128 @@ const generateOrderNumber = async () => {
 
   /* ================= SAVE BILL ================= */
   const saveBill = async () => {
-  if (!cart.length) return toast.error("Cart empty");
+    if (!cart.length) return toast.error("Cart empty");
 
-  for (const key in shipping) {
-    if (!shipping[key]) return toast.error(`Fill ${key} field`);
-  }
+    for (const key in shipping) {
+      if (!shipping[key]) return toast.error(`Fill ${key} field`);
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    /* 1️⃣ GET ORDER NUMBER */
-    const orderId = await generateOrderNumber();
+      /* 1️⃣ GET ORDER NUMBER */
+      const orderId = await generateOrderNumber();
 
-    /* 2️⃣ UPDATE PRODUCT STOCK */
-    for (const item of cart) {
-      const productData = products.find((p) => p.id === item.productId);
+      /* 2️⃣ UPDATE PRODUCT STOCK */
+      for (const item of cart) {
+        const productData = products.find((p) => p.id === item.productId);
 
-      if (!productData) {
-        throw new Error(`Product ${item.productId} not found`);
+        if (!productData) {
+          throw new Error(`Product ${item.productId} not found`);
+        }
+
+        const updatedStock = { ...productData.stock };
+
+        if (!updatedStock[item.variant]) {
+          throw new Error(`Variant not found for ${productData.name}`);
+        }
+
+        const newQty = updatedStock[item.variant].qty - item.quantity;
+
+        if (newQty < 0) {
+          throw new Error(`Insufficient stock for ${productData.name}`);
+        }
+
+        updatedStock[item.variant] = {
+          ...updatedStock[item.variant],
+          qty: newQty,
+        };
+
+        const updateRes = await fetch(`${API_BASE}/products/${item.productId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stock: updatedStock }),
+        });
+
+        if (!updateRes.ok) {
+          throw new Error(`Failed to update stock for ${productData.name}`);
+        }
       }
 
-      const updatedStock = { ...productData.stock };
+      /* 3️⃣ CREATE ORDER WITH ITEMS */
+      const orderPayload = {
+        order_id: orderId,
+        user_id: null,
+        status: "orderPlaced",
+        payment_status: orderType === "ONLINE" ? "pending" : "paid",
+        total: subtotal,
+        order_type: orderType,
+        shipping: shipping,
+        pickup: null,
 
-      if (!updatedStock[item.variant]) {
-        throw new Error(`Variant not found for ${productData.name}`);
-      }
+        order_track: [
+          {
+            status: "orderPlaced",
+            time: new Date().toISOString(),
+          },
+        ],
 
-      const newQty = updatedStock[item.variant].qty - item.quantity;
+        /* ✅ ADD ORDER ITEMS */
+        items: cart.map((item) => {
+          // Parse variant to extract size and color (e.g., "XS-Male" -> size: "XS", color: "Male")
+          const variantParts = item.variant ? item.variant.split('-') : [];
+          const size = variantParts[0] || null;
+          const color = variantParts.slice(1).join('-') || null;
 
-      if (newQty < 0) {
-        throw new Error(`Insufficient stock for ${productData.name}`);
-      }
-
-      updatedStock[item.variant] = {
-        ...updatedStock[item.variant],
-        qty: newQty,
+          return {
+            product_id: item.productId,
+            product_name: item.name,
+            price: item.price,
+            qty: item.quantity,
+            size: size,
+            color: color,
+            image: item.image
+          };
+        }),
       };
 
-      const updateRes = await fetch(`${API_BASE}/products/${item.productId}`, {
-        method: "PUT",
+      const orderRes = await fetch(`${API_BASE}/orders`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stock: updatedStock }),
+        body: JSON.stringify(orderPayload),
       });
 
-      if (!updateRes.ok) {
-        throw new Error(`Failed to update stock for ${productData.name}`);
+      if (!orderRes.ok) {
+        const errData = await orderRes.json();
+        throw new Error(errData.message || "Failed to create order");
       }
+
+      // ✅ Order created successfully - show order ID to user
+      setCreatedOrderId(orderId);
+      setShowSuccessModal(true);
+
+      toast.success(`Order ${orderId} placed successfully ✅`);
+
+      // Reset form
+      setCart([]);
+      setShipping({
+        name: "",
+        phone: "",
+        email: "",
+        address: "",
+        city: "",
+        state: "",
+        zip: "",
+        country: "India",
+      });
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Billing failed");
+    } finally {
+      setLoading(false);
     }
-
-    /* 3️⃣ CREATE ORDER WITH ITEMS */
-    const orderPayload = {
-      order_id: orderId,
-      user_id: null,
-      status: "orderPlaced",
-      payment_status: orderType === "ONLINE" ? "pending" : "paid",
-      total: subtotal,
-      order_type: orderType,
-      shipping: shipping,
-      pickup: null,
-
-      order_track: [
-        {
-          status: "orderPlaced",
-          time: new Date().toISOString(),
-        },
-      ],
-
-      /* ✅ ADD ORDER ITEMS */
-      items: cart.map((item) => {
-        // Parse variant to extract size and color (e.g., "XS-Male" -> size: "XS", color: "Male")
-        const variantParts = item.variant ? item.variant.split('-') : [];
-        const size = variantParts[0] || null;
-        const color = variantParts.slice(1).join('-') || null;
-        
-        return {
-          product_id: item.productId,
-          product_name: item.name,
-          price: item.price,
-          qty: item.quantity,
-          size: size,
-          color: color,
-          image: item.image
-        };
-      }),
-    };
-
-    const orderRes = await fetch(`${API_BASE}/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderPayload),
-    });
-
-    if (!orderRes.ok) {
-      const errData = await orderRes.json();
-      throw new Error(errData.message || "Failed to create order");
-    }
-
-    // ✅ Order created successfully - show order ID to user
-    setCreatedOrderId(orderId);
-    setShowSuccessModal(true);
-    
-    toast.success(`Order ${orderId} placed successfully ✅`);
-
-    // Reset form
-    setCart([]);
-    setShipping({
-      name: "",
-      phone: "",
-      email: "",
-      address: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "India",
-    });
-
-  } catch (err) {
-    console.error(err);
-    toast.error(err.message || "Billing failed");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   /* ================= UI ================= */
   return (
@@ -324,7 +324,7 @@ const generateOrderNumber = async () => {
       {/* SELECT MEMBER/USER */}
       <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
         <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          
+
           Select Member or User
         </h3>
         <select
@@ -343,7 +343,7 @@ const generateOrderNumber = async () => {
       </div>
 
       {/* RECENT ORDERS / BILLS */}
-      
+
       <div>
         <h3 className="text-lg font-semibold mb-3">Add Products</h3>
 
@@ -539,7 +539,7 @@ const generateOrderNumber = async () => {
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1f35] border-2 border-green-500/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            
+
             {/* SUCCESS CHECKMARK */}
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">

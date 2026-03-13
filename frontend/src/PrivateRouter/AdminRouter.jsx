@@ -13,7 +13,7 @@ import Plans from "../Admin/Plans/Plans";
 import Facilities from "../Admin/Fecilieties/Facilities";
 import Orders from "../Admin/Orders/Orders";
 import Payments from "../Admin/Payments/Payments";
-import Billing from "../Admin/Billing/Billins";
+import Billing from "../Admin/Billing/Billing";
 import Reports from "../Admin/Reports/Reports";
 import Enquiry from "../Admin/Enquiry/Enquiry";
 
