@@ -12,6 +12,8 @@ import {
   Activity,
   BarChart3,
   Home,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 
 
@@ -52,6 +54,11 @@ const navItems = [
     path: "/trainer/overall-attendance",
     label: "Attendance",
     icon: CalendarCheck,
+  },
+  {
+    path: "/trainer/send-message",
+    label: "Send Message",
+    icon: Send,
   },
   // {
   //   path: "/trainer/reports",

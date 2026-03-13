@@ -322,6 +322,7 @@ const AddDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AddDietPla
 const AllDietPlans = lazy(() => import("./TrainerAdminPanel/DietPlans/AllDietPlans.jsx"));
 const TrainerOverallAttendance = lazy(() => import("./TrainerAdminPanel/TrainerAttendance/OverallAttendance.jsx"));
 const TrainerReports = lazy(() => import("./TrainerAdminPanel/TrainerReports/Reports.jsx"));
+const TrainerSendMessage = lazy(() => import("./TrainerAdminPanel/TrainerSendMessage/TrainerSendMessage.jsx"));
 const AssingnedTrainers = lazy(() => import("./Admin/Payments/AssingnedTrainers.jsx"));
 const GymWorkoutManager = lazy(() => import("./Admin/CommenWorkDiet/CommenWorkDiet.jsx"));
 
@@ -444,6 +445,7 @@ const router = createBrowserRouter([
       { path: "adddietplans", element: <AddDietPlans /> },
       { path: "adddietplans/:id", element: <AddDietPlans /> },
       { path: "alladddietplans", element: <AllDietPlans /> },
+      { path: "send-message", element: <TrainerSendMessage /> },
 
       { path: "settings", element: <Settings /> },
       { path: "settings/profile", element: <ProfileSettings /> },
