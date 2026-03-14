@@ -7,28 +7,40 @@ const db = require('../config/db');
  */
 async function getTodayCheckins(req, res) {
   try {
-    const { trainerId } = req.query;
-    
-    // We'll count members who have an entry in the attendance table for today.
-    // If trainerId is provided, we join with trainer_assignments to filter.
+    const { trainerId } = req.query; // This is the user_id from frontend
     
     let sql = "";
     let params = [];
     
-    if (trainerId) {
+    if (trainerId && trainerId !== 'undefined') {
+      // 1. Resolve users.id -> staff.id
+      const [staffRows] = await db.query(
+        "SELECT s.id FROM staff s JOIN users u ON (s.email = u.email OR s.username = u.username) WHERE u.id = ?",
+        [trainerId]
+      );
+      
+      const resolvedStaffId = staffRows.length > 0 ? staffRows[0].id : null;
+
+      if (!resolvedStaffId) {
+        return res.json({ count: 0 });
+      }
+
+      // 2. Count distinct members assigned to this staff
       sql = `
         SELECT COUNT(DISTINCT a.member_id) as count
         FROM attendance a
-        INNER JOIN trainer_assignments ta ON (ta.user_id = a.member_id OR ta.user_id = (SELECT user_id FROM members WHERE id = a.member_id))
-        WHERE DATE(a.check_in) = CURDATE()
+        INNER JOIN trainer_assignments ta ON ta.user_id = a.member_id
+        WHERE (DATE(a.check_in) = CURDATE() OR a.date = CURDATE())
           AND ta.trainer_id = ?
+          AND a.status = 'Present'
       `;
-      params = [trainerId];
+      params = [resolvedStaffId];
     } else {
       sql = `
         SELECT COUNT(DISTINCT member_id) as count
         FROM attendance
-        WHERE DATE(check_in) = CURDATE()
+        WHERE (DATE(check_in) = CURDATE() OR date = CURDATE())
+          AND status = 'Present'
       `;
     }
     

@@ -1,682 +1,475 @@
-// import { useEffect, useState, useMemo } from "react";
-// import {
-//   collection,
-//   getDocs,
-//   query,
-//   orderBy,
-//   addDoc,
-//   serverTimestamp,
-// } from "firebase/firestore";
-// import { db } from "../../firebase";
-// import { Search, Download, Calendar, Users } from "lucide-react";
-// import toast from "react-hot-toast";
-// import dayjs from "dayjs";
-
-// /* ================= STATUS BADGE ================= */
-// const StatusBadge = ({ status }) => {
-//   const map = {
-//     Present: "bg-green-500/20 text-green-400",
-//     Absent: "bg-red-500/20 text-red-400",
-//     Late: "bg-yellow-500/20 text-yellow-400",
-//     "On Leave": "bg-blue-500/20 text-blue-400",
-//   };
-
-//   return (
-//     <span
-//       className={`px-3 py-1 rounded-full text-xs font-semibold ${
-//         map[status] || "bg-white/10 text-white/60"
-//       }`}
-//     >
-//       {status}
-//     </span>
-//   );
-// };
-
-// const OverallAttendance = () => {
-//   const [attendanceData, setAttendanceData] = useState([]);
-//   const [members, setMembers] = useState([]);
-//   const [attendanceForm, setAttendanceForm] = useState({});
-//   const [showModal, setShowModal] = useState(false);
-
-//   const [search, setSearch] = useState("");
-//   const [selectedDate, setSelectedDate] = useState(
-//     dayjs().format("YYYY-MM-DD")
-//   );
-//   const [loading, setLoading] = useState(false);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const itemsPerPage = 15;
-
-//   useEffect(() => {
-//     loadAttendanceData();
-//   }, [selectedDate]);
-
-//   /* ================= LOAD ATTENDANCE ================= */
-//   const loadAttendanceData = async () => {
-//     setLoading(true);
-//     try {
-//       const q = query(
-//         collection(db, "attendance", selectedDate, "staff"),
-//         orderBy("loginTime", "desc")
-//       );
-
-//       const snap = await getDocs(q);
-//       const data = snap.docs.map((d) => ({
-//         id: d.id,
-//         ...d.data(),
-//       }));
-
-//       setAttendanceData(data);
-//     } catch (err) {
-//       console.error(err);
-//       setAttendanceData([]);
-//       toast.error("Failed to load attendance");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   /* ================= LOAD MEMBERS ================= */
-//   const loadMembers = async () => {
-//     try {
-//       const snap = await getDocs(collection(db, "users"));
-//       const data = snap.docs.map((d) => ({
-//         id: d.id,
-//         ...d.data(),
-//       }));
-
-//       setMembers(data);
-
-//       const initial = {};
-//       data.forEach((m) => {
-//         initial[m.id] = true;
-//       });
-//       setAttendanceForm(initial);
-//     } catch {
-//       toast.error("Failed to load members");
-//     }
-//   };
-
-//   /* ================= SUBMIT ATTENDANCE ================= */
-//   const submitAttendance = async () => {
-//     try {
-//       const promises = members.map((m) =>
-//         addDoc(
-//           collection(db, "attendance", selectedDate, "staff"),
-//           {
-//             name: m.name || "N/A",
-//             role: m.role || "member",
-//             status: attendanceForm[m.id]
-//               ? "Present"
-//               : "Absent",
-//             loginTime: attendanceForm[m.id]
-//               ? serverTimestamp()
-//               : null,
-//             logoutTime: null,
-//           }
-//         )
-//       );
-
-//       await Promise.all(promises);
-
-//       toast.success("Attendance Saved");
-//       setShowModal(false);
-//       loadAttendanceData();
-//     } catch (err) {
-//       console.error(err);
-//       toast.error("Failed to save attendance");
-//     }
-//   };
-
-//   /* ================= FILTER ================= */
-//   const filtered = useMemo(() => {
-//     return attendanceData.filter((item) =>
-//       `${item.name || ""} ${item.role || ""}`
-//         .toLowerCase()
-//         .includes(search.toLowerCase())
-//     );
-//   }, [attendanceData, search]);
-
-//   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-//   const paginatedData = filtered.slice(
-//     (currentPage - 1) * itemsPerPage,
-//     currentPage * itemsPerPage
-//   );
-
-//   /* ================= DOWNLOAD CSV ================= */
-//   const downloadAttendance = () => {
-//     let csv = "Name,Role,Status,Date\n";
-//     attendanceData.forEach((i) => {
-//       csv += `"${i.name}","${i.role}","${i.status}","${selectedDate}"\n`;
-//     });
-
-//     const el = document.createElement("a");
-//     el.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-//     el.download = `attendance-${selectedDate}.csv`;
-//     el.click();
-
-//     toast.success("Attendance downloaded");
-//   };
-
-//   return (
-//     <div className="p-6 space-y-6 min-h-screen">
-
-//       {/* HEADER */}
-//       <div className="flex justify-between items-center flex-wrap gap-3">
-//         <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-//           <Users className="text-orange-400" />
-//           Overall Attendance
-//         </h1>
-
-//         <div className="flex gap-3">
-//           <button
-//             onClick={() => {
-//               loadMembers();
-//               setShowModal(true);
-//             }}
-//             className="px-5 py-3 bg-green-600 rounded-lg text-white"
-//           >
-//             Mark Attendance
-//           </button>
-
-//           <button
-//             onClick={downloadAttendance}
-//             className="px-5 py-3 bg-orange-500 rounded-lg text-white"
-//           >
-//             <Download size={16} className="inline mr-1" />
-//             Download CSV
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* DATE */}
-//       <input
-//         type="date"
-//         value={selectedDate}
-//         onChange={(e) => setSelectedDate(e.target.value)}
-//         className="px-4 py-2 bg-white/10 text-white rounded-lg"
-//       />
-
-//       {/* SEARCH */}
-//       <div className="relative">
-//         <Search className="absolute left-3 top-3 text-white/40" />
-//         <input
-//           value={search}
-//           onChange={(e) => setSearch(e.target.value)}
-//           placeholder="Search..."
-//           className="w-full pl-10 pr-4 py-3 bg-white/10 text-white rounded-lg"
-//         />
-//       </div>
-
-//       {/* TABLE */}
-//       <div className="bg-white/5 rounded-xl overflow-hidden">
-//         {loading ? (
-//           <div className="p-6 text-white">Loading...</div>
-//         ) : (
-//           <table className="min-w-full text-white text-sm">
-//             <thead className="bg-white/10">
-//               <tr>
-//                 <th className="px-4 py-3 text-left">Name</th>
-//                 <th className="px-4 py-3 text-left">Role</th>
-//                 <th className="px-4 py-3 text-left">Status</th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {paginatedData.map((i) => (
-//                 <tr key={i.id} className="border-b border-white/10">
-//                   <td className="px-4 py-3">{i.name}</td>
-//                   <td className="px-4 py-3 capitalize">
-//                     {i.role}
-//                   </td>
-//                   <td className="px-4 py-3">
-//                     <StatusBadge status={i.status} />
-//                   </td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </table>
-//         )}
-//       </div>
-
-//       {/* MODAL */}
-//       {showModal && (
-//         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-6 z-50">
-//           <div className="bg-gray-900 w-full max-w-2xl rounded-xl p-6 space-y-4">
-
-//             <h2 className="text-xl font-bold text-white">
-//               Mark Attendance ({selectedDate})
-//             </h2>
-
-//             <div className="max-h-80 overflow-y-auto space-y-2">
-//               {members.map((m) => (
-//                 <div
-//                   key={m.id}
-//                   className="flex justify-between items-center bg-white/5 p-3 rounded-lg"
-//                 >
-//                   <div>
-//                     <p className="text-white">{m.name}</p>
-//                     <p className="text-xs text-white/50 capitalize">
-//                       {m.role}
-//                     </p>
-//                   </div>
-
-//                   <label className="flex items-center gap-2 text-white">
-//                     <input
-//                       type="checkbox"
-//                       checked={attendanceForm[m.id] || false}
-//                       onChange={(e) =>
-//                         setAttendanceForm({
-//                           ...attendanceForm,
-//                           [m.id]: e.target.checked,
-//                         })
-//                       }
-//                     />
-//                     Present
-//                   </label>
-//                 </div>
-//               ))}
-//             </div>
-
-//             <div className="flex justify-end gap-3">
-//               <button
-//                 onClick={() => setShowModal(false)}
-//                 className="px-4 py-2 bg-gray-700 rounded-lg text-white"
-//               >
-//                 Cancel
-//               </button>
-
-//               <button
-//                 onClick={submitAttendance}
-//                 className="px-6 py-2 bg-green-600 rounded-lg text-white"
-//               >
-//                 Submit
-//               </button>
-//             </div>
-
-//           </div>
-//         </div>
-//       )}
-
-//     </div>
-//   );
-// };
-
-// export default OverallAttendance;
-
-
-import { useEffect, useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  collection,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../../firebase";
-import { getAuth } from "firebase/auth";
-import { Search, Users, Calendar } from "lucide-react";
-import toast from "react-hot-toast";
+  Calendar,
+  Search,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Filter,
+  Users,
+  AlertCircle,
+  MapPin,
+  Save,
+  RefreshCcw,
+  Check
+} from "lucide-react";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import dayjs from "dayjs";
+import toast from "react-hot-toast";
+import api from "../../api";
 
-/* ================= STATUS BADGE ================= */
 const StatusBadge = ({ status }) => {
-  const map = {
-    Present: "bg-green-500/20 text-green-400",
-    Absent: "bg-red-500/20 text-red-400",
-  };
-
+  const isPresent = status === "Present";
   return (
     <span
-      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-        map[status] || "bg-white/10 text-white/60"
+      className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 w-fit ${
+        isPresent
+          ? "bg-green-500/10 text-green-400 border-green-500/20"
+          : "bg-red-500/10 text-red-400 border-red-500/20"
       }`}
     >
+      {isPresent ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
       {status}
     </span>
   );
 };
 
 const OverallAttendance = () => {
-  const auth = getAuth();
-  const trainerId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const trainerUserId = user?.id;
 
+  const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [loading, setLoading] = useState(true);
   const [attendanceData, setAttendanceData] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [attendanceForm, setAttendanceForm] = useState({});
-  const [showModal, setShowModal] = useState(false);
-
-  const [search, setSearch] = useState("");
+  const [assignedMembers, setAssignedMembers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [selectedDate, setSelectedDate] = useState(
-    dayjs().format("YYYY-MM-DD")
-  );
-  const [loading, setLoading] = useState(false);
+  const [showMarkModal, setShowMarkModal] = useState(false);
 
-  /* ================= LOAD ATTENDANCE ================= */
-  const loadAttendanceData = async () => {
-    if (!trainerId) return;
+  // States for marking attendance (Checklist)
+  const [savingMulti, setSavingMulti] = useState(false);
+  const [attendanceStates, setAttendanceStates] = useState({}); // { memberId: boolean }
+  const [locationStatus, setLocationStatus] = useState("idle"); 
+  const [trainerCoords, setTrainerCoords] = useState(null);
+  const [locationName, setLocationName] = useState("");
 
-    setLoading(true);
-
+  /* ---------------- LOAD ASSIGNMENTS (SQL) ---------------- */
+  const loadAssignedMembers = async () => {
+    if (!trainerUserId) return;
     try {
-      const q = query(
-        collection(db, "attendance", selectedDate, "staff"),
-        where("trainerId", "==", trainerId)
-      );
+      const res = await api.get(`/assignments?trainerUserId=${trainerUserId}`);
+      const membersRaw = Array.isArray(res.data)
+        ? res.data
+        : res.data?.data || res.data?.assignments || [];
 
-      const snap = await getDocs(q);
+      const activeMembers = membersRaw
+        .filter((m) => !m.status || m.status.toLowerCase() === "active")
+        .map((m) => ({
+          id: m.userId || m.user_id,
+          name: m.username || m.user_name || "Unknown Member",
+          email: m.userEmail || m.user_email,
+        }));
 
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-
-      // frontend sorting
-      data.sort((a, b) => {
-        const aTime = a.createdAt?.seconds || 0;
-        const bTime = b.createdAt?.seconds || 0;
-        return bTime - aTime;
-      });
-
-      setAttendanceData(data);
+      const unique = Array.from(new Map(activeMembers.map((m) => [m.id, m])).values());
+      setAssignedMembers(unique);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to load attendance");
+      console.error("Load members error:", err);
+      toast.error("Failed to load assigned members");
+    }
+  };
+
+  /* ---------------- LOAD ATTENDANCE (MYSQL API) ---------------- */
+  const loadAttendanceData = async (selectedDate) => {
+    if (!trainerUserId) return;
+    setLoading(true);
+    try {
+      const res = await api.get(`/attendance?date=${selectedDate}&trainerId=${trainerUserId}`);
+      const data = res.data || [];
+      setAttendanceData(data);
+
+      // Initialize attendance states from existing records
+      const states = {};
+      data.forEach(r => {
+        states[r.member_id] = r.status === "Present";
+      });
+      setAttendanceStates(states);
+    } catch (err) {
+      console.error("Load attendance error:", err);
+      toast.error("Failed to load attendance records");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAttendanceData();
-  }, [selectedDate, trainerId]);
-
-  /* ================= LOAD ASSIGNED MEMBERS ================= */
-  const loadMembers = async () => {
-    if (!trainerId) return;
-
-    try {
-      const q = query(
-        collection(db, "trainerAssignments"),
-        where("trainerId", "==", trainerId),
-        where("status", "==", "active")
-      );
-
-      const snap = await getDocs(q);
-
-      const assigned = snap.docs.map((d) => ({
-        id: d.data().userId,
-        name: d.data().username,
-      }));
-
-      setMembers(assigned);
-
-      const initial = {};
-      assigned.forEach((m) => {
-        initial[m.id] = true;
-      });
-
-      setAttendanceForm(initial);
-    } catch {
-      toast.error("Failed to load members");
+    if (trainerUserId) {
+      loadAssignedMembers();
+      loadAttendanceData(date);
     }
-  };
+  }, [trainerUserId, date]);
 
-  /* ================= PREVENT DUPLICATE ================= */
-  const checkIfAlreadyMarked = async () => {
-    const q = query(
-      collection(db, "attendance", selectedDate, "staff"),
-      where("trainerId", "==", trainerId)
-    );
-
-    const snap = await getDocs(q);
-    return !snap.empty;
-  };
-
-  /* ================= SUBMIT ================= */
-  const submitAttendance = async () => {
-    const alreadyMarked = await checkIfAlreadyMarked();
-
-    if (alreadyMarked) {
-      toast.error("Attendance already marked for this date");
+  /* ---------------- GEOLOCATION LOGIC ---------------- */
+  const verifyLocation = () => {
+    setLocationStatus("checking");
+    setLocationName("Fetching address...");
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      setLocationStatus("failed");
       return;
     }
 
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setTrainerCoords({ lat: latitude, lng: longitude });
+        
+        try {
+          // CALL BACKEND PROXY instead of external API to avoid CSP issues
+          const response = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+          const data = response.data;
+          const address = data.display_name || "Unknown Location";
+          setLocationName(address);
+          setLocationStatus("verified");
+        } catch (err) {
+          console.error("Reverse geocoding error:", err);
+          setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          setLocationStatus("verified"); // Still verified if coordinates are set
+        }
+      },
+      () => {
+        toast.error("Location access denied.");
+        setLocationStatus("failed");
+        setLocationName("");
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  /* ---------------- MARK ATTENDANCE (BATCH) ---------------- */
+  const toggleMemberStatus = (memberId) => {
+    setAttendanceStates(prev => ({
+      ...prev,
+      [memberId]: !prev[memberId]
+    }));
+  };
+
+  const handleSelectAll = (checked) => {
+    const newStates = {};
+    assignedMembers.forEach(m => {
+      newStates[m.id] = checked;
+    });
+    setAttendanceStates(newStates);
+  };
+
+  const isAllSelected = assignedMembers.length > 0 && assignedMembers.every(m => attendanceStates[m.id]);
+
+  const handleSaveAll = async () => {
+    if (locationStatus !== "verified") {
+      return toast.error("Please fetch current location first!");
+    }
+    
+    setSavingMulti(true);
     try {
-      const promises = members.map((m) =>
-        addDoc(
-          collection(db, "attendance", selectedDate, "staff"),
-          {
-            trainerId,
-            memberId: m.id,
-            name: m.name,
-            status: attendanceForm[m.id]
-              ? "Present"
-              : "Absent",
-            createdAt: serverTimestamp(),
-          }
-        )
-      );
+      const promises = assignedMembers.map(member => {
+        const isPresent = attendanceStates[member.id] || false;
+        const statusText = isPresent ? "Present" : "Absent";
+        
+        const payload = {
+          memberId: member.id,
+          trainerId: trainerUserId,
+          status: statusText,
+          date: date,
+          lat: trainerCoords?.lat || null,
+          lng: trainerCoords?.lng || null,
+          locationName: locationName || null,
+        };
+        return api.post('/attendance', payload);
+      });
 
       await Promise.all(promises);
-
-      toast.success("Attendance Saved");
-      setShowModal(false);
-      loadAttendanceData();
-    } catch {
-      toast.error("Failed to save attendance");
+      toast.success("Attendance updated for all assigned members");
+      setShowMarkModal(false);
+      loadAttendanceData(date);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error saving attendance checklist");
+    } finally {
+      setSavingMulti(false);
     }
   };
 
-  /* ================= FILTER ================= */
-  const filtered = useMemo(() => {
-    return attendanceData.filter((item) => {
-      const matchesSearch = (item.name || "")
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "All" ||
-        item.status === statusFilter;
-
+  /* ---------------- FILTERING & STATS ---------------- */
+  const filteredRecords = useMemo(() => {
+    return attendanceData.filter(r => {
+      const matchesSearch = r.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "All" || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [attendanceData, search, statusFilter]);
+  }, [attendanceData, searchTerm, statusFilter]);
 
-  /* ================= STATS ================= */
   const stats = useMemo(() => {
-    const total = attendanceData.length;
-    const present = attendanceData.filter(
-      (i) => i.status === "Present"
-    ).length;
-    const absent = attendanceData.filter(
-      (i) => i.status === "Absent"
-    ).length;
-
-    return { total, present, absent };
+    const present = attendanceData.filter(r => r.status === "Present").length;
+    const absent = attendanceData.filter(r => r.status === "Absent").length;
+    return { present, absent, total: attendanceData.length };
   }, [attendanceData]);
 
+  /* ---------------- UI ---------------- */
   return (
-    <div className="p-6 space-y-6 min-h-screen text-white">
-
+    <div className="min-h-screen p-4 sm:p-6 text-white space-y-8 bg-transparent">
+      
       {/* HEADER */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Users className="text-orange-400" />
-          Overall Attendance
-        </h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-xl shadow-2xl">
+        <div>
+          <h2 className="text-3xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+            Trainer Attendance
+          </h2>
+          <p className="text-gray-400 mt-1 flex items-center gap-2">
+            <Users className="w-4 h-4" /> MySQL Tracking • {assignedMembers.length} Assigned Members
+          </p>
+        </div>
 
-        <button
-          onClick={() => {
-            loadMembers();
-            setShowModal(true);
-          }}
-          className="px-5 py-3 bg-green-600 rounded-lg"
-        >
-          Mark Attendance
-        </button>
-      </div>
-
-      {/* DATE */}
-      <div className="flex items-center gap-3">
-        <Calendar className="text-orange-400" />
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="px-4 py-2 bg-white/10 rounded-lg"
-        />
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative">
+            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-white/10 border border-white/20 rounded-2xl pl-12 pr-6 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none"
+            />
+          </div>
+          
+          <button
+            onClick={() => { setShowMarkModal(true); setLocationStatus("idle"); }}
+            className="px-8 py-3.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+          >
+            <CheckCircle className="w-5 h-5" /> Mark Today
+          </button>
+        </div>
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white/5 p-4 rounded-xl">
-          <p>Total</p>
-          <h2 className="text-2xl font-bold">{stats.total}</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+          <p className="text-gray-400 text-sm flex items-center gap-2 font-medium">
+            <Users className="w-4 h-4 text-blue-400" /> Total Active Records
+          </p>
+          <h3 className="text-4xl font-black mt-2">{stats.total}</h3>
         </div>
-        <div className="bg-green-500/10 p-4 rounded-xl">
-          <p>Present</p>
-          <h2 className="text-2xl font-bold text-green-400">
-            {stats.present}
-          </h2>
+        <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+          <p className="text-gray-400 text-sm flex items-center gap-2 font-medium">
+            <CheckCircle className="w-4 h-4 text-green-400" /> Present
+          </p>
+          <h3 className="text-4xl font-black mt-2 text-green-400">{stats.present}</h3>
         </div>
-        <div className="bg-red-500/10 p-4 rounded-xl">
-          <p>Absent</p>
-          <h2 className="text-2xl font-bold text-red-400">
-            {stats.absent}
-          </h2>
+        <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+          <p className="text-gray-400 text-sm flex items-center gap-2 font-medium">
+            <XCircle className="w-4 h-4 text-red-400" /> Absent
+          </p>
+          <h3 className="text-4xl font-black mt-2 text-red-400">{stats.absent}</h3>
         </div>
       </div>
 
-      {/* FILTERS */}
-      <div className="flex flex-wrap gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search member..."
-          className="px-4 py-2 bg-white/10 rounded-lg"
-        />
+      {/* SEARCH & FILTER */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+         <div className="relative w-full sm:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              placeholder="Filter logged names..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 w-full outline-none focus:ring-2 focus:ring-orange-500"
+            />
+         </div>
 
-        {["All", "Present", "Absent"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`px-4 py-2 rounded-lg ${
-              statusFilter === s
-                ? "bg-orange-500"
-                : "bg-white/10"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+         <div className="flex gap-2">
+            {["All", "Present", "Absent"].map(f => (
+              <button
+                key={f}
+                onClick={() => setStatusFilter(f)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                  statusFilter === f ? "bg-orange-600 text-white" : "bg-white/10 text-gray-400 hover:bg-white/20"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+         </div>
       </div>
 
-      {/* TABLE (desktop) */}
-      <div className="hidden sm:block bg-white/5 rounded-xl overflow-hidden">
-        {loading ? (
-          <div className="p-6">Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-6 text-white/60">No attendance found</div>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/10">
+      {/* RECORDS TABLE */}
+      <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden backdrop-blur-xl">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px] hide-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-widest">
               <tr>
-                <th className="px-4 py-3 text-left">S No</th>
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-8 py-5">Member Name</th>
+                <th className="px-8 py-5 text-center">Status</th>
+                <th className="px-8 py-5">Log Time</th>
+                <th className="px-8 py-5">Trace</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.map((i,d) => (
-                <tr key={i.id} className="border-b border-white/10">
-                  <td className="px-4 py-3">{d+1}</td>
-                  <td className="px-4 py-3">{i.name}</td>
-                  <td className="px-4 py-3"><StatusBadge status={i.status} /></td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr><td colSpan="4" className="text-center py-20 text-gray-500">Loading records...</td></tr>
+              ) : filteredRecords.length === 0 ? (
+                <tr><td colSpan="4" className="text-center py-20 text-gray-500">No attendance data found for this date.</td></tr>
+              ) : (
+                filteredRecords.map(r => (
+                  <tr key={r.id} className="hover:bg-white/5 transition group">
+                    <td className="px-8 py-5 font-bold group-hover:text-orange-400">{r.name || r.member_id}</td>
+                    <td className="px-8 py-5 text-center"><StatusBadge status={r.status} /></td>
+                    <td className="px-8 py-5 text-sm text-gray-400">
+                       <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
+                       </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      {r.lat ? (
+                        <span className="flex items-center gap-1 text-xs text-green-400 font-medium">
+                          <MapPin className="w-3 h-3 text-orange-500" /> Verified
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-600 italic">No GPS data</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
 
-      {/* CARDS (mobile) */}
-      <div className="sm:hidden space-y-3">
-        {loading ? (
-          <div className="p-4">Loading...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-4 text-white/60">No attendance found</div>
-        ) : (
-          filtered.map((i, idx) => (
-            <div key={i.id} className="bg-white/5 border border-white/10 rounded-lg p-4">
-              <div className="flex justify-between items-start">
+      {/* CHECKLIST MODAL */}
+      {showMarkModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowMarkModal(false)} />
+          <div className="relative w-full max-w-2xl bg-[#0b0c10] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+             <div className="bg-gradient-to-r from-red-600 to-orange-500 p-8 flex justify-between items-center">
                 <div>
-                  <p className="font-semibold">{i.name}</p>
-                  <p className="text-xs text-gray-400">{i.role}</p>
+                   <h3 className="text-2xl font-black text-white">Attendance Checklist</h3>
+                   <p className="text-white/80 mt-1 uppercase text-xs tracking-widest">{dayjs(date).format("DD MMMM YYYY")}</p>
                 </div>
-                <div>
-                  <StatusBadge status={i.status} />
+                <button onClick={() => setShowMarkModal(false)} className="text-white/50 hover:text-white">
+                   <XCircle className="w-6 h-6" />
+                </button>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-8 space-y-6 hide-scrollbar">
+                
+                {/* SELECT ALL & LOCATION FETCH */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-6 bg-white/5 rounded-3xl border border-white/10">
+                   <div className="flex items-center gap-3">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
+                        <div className="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        <span className="ml-3 text-xs font-bold text-gray-300 uppercase">Select All</span>
+                      </label>
+                   </div>
+                   
+                   <div className="flex flex-col gap-2">
+                       <button 
+                        onClick={verifyLocation}
+                        className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 shadow-lg ${
+                          locationStatus === "verified" 
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30" 
+                            : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+                        }`}
+                       >
+                         {locationStatus === "checking" ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                         {locationStatus === "verified" ? "Location Verified" : "Fetch My Location"}
+                       </button>
+                       {locationName && (
+                         <p className="text-[10px] text-gray-500 font-medium italic max-w-[200px] truncate text-right">
+                           {locationName}
+                         </p>
+                       )}
+                   </div>
                 </div>
-              </div>
-              <div className="text-xs text-gray-400 mt-2">#{idx+1}</div>
-            </div>
-          ))
-        )}
-      </div>
 
-      {/* MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-6 z-50">
-          <div className="bg-gray-900 w-full max-w-2xl rounded-xl p-6 space-y-4">
-            <h2 className="text-xl font-bold">
-              Mark Attendance ({selectedDate})
-            </h2>
+                <div className="space-y-2">
+                   <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-2">Member List</p>
+                   {assignedMembers.length === 0 ? (
+                     <div className="text-center py-10 text-gray-600 italic font-medium">No members assigned.</div>
+                   ) : (
+                     assignedMembers.map(member => {
+                       const isChecked = attendanceStates[member.id] || false;
+                       return (
+                         <div 
+                           key={member.id} 
+                           onClick={() => toggleMemberStatus(member.id)}
+                           className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                             isChecked 
+                               ? "bg-green-500/10 border-green-500/30" 
+                               : "bg-white/5 border-white/10 hover:border-white/20"
+                           }`}
+                         >
+                            <div className="flex items-center gap-4">
+                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${isChecked ? "bg-green-500 text-white" : "bg-white/10 text-gray-400"}`}>
+                                  {member.name.charAt(0)}
+                               </div>
+                               <div>
+                                  <p className={`font-bold transition-colors ${isChecked ? "text-green-400" : "text-white"}`}>{member.name}</p>
+                                  <p className="text-[10px] text-gray-500 uppercase">{member.email || "No Email"}</p>
+                               </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                               <span className={`text-[10px] font-black uppercase tracking-tighter ${isChecked ? "text-green-500" : "text-gray-600"}`}>
+                                  {isChecked ? "Present" : "Absent"}
+                               </span>
+                               <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${
+                                 isChecked ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-500/20" : "bg-transparent border-white/20"
+                               }`}>
+                                  {isChecked && <Check className="w-4 h-4 text-white" />}
+                               </div>
+                            </div>
+                         </div>
+                       );
+                     })
+                   )}
+                </div>
+             </div>
 
-            <div className="max-h-80 overflow-y-auto space-y-2">
-              {members.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex justify-between items-center bg-white/5 p-3 rounded-lg"
+             <div className="p-8 bg-white/5 border-t border-white/10 flex gap-4">
+                <button 
+                  type="button" 
+                  onClick={() => setShowMarkModal(false)} 
+                  className="px-6 py-4 text-gray-400 font-bold uppercase text-[10px] tracking-widest hover:text-white transition"
                 >
-                  <p>{m.name}</p>
-
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={attendanceForm[m.id] || false}
-                      onChange={(e) =>
-                        setAttendanceForm({
-                          ...attendanceForm,
-                          [m.id]: e.target.checked,
-                        })
-                      }
-                    />
-                    Present
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-700 rounded-lg"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={submitAttendance}
-                className="px-6 py-2 bg-green-600 rounded-lg"
-              >
-                Submit
-              </button>
-            </div>
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  disabled={savingMulti || assignedMembers.length === 0 || locationStatus !== "verified"}
+                  onClick={handleSaveAll}
+                  className={`flex-1 py-4 rounded-2xl text-white font-black shadow-xl active:scale-95 transition-all text-sm uppercase flex items-center justify-center gap-2 ${
+                    locationStatus === "verified" 
+                      ? "bg-gradient-to-r from-red-600 to-orange-500 shadow-red-600/20" 
+                      : "bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5"
+                  }`}
+                >
+                  {savingMulti ? (
+                    <>
+                      <RefreshCcw className="w-4 h-4 animate-spin" />
+                      Saving Checklist...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Attendance
+                    </>
+                  )}
+                </button>
+             </div>
           </div>
         </div>
       )}
     </div>
   );
 };
+;
 
 export default OverallAttendance;

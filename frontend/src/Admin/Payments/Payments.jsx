@@ -587,6 +587,7 @@ const Payments = () => {
                 <th className="px-4 py-4">End Date</th>
                 <th className="px-4 py-4">Status</th>
                 <th className="px-4 py-4">Action</th>
+                <th className="px-4 py-4">Printer</th>
               </tr>
             </thead>
             <tbody>
@@ -614,19 +615,14 @@ const Payments = () => {
                       ? "Active"
                       : "Inactive"}
                   </td>
-                  <td className="px-4 py-4 flex flex-wrap items-center gap-2">
-			<button
-                      onClick={() => handlePrintReceipt(member, plan)}
-                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition whitespace-nowrap"
-                    >
-                      Print Receipt
-                    </button>
+                  <td className="px-4 py-4  items-center gap-2">
+			
                     {plan.status === "active" ? (
                       <button
                         onClick={() => handleStatusChange(member.uid, plan.id, "inactive")}
                         className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition whitespace-nowrap"
                       >
-                        Refund & Inactive
+                       Togle Inactive
                       </button>
                     ) : (
                       <button
@@ -636,6 +632,15 @@ const Payments = () => {
                         Mark Active
                       </button>
                     )}
+                  </td>
+
+                  <td className="px-4 py-4  gap-2">
+                    <button
+                      onClick={() => handlePrintReceipt(member, plan)}
+                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition whitespace-nowrap"
+                    >
+                      Print Receipt
+                    </button>
                   </td>
                 </tr>
               ))}
