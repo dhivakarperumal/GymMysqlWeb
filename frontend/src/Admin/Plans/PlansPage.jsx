@@ -8,6 +8,7 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import cache from "../../cache";
 
 import api from "../../api";
 const API = `/plans`;
@@ -30,14 +31,22 @@ const PlansAll = () => {
 
   /* ================= LOAD ================= */
   const loadPlans = async () => {
-    try {
+    if (cache.plans) {
+      setPlans(cache.plans.map((p) => ({ id: p.id, ...p })));
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    try {
       const res = await api.get(API);
       const data = res.data || [];
-      setPlans(data.map((p) => ({ id: p.id, ...p })));
+      const mappedData = data.map((p) => ({ id: p.id, ...p }));
+      setPlans(mappedData);
+      cache.plans = mappedData;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load plans");
+      if (!cache.plans) toast.error("Failed to load plans");
     } finally {
       setLoading(false);
     }
@@ -151,10 +160,13 @@ const PlansAll = () => {
 
 
       {/* PLANS LIST */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-400">Fetching membership plans...</p>
+      {loading && !cache.plans ? (
+        <div className="flex flex-col items-center justify-center py-32 gap-6 bg-white/5 rounded-3xl border border-white/10 mt-6">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+          </div>
+          <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Growth Tiers</p>
         </div>
       ) : filteredPlans.length === 0 ? (
         <p className="text-center text-gray-400">No plans found</p>

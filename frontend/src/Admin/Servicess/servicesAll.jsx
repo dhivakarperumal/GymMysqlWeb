@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api";
+import cache from "../../cache";
 import {
   FiPlus,
   FiEdit,
@@ -36,6 +37,13 @@ const ServicesList = () => {
 
   /* ================= FETCH SERVICES ================= */
   const fetchServices = async () => {
+    if (cache.adminServices) {
+      setServices(cache.adminServices);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get('/services');
       const rows = res.data || [];
@@ -52,9 +60,10 @@ const ServicesList = () => {
       }));
 
       setServices(list);
+      cache.adminServices = list;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load services");
+      if (!cache.adminServices) toast.error("Failed to load services");
     } finally {
       setLoading(false);
     }
@@ -83,7 +92,7 @@ const ServicesList = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl text-white font-semibold">
-          
+          Gym Services
         </h2>
 
         <button
@@ -94,8 +103,14 @@ const ServicesList = () => {
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-gray-300">Loading...</p>
+      {loading && !cache.adminServices ? (
+        <div className="flex flex-col items-center justify-center py-40 gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+          </div>
+          <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Brand Assets</p>
+        </div>
       ) : services.length === 0 ? (
         <p className="text-gray-400">No services found</p>
       ) : (

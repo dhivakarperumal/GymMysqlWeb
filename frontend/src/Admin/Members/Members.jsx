@@ -3,6 +3,7 @@ import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api"
+import cache from "../../cache";
 
 
 const Members = () => {
@@ -15,13 +16,19 @@ const Members = () => {
 
   // 🔄 FETCH MEMBERS
   const fetchMembers = async () => {
-    try {
+    if (cache.adminMembers) {
+      setMembers(cache.adminMembers);
+    } else {
       setLoading(true);
+    }
+
+    try {
       const res = await api.get("/members");
       const data = Array.isArray(res.data) ? res.data : [];
       setMembers(data);
+      cache.adminMembers = data;
     } catch {
-      toast.error("Failed to load members");
+      if (!cache.adminMembers) toast.error("Failed to load members");
     } finally {
       setLoading(false);
     }
@@ -67,6 +74,18 @@ const Members = () => {
       toast.error(err.response?.data?.error || "Delete failed");
     }
   };
+
+  if (loading && !cache.adminMembers) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Retrieving Member Directory</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen px-0 py-8">

@@ -9,6 +9,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import api from "../../api"; 
+import cache from "../../cache";
 
 /* ---------------- UI ---------------- */
 const glassCard =
@@ -26,19 +27,25 @@ const FacilitiesAll = () => {
 
   /* ================= LOAD ================= */
   const loadFacilities = async () => {
-    try {
+    if (cache.adminFacilities) {
+      setFacilities(cache.adminFacilities);
+      setLoading(false);
+    } else {
       setLoading(true);
+    }
+
+    try {
       const { data } = await api.get("/facilities");
-      setFacilities(
-        data.map((f) => ({
-          // ensure we always have an active flag
-          active: f.active === false ? false : true,
-          ...f,
-        }))
-      );
+      const mappedData = data.map((f) => ({
+        // ensure we always have an active flag
+        active: f.active === false ? false : true,
+        ...f,
+      }));
+      setFacilities(mappedData);
+      cache.adminFacilities = mappedData;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load facilities");
+      if (!cache.adminFacilities) toast.error("Failed to load facilities");
     } finally {
       setLoading(false);
     }
@@ -113,19 +120,18 @@ const FacilitiesAll = () => {
         className=" p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
 
 
-        {loading && (
-          <p className="text-center text-white/50 py-10">
-            Loading facilities…
-          </p>
-        )}
-
-        {!loading && filtered.length === 0 && (
-          <p className="text-center text-white/50 py-10">
-            No facilities found
-          </p>
-        )}
-
-        {filtered.map((f) => (
+        {loading && !cache.adminFacilities ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-32 gap-6 bg-white/5 rounded-3xl border border-white/10 mt-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+            </div>
+            <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Infrastructure</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="col-span-full text-center text-white/50 py-20 font-medium uppercase tracking-widest text-xs">No facilities found</p>
+        ) : (
+          filtered.map((f) => (
           <div
             key={f.id}
             className={`${glassCard} p-6 flex flex-col md:flex-row gap-6 justify-between`}
@@ -178,7 +184,8 @@ const FacilitiesAll = () => {
               </button>
             </div>
           </div>
-        ))}
+        ))
+      )}
       </div>
     </div>
   );

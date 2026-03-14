@@ -10,6 +10,17 @@ const cache = {
   dietTitle: null,
   userInfo: null,
   userPlans: null,
+  adminMembers: null,
+  adminStaff: null,
+  adminEquipment: null,
+  adminOrders: null,
+  adminProducts: null,
+  adminPayments: null,
+  adminAssignments: null,
+  adminTrainers: null,
+  adminFacilities: null,
+  adminServices: null,
+  dashboardStats: null,
   
   clear() {
     this.products = null;
@@ -22,6 +33,17 @@ const cache = {
     this.dietTitle = null;
     this.userInfo = null;
     this.userPlans = null;
+    this.adminMembers = null;
+    this.adminStaff = null;
+    this.adminEquipment = null;
+    this.adminOrders = null;
+    this.adminProducts = null;
+    this.adminPayments = null;
+    this.adminAssignments = null;
+    this.adminTrainers = null;
+    this.adminFacilities = null;
+    this.adminServices = null;
+    this.dashboardStats = null;
   }
 };
 

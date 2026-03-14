@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../api"; // backend HTTP client
+import cache from "../../cache";
 import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search } from "lucide-react";
 
 const AssingnedTrainers = () => {
@@ -17,12 +18,16 @@ const AssingnedTrainers = () => {
   /* ================= FETCH MEMBERSHIPS ================= */
   useEffect(() => {
     const fetchMembers = async () => {
-      setLoading(true);
+      if (cache.adminAssignmentsMembers) {
+        setMembers(cache.adminAssignmentsMembers);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get("/memberships");
         const membershipsData = Array.isArray(res.data) ? res.data : [];
-
-       
+ 
         const usersData = membershipsData.map((m) => ({
           uid: m.userId || `m_${m.id}`,
           membershipId: m.id,
@@ -43,6 +48,7 @@ const AssingnedTrainers = () => {
         }));
 
         setMembers(usersData);
+        cache.adminAssignmentsMembers = usersData;
       } catch (error) {
         console.error("Error fetching memberships:", error);
       } finally {
@@ -56,6 +62,9 @@ const AssingnedTrainers = () => {
   /* ================= FETCH TRAINERS ================= */
   useEffect(() => {
     const fetchTrainers = async () => {
+      if (cache.adminTrainers) {
+        setTrainers(cache.adminTrainers);
+      }
       try {
         const res = await api.get("/staff", { params: { role: "trainer" } });
         const trainers = Array.isArray(res.data) ? res.data : [];
@@ -66,6 +75,7 @@ const AssingnedTrainers = () => {
           source: "staff",
         }));
         setTrainers(normalized);
+        cache.adminTrainers = normalized;
       } catch (err) {
         console.error("Error fetching trainers:", err);
       }
@@ -77,6 +87,9 @@ const AssingnedTrainers = () => {
   /* ================= FETCH TRAINER ASSIGNMENTS ================= */
   useEffect(() => {
     const fetchAssignments = async () => {
+      if (cache.adminAssignments) {
+        setAssignments(cache.adminAssignments);
+      }
       try {
         const res = await api.get("/assignments");
         const assignData = {};
@@ -86,6 +99,7 @@ const AssingnedTrainers = () => {
           assignData[userId].push(a);
         });
         setAssignments(assignData);
+        cache.adminAssignments = assignData;
       } catch (error) {
         console.error("Error fetching assignments:", error);
       }
@@ -156,6 +170,7 @@ const AssingnedTrainers = () => {
       assignData[userId].push(a);
     });
     setAssignments(assignData);
+    cache.adminAssignments = assignData;
   } catch (err) {
     console.error(err);
     alert("Assignment failed");
@@ -262,9 +277,13 @@ const AssingnedTrainers = () => {
 
       {/* MEMBERS WITH TRAINERS */}
       <div className="grid gap-6">
-        {loading ? (
-          <div className="text-center py-12 text-gray-400">
-            Loading...
+        {loading && !cache.adminAssignmentsMembers ? (
+          <div className="flex flex-col items-center justify-center py-40 gap-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+            </div>
+            <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Mapping Personnel</p>
           </div>
         ) : members.length === 0 ? (
           <div className="text-center py-12 text-gray-400">

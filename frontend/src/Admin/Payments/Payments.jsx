@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 
 // backend API
 import api from "../../api";
+import cache from "../../cache";
 const MEMBERSHIPS_API = `memberships`;
 const MEMBERS_API = `members`;
 
@@ -12,6 +13,7 @@ const Payments = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [viewType, setViewType] = useState("table");
+  const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
@@ -21,6 +23,13 @@ const Payments = () => {
   /* ================= FETCH DATA ================= */
   useEffect(() => {
     const fetchPayments = async () => {
+      if (cache.adminPayments) {
+        setMembers(cache.adminPayments);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get(MEMBERSHIPS_API);
         const membershipsData = res.data;
@@ -56,10 +65,14 @@ const Payments = () => {
           });
         });
 
-        setMembers(Array.from(usersMap.values()));
+        const finalData = Array.from(usersMap.values());
+        setMembers(finalData);
+        cache.adminPayments = finalData;
       } catch (error) {
         console.error(error);
-        alert("Failed to load payment data");
+        if (!cache.adminPayments) alert("Failed to load payment data");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -319,6 +332,18 @@ const Payments = () => {
 
     reader.readAsArrayBuffer(file);
   };
+
+  if (loading && !cache.adminPayments) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Processing Transactions</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-8 text-white">

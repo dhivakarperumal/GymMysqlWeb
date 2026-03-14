@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
+import cache from "../../cache";
 // import AddressForm from "../Address";
 
 
@@ -95,8 +96,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
+      // 1. Initial Cache Check
+      if (cache.dashboardStats) {
+        setStats(cache.dashboardStats);
+        setLoading(false);
+      } else {
         setLoading(true);
+      }
+
+      try {
         const [membersRes, plansRes, ordersRes, staffRes, equipmentRes, productsRes] = await Promise.all([
           api.get('/members'),
           api.get('/plans'),
@@ -113,7 +121,7 @@ export default function Dashboard() {
         const equipment = equipmentRes.data || [];
         const products = productsRes.data || [];
 
-        setStats({
+        const newStats = {
           members: members.length,
           checkinsToday: 0, 
           activePlans: plans.length,
@@ -122,10 +130,21 @@ export default function Dashboard() {
           equipmentDue: equipment.length,
           totalOrders: orders.length,
           totalProducts: products.length,
-        });
+        };
+
+        setStats(newStats);
+        cache.dashboardStats = newStats;
+        
+        // Populate individual caches too since we already fetched them
+        cache.adminMembers = members;
+        cache.adminStaff = staffRes.data;
+        cache.adminOrders = orders;
+        cache.adminProducts = products;
+        cache.adminEquipment = equipment;
+
       } catch (err) {
         console.error('Error fetching stats:', err);
-        toast.error('Failed to load dashboard stats');
+        if (!cache.dashboardStats) toast.error('Failed to load dashboard stats');
       } finally {
         setLoading(false);
       }
@@ -288,6 +307,17 @@ export default function Dashboard() {
 
 
   /* -------------------- UI -------------------- */
+  if (loading && !cache.dashboardStats) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-6 bg-white/5 rounded-3xl border border-white/10">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Command Center</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 space-y-8 relative min-h-[80vh]">

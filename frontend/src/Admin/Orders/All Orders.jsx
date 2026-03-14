@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../../api";
+import cache from "../../cache";
 import {
   FaPrint,
   FaTruck,
@@ -75,7 +76,8 @@ const STATUS_SEQUENCE = [
 const makeImageUrl = (img) => {
   if (!img) return "";
   if (img.startsWith("http") || img.startsWith("data:")) return img;
-  const base = API_URL.replace(/\/api$/, "");
+  const baseUrl = import.meta.env.VITE_API_URL || "";
+  const base = baseUrl.replace(/\/api$/, "");
   return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
 };
 
@@ -105,12 +107,13 @@ const StatCard = ({ title, value, icon, gradient }) => (
 /* ================= PAGE ================= */
 const AllOrders = () => {
   const [orders, setOrders] = useState([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [view, setView] = useState("table");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [search, setSearch] = useState("");
 
   /* MODALS */
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -127,6 +130,13 @@ const AllOrders = () => {
   /* ================= LOAD ================= */
   useEffect(() => {
     const fetch = async () => {
+      if (cache.adminOrders) {
+        setOrders(cache.adminOrders);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get("/orders");
         const raw = res.data || [];
@@ -140,8 +150,11 @@ const AllOrders = () => {
           createdAt: o.created_at,
         }));
         setOrders(formatted);
+        cache.adminOrders = formatted;
       } catch (err) {
         console.error("failed to load orders", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetch();
@@ -520,6 +533,18 @@ ${items
       </span>
     );
   };
+
+  if (loading && !cache.adminOrders) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Shipments</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 text-white">

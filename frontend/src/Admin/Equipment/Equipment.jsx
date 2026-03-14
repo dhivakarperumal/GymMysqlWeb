@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { FaSearch } from "react-icons/fa";
 import api from "../../api";
+import cache from "../../cache";
 
 /* =======================
    DARK INPUT STYLE
@@ -51,6 +52,7 @@ const Equipment = () => {
   const [equipment, setEquipment] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -69,6 +71,15 @@ const Equipment = () => {
   }, []);
 
   const loadEquipment = async () => {
+    if (cache.adminEquipment) {
+      setEquipment(cache.adminEquipment);
+      setFiltered(cache.adminEquipment);
+      setCategories([...new Set(cache.adminEquipment.map(e => e.category).filter(Boolean))]);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get('/equipment');
       const rows = res.data || [];
@@ -87,9 +98,12 @@ const Equipment = () => {
       setEquipment(data);
       setFiltered(data);
       setCategories([...new Set(data.map(e => e.category).filter(Boolean))]);
+      cache.adminEquipment = data;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load equipment");
+      if (!cache.adminEquipment) toast.error("Failed to load equipment");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -166,6 +180,18 @@ const Equipment = () => {
   /* =======================
      UI
   ======================= */
+  if (loading && !cache.adminEquipment) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Scanning Heavy Assets</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-0 space-y-6 min-h-screen">
 
