@@ -1,15 +1,29 @@
 const db = require('../config/db');
 
-// Stub: return attendance for a given date (currently returns empty)
+/**
+ * GET /api/attendance?date=YYYY-MM-DD
+ * Returns all attendance records for a specific date.
+ */
 async function getAttendance(req, res) {
   try {
     const { date } = req.query;
-    // TODO: implement actual attendance lookup once schema is ready
-    res.json([]);
+    
+    let sql = "SELECT * FROM attendance";
+    let params = [];
+    
+    if (date) {
+      sql += " WHERE DATE(check_in) = ?";
+      params = [date];
+    }
+    
+    const [rows] = await db.query(sql, params);
+    res.json(rows);
   } catch (err) {
-    console.error('getAttendance error', err);
+    console.error('getAttendance error:', err);
     res.status(500).json({ error: 'Query failed' });
   }
 }
 
-module.exports = { getAttendance };
+module.exports = { 
+  getAttendance 
+};
