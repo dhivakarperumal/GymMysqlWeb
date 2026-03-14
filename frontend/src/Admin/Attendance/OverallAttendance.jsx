@@ -473,11 +473,22 @@ const OverallAttendance = () => {
 
   const loadStaffMembers = async () => {
     try {
-      // Get only staff by filtering by role or using specific endpoint
-      const res = await api.get('/staff');
-      setStaffMembers(res.data || []);
+      // Fetch all users to allow marking attendance for anyone (Staff or Members)
+      const res = await api.get('/users');
+      const allUsers = res.data || [];
+      
+      // Map to consistent format
+      const formatted = allUsers.map(u => ({
+        id: u.id,
+        name: u.username || u.email || "Member",
+        email: u.email,
+        role: u.role || 'Member'
+      }));
+
+      setStaffMembers(formatted);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load users");
     }
   };
 
@@ -539,10 +550,8 @@ const OverallAttendance = () => {
         const isPresent = attendanceStates[staff.id] || false;
         const statusText = isPresent ? "Present" : "Absent";
         
-        // Need to resolve staffId to user_id for member_id column in attendance table
-        // Or handle it on backend. For now, assuming staff.id is what we use.
         const payload = {
-          memberId: staff.user_id || staff.id, // Ensure we map to the correct user entry
+          memberId: staff.id, // This is u.id now
           status: statusText,
           date: date,
           lat: currentCoords?.lat || null,
@@ -553,7 +562,7 @@ const OverallAttendance = () => {
       });
 
       await Promise.all(promises);
-      toast.success("Staff attendance updated successfully");
+      toast.success("Attendance updated successfully");
       setShowMarkModal(false);
       loadAttendanceData();
     } catch (err) {
@@ -567,7 +576,8 @@ const OverallAttendance = () => {
   /* ---------------- HELPERS ---------------- */
   const filteredRecords = useMemo(() => {
     return attendanceData.filter(r => {
-      const matchesSearch = r.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const name = r.name || r.email || "Unknown";
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });

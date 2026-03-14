@@ -8,16 +8,21 @@ async function getAttendance(req, res) {
   try {
     const { date, trainerId } = req.query;
     
+    // Improved query to get names from either users or staff
     let sql = `
-      SELECT a.*, u.username as name, u.email
+      SELECT 
+        a.*, 
+        COALESCE(s.name, u.username, u.email, 'Unknown') as name, 
+        COALESCE(u.email, s.email) as email,
+        COALESCE(s.role, u.role, 'Staff') as role
       FROM attendance a
       LEFT JOIN users u ON u.id = a.member_id
+      LEFT JOIN staff s ON (s.email = u.email OR s.username = u.username OR s.id = a.member_id)
       WHERE 1=1
     `;
     let params = [];
     
     if (date) {
-      // Use the new date column or fallback to DATE(check_in)
       sql += " AND (a.`date` = ? OR DATE(a.check_in) = ?)";
       params.push(date, date);
     }
@@ -34,7 +39,7 @@ async function getAttendance(req, res) {
       params.push(resolvedStaffId);
     }
     
-    sql += " ORDER BY a.check_in DESC";
+    sql += " GROUP BY a.id ORDER BY a.check_in DESC";
     
     const [rows] = await db.query(sql, params);
     res.json(rows);
