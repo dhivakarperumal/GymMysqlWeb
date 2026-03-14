@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FaArrowLeft, FaPlus, FaTrash } from "react-icons/fa";
 
-const API = "http://localhost:5000/api/plans";
+import { API_URL } from "../../api";
+const API = `${API_URL}/plans`;
 
 /* ================= STYLES ================= */
 const glassCard =

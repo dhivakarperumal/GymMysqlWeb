@@ -8,7 +8,7 @@ import {
   FaSearch,
   FaCheckCircle,
 } from "react-icons/fa";
-import api from "../../api"; // axios instance pointing at backend
+import api from "../../api"; 
 
 /* ---------------- UI ---------------- */
 const glassCard =

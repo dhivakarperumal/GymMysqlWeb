@@ -283,7 +283,7 @@ const Settings = lazy(() => import("./Admin/Settingss/Settings.jsx"));
 const Enquiry = lazy(() => import("./Admin/Enquiry/Enquiry.jsx"));
 
 const AddEditEquipment = lazy(() => import("./Admin/Equipment/AddEquipments.jsx"));
-const ViewEquipment = lazy(() => import("./Admin/Equipment/ViewEquipment.jsx"));
+
 const ProfileSettings = lazy(() => import("./Admin/Settingss/ProfileSettings.jsx"));
 const UserManagement = lazy(() => import("./Admin/Settingss/UserManagement.jsx"));
 const Staffs = lazy(() => import("./Admin/Staff/Staffs.jsx"));
@@ -397,7 +397,7 @@ const router = createBrowserRouter([
       { path: "equipment", element: <Equipment /> },
       { path: "addequipment", element: <AddEditEquipment /> },
       { path: "addequipment/:id", element: <AddEditEquipment /> },
-      { path: "viewequipment/:id", element: <ViewEquipment /> },
+
 
 
       { path: "reports", element: <Reports /> },

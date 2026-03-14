@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import api from "../../api"
 
-const API = "http://localhost:5000/api/members";
 
 const Members = () => {
   const [members, setMembers] = useState([]);
@@ -17,8 +17,8 @@ const Members = () => {
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(API);
-      const data = await res.json();
+      const res = await api.get("/members");
+      const data = Array.isArray(res.data) ? res.data : [];
       setMembers(data);
     } catch {
       toast.error("Failed to load members");

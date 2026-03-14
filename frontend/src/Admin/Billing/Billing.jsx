@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:5000/api";
+import { API_URL as API_BASE } from "../../api";
 
 const inputClass =
   "w-full bg-[#0f172a]/70 border border-white/10 rounded-xl px-4 py-4 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500";

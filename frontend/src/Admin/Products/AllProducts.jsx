@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API = "/api/products";
+import { API_URL } from "../../api";
+const API = `${API_URL}/products`;
 
 /* ================= IMAGE HELPER ================= */
 

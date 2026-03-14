@@ -3,8 +3,9 @@ import { Search, Users, CheckCircle, XCircle, AlertTriangle } from "lucide-react
 import * as XLSX from "xlsx";
 
 // backend API
-const MEMBERSHIPS_API = "http://localhost:5000/api/memberships";
-const MEMBERS_API = "http://localhost:5000/api/members";
+import api, { API_URL } from "../../api";
+const MEMBERSHIPS_API = `memberships`;
+const MEMBERS_API = `members`;
 
 const Payments = () => {
   const [members, setMembers] = useState([]);
@@ -21,11 +22,17 @@ const Payments = () => {
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const res = await fetch(MEMBERSHIPS_API);
-        const membershipsData = await res.json();
+        const res = await api.get(MEMBERSHIPS_API);
+        const membershipsData = res.data;
 
         // Group memberships by user to match the existing UI shape
         const usersMap = new Map();
+
+        if (!Array.isArray(membershipsData)) {
+          console.warn("Expected array for memberships, got:", membershipsData);
+          setMembers([]);
+          return;
+        }
 
         membershipsData.forEach((m) => {
           const uId = m.userId || `guest_${m.id}`;
@@ -77,13 +84,9 @@ const Payments = () => {
 
     try {
       // update via API
-      const res = await fetch(`${MEMBERSHIPS_API}/${planId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      const res = await api.put(`${MEMBERSHIPS_API}/${planId}`, { status: newStatus });
       
-      if (!res.ok) {
+      if (res.status !== 200) {
         console.error("status update failed");
         alert("Update failed");
         return;
@@ -290,12 +293,7 @@ const Payments = () => {
 
         for (const row of jsonData) {
 
-          await fetch(MEMBERS_API, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
+          await api.post(MEMBERS_API, {
               name: row.Name,
               username: row.Name,
               phone: String(row.Mobile || ""),
@@ -305,8 +303,7 @@ const Payments = () => {
               joinDate: excelDateToJSDate(row["Start Date"]),
               expiryDate: excelDateToJSDate(row["End Date"]),
               status: row.Status || "active"
-            })
-          });
+            });
 
         }
 

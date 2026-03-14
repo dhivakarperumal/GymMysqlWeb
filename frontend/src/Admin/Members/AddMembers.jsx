@@ -4,8 +4,9 @@ import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
+import { API_URL } from "../../api";
+const API = `${API_URL}/members`;
 
-const API = "http://localhost:5000/api/members";
 
 const AddMember = () => {
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ const AddMember = () => {
       // Fetch user info to prefill
       const fetchUser = async () => {
         try {
-          const res = await fetch(`http://localhost:5000/api/users/${userId}`);
+          const res = await fetch(`${API_URL}/users/${userId}`);
           const data = await res.json();
           setForm(prev => ({
             ...prev,

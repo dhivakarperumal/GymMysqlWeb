@@ -9,7 +9,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const API = "http://localhost:5000/api/plans";
+import { API_URL } from "../../api";
+const API = `${API_URL}/plans`;
 
 /* ================= STYLES ================= */
 const glassCard =

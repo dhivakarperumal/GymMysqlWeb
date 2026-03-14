@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 import {
   FaPrint,
   FaTruck,
@@ -52,7 +52,7 @@ const STATUS_SEQUENCE = [
 const makeImageUrl = (img) => {
   if (!img) return "";
   if (img.startsWith("http") || img.startsWith("data:")) return img;
-  const base = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const base = API_URL.replace(/\/api$/, "");
   return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
 };
 

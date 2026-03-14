@@ -5,7 +5,7 @@ import { Eye, Trash2, Edit2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-const API_BASE = "/api";
+import { API_URL as API_BASE } from "../../api";
 
 
 const weekDays = [

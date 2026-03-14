@@ -1,9 +1,8 @@
 import axios from "axios";
 
-/* ✅ VITE ENV (NO process.env) */
-// prefer explicit env var, fall back to same‑origin relative path
-const API_URL = import.meta.env.VITE_API_URL || "/api";
-console.log("API base URL:", API_URL);
+
+export const API_URL = "https://mygym.qtechx.com/api";
+console.log("API base URL (FORCED):", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,

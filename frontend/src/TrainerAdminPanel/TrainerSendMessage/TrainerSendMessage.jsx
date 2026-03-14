@@ -8,7 +8,7 @@ import api from "../../api";
 import toast from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-const API_BASE = "http://localhost:5000/api";
+import { API_URL as API_BASE } from "../../api";
 
 const TrainerSendMessage = () => {
   const { user } = useAuth();

@@ -5,7 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 
 /* ================= API BASE ================= */
-const API = "/api/products"; // 🔥 change to your backend
+import { API_URL } from "../../api";
+const API = `${API_URL}/products`;
 
 /* ================= CONSTANTS ================= */
 

@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-const API_BASE = "/api";
+import { API_URL as API_BASE } from "../../api";
 
 /* -------------------- STAT CARD -------------------- */
 const StatCard = ({ title, value, icon, color }) => (

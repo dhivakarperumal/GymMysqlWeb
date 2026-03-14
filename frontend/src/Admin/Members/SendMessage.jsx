@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Send, Users, Mail, Phone, CheckSquare, Square, Search, Loader } from "lucide-react";
 import toast from "react-hot-toast";
-
-const MEMBERS_API = "http://localhost:5000/api/members";
-const SEND_MSG_API = "http://localhost:5000/api/send-message"; // Change to appropriate endpoint later
+import { API_URL } from "../../api"
+const MEMBERS_API = `${API_URL}/members`;
+const SEND_MSG_API = `${API_URL}/send-message`;
 
 const SendMessage = () => {
   const [members, setMembers] = useState([]);

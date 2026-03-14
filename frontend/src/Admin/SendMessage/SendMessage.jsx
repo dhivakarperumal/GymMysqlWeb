@@ -7,7 +7,8 @@ import {
 import api from "../../api";
 import toast from "react-hot-toast";
 
-const API_MEMBERS = "http://localhost:5000/api/members";
+import { API_URL } from "../../api";
+const API_MEMBERS = `${API_URL}/members`;
 
 /* =====================
    STATUS BADGE

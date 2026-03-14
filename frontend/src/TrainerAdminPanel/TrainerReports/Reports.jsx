@@ -12,6 +12,7 @@ import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { API_URL } from "../../api";
 
 /* ================= HELPERS ================= */
 
@@ -44,7 +45,7 @@ const Reports = () => {
   if (!trainerId) return;
 
   // load members via assignments
-  fetch("/api/assignments")
+  fetch(`${API_URL}/assignments`)
     .then((res) => res.json())
     .then((data) => {
       setMembers(
@@ -57,7 +58,7 @@ const Reports = () => {
 
   // diets still fire-based for now (migration not implemented)
   // workouts from our new mysql endpoint
-  fetch(`/api/workouts?trainerId=${trainerId}`)
+  fetch(`${API_URL}/workouts?trainerId=${trainerId}`)
     .then((res) => res.json())
     .then((data) => {
       const normalized = data.map((w) => ({
