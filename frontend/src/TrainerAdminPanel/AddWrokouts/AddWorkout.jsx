@@ -68,51 +68,23 @@ const AddWorkout = () => {
       try {
         setLoading(true);
 
-        // fetch only assignments
-        const aRes = await api.get("/assignments");
+        // Server-side filter by trainer's user ID — avoids the users.id vs staff.id mismatch
+        const aRes = await api.get(`/assignments?trainerUserId=${user.id}`);
         const aData = aRes.data;
         const assignments = Array.isArray(aData)
           ? aData
           : aData.data || aData.assignments || [];
 
-        // Filter ONLY members assigned to current trainer
-        const assignedMembers = [];
+        const assignedMembers = assignments.map((a) => ({
+          id: String(a.userId || a.user_id),
+          name: a.username || a.user_name || "Member",
+          planName: a.planName || a.plan_name || "Plan",
+          email: a.userEmail || a.user_email || "",
+          mobile: a.userMobile || a.user_mobile || "",
+          source: "assign",
+        }));
 
-        assignments.forEach((a) => {
-          let include = false;
-          if (user.id) {
-            const assignTrainerId = Number(a.trainerId || a.trainer_id);
-            const currentTrainerId = Number(user.id);
-            if (!isNaN(assignTrainerId) && assignTrainerId === currentTrainerId) {
-              include = true;
-            }
-          }
-          if (!include && user.username && (a.trainerName || a.trainer_name)) {
-            if ((a.trainerName || a.trainer_name).toLowerCase() === user.username.toLowerCase()) {
-              include = true;
-            }
-          }
-          if (!include && user.email && (a.trainerEmail || a.trainer_email)) {
-            if ((a.trainerEmail || a.trainer_email).toLowerCase() === user.email.toLowerCase()) {
-              include = true;
-            }
-          }
-          if (!include && user.firebaseId && a.trainerId === user.firebaseId) {
-            include = true;
-          }
-          if (!include) return;
-
-          assignedMembers.push({
-            id: String(a.userId || a.user_id),
-            name: a.username || a.user_name || "Member",
-            planName: a.planName || a.plan_name || "Plan",
-            email: a.userEmail || a.user_email || "",
-            mobile: a.userMobile || a.user_mobile || "",
-            source: "assign",
-          });
-        });
-
-        console.log("🔍 Assigned members list:", assignedMembers);
+        console.log("🔍 Assigned members list:", assignedMembers.length);
         setMembers(assignedMembers);
         setAllAssignments(assignments);
       } catch (err) {

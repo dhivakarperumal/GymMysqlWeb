@@ -67,29 +67,15 @@ const AddDietPlans = () => {
       try {
         setLoading(true);
 
-        const res = await api.get("/assignments");
+        // Server-side filter — avoids users.id vs staff.id mismatch
+        const res = await api.get(`/assignments?trainerUserId=${user.id}`);
         const data = res.data;
 
         const assignments = Array.isArray(data)
           ? data
           : data.data || data.assignments || [];
 
-        const filtered = assignments.filter((a) => {
-          const assignTrainerId = Number(a.trainerId || a.trainer_id);
-          const currentTrainerId = Number(user?.id);
-
-          if (assignTrainerId === currentTrainerId) return true;
-
-          const trainerName = (a.trainerName || a.trainer_name || "").toLowerCase();
-          const trainerEmail = (a.trainerEmail || a.trainer_email || "").toLowerCase();
-
-          if (trainerName === user?.username?.toLowerCase()) return true;
-          if (trainerEmail === user?.email?.toLowerCase()) return true;
-
-          return false;
-        });
-
-        const formatted = filtered.map((d) => ({
+        const formatted = assignments.map((d) => ({
           id: String(d.userId || d.user_id),
           name: d.username || d.user_name || "Member",
           email: d.userEmail || d.user_email || "",

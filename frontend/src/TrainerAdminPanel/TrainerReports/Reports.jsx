@@ -46,11 +46,11 @@ const Reports = () => {
 
     const loadData = async () => {
       try {
-        // load members via assignments
-        const assignRes = await api.get("/assignments");
+        // load members via assignments (server filters by trainer)
+        const assignRes = await api.get(`/assignments?trainerUserId=${trainerId}`);
         setMembers(
           (assignRes.data || []).filter(
-            (a) => a.trainerId === trainerId && a.status === "active"
+            (a) => !a.status || a.status === "active"
           )
         );
 

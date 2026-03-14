@@ -51,49 +51,17 @@ const TrainerDashboard = () => {
       try {
         setLoading(true);
 
-        /* FETCH ASSIGNMENTS */
-        const memberRes = await api.get("/assignments");
-        const memberData = memberRes.data;
+        /* FETCH ASSIGNMENTS — server filters by this trainer's user ID */
+        const memberRes = await api.get(`/assignments?trainerUserId=${trainerId}`);
+        const membersRaw = Array.isArray(memberRes.data)
+          ? memberRes.data
+          : memberRes.data?.data || memberRes.data?.assignments || [];
 
-        const membersRaw = Array.isArray(memberData)
-          ? memberData
-          : memberData.data || memberData.assignments || [];
-
-        // Filter by current trainer only
-        const filteredByTrainer = membersRaw.filter((a) => {
-          let include = false;
-          
-          // Match by trainer ID
-          if (user?.id) {
-            const assignTrainerId = Number(a.trainerId || a.trainer_id);
-            const currentTrainerId = Number(user.id);
-            if (!isNaN(assignTrainerId) && assignTrainerId === currentTrainerId) {
-              include = true;
-            }
-          }
-          
-          // Match by trainer name
-          if (!include && user?.username && (a.trainerName || a.trainer_name)) {
-            if ((a.trainerName || a.trainer_name).toLowerCase() === user.username.toLowerCase()) {
-              include = true;
-            }
-          }
-          
-          // Match by trainer email
-          if (!include && user?.email && (a.trainerEmail || a.trainer_email)) {
-            if ((a.trainerEmail || a.trainer_email).toLowerCase() === user.email.toLowerCase()) {
-              include = true;
-            }
-          }
-          
-          return include;
-        });
-
-        console.log("📊 Filtered by trainer:", filteredByTrainer.length);
+        console.log("📊 Assignments from server:", membersRaw.length);
 
         /* show only ACTIVE members */
-        const activeMembers = filteredByTrainer.filter(
-          (m) => (m.status || "").toLowerCase() === "active"
+        const activeMembers = membersRaw.filter(
+          (m) => !m.status || (m.status || "").toLowerCase() === "active"
         );
 
         /* remove duplicates by userId */
@@ -106,7 +74,7 @@ const TrainerDashboard = () => {
         setAssignedMembers(uniqueMembers);
 
         const assignedMemberIds = uniqueMembers.map(m => String(m.userId || m.user_id));
-        console.log("👥 Assigned members:", assignedMemberIds);
+        console.log("👥 Assigned members:", assignedMemberIds.length);
 
         let workoutCount = 0;
         let dietCount = 0;
@@ -117,9 +85,9 @@ const TrainerDashboard = () => {
           const workoutRes = await api.get("/workouts");
           const workoutData = workoutRes.data;
           const workoutsRaw = Array.isArray(workoutData) ? workoutData : workoutData?.data || [];
-          const userWorkouts = workoutsRaw.filter(w => 
-            assignedMemberIds.includes(String(w.member_id || w.memberId))
-          );
+          const userWorkouts = assignedMemberIds.length > 0
+            ? workoutsRaw.filter(w => assignedMemberIds.includes(String(w.member_id || w.memberId)))
+            : workoutsRaw;
           workoutCount = userWorkouts.length;
           console.log("💪 Workouts:", workoutCount);
         } catch (e) {
@@ -131,9 +99,9 @@ const TrainerDashboard = () => {
           const dietRes = await api.get("/diet-plans");
           const dietData = dietRes.data;
           const dietsRaw = Array.isArray(dietData) ? dietData : dietData?.data || [];
-          const userDiets = dietsRaw.filter(d => 
-            assignedMemberIds.includes(String(d.member_id || d.memberId))
-          );
+          const userDiets = assignedMemberIds.length > 0
+            ? dietsRaw.filter(d => assignedMemberIds.includes(String(d.member_id || d.memberId)))
+            : dietsRaw;
           dietCount = userDiets.length;
           console.log("🥗 Diets:", dietCount);
         } catch (e) {
@@ -143,8 +111,7 @@ const TrainerDashboard = () => {
         try {
           /* TODAY CHECKINS */
           const checkinRes = await api.get(`/checkins/today?trainerId=${trainerId}`);
-          const checkinData = checkinRes.data;
-          checkinCount = checkinData?.count || checkinData?.length || 0;
+          checkinCount = checkinRes.data?.count || checkinRes.data?.length || 0;
           console.log("📅 Checkins:", checkinCount);
         } catch (e) {
           console.error("Checkin fetch error:", e);
@@ -157,20 +124,9 @@ const TrainerDashboard = () => {
           dietPlans: dietCount,
         });
 
-        console.log("📈 Final stats:", {
-          members: uniqueMembers.length,
-          todayCheckins: checkinCount,
-          workoutPlans: workoutCount,
-          dietPlans: dietCount,
-        });
       } catch (err) {
         console.error("Dashboard error:", err);
-        setStats({
-          members: 0,
-          todayCheckins: 0,
-          workoutPlans: 0,
-          dietPlans: 0,
-        });
+        setStats({ members: 0, todayCheckins: 0, workoutPlans: 0, dietPlans: 0 });
       } finally {
         setLoading(false);
       }
