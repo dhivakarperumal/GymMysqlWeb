@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-import { API_URL as API_BASE } from "../../api";
+import api from "../../api";
 
 /* -------------------- STAT CARD -------------------- */
 const StatCard = ({ title, value, icon, color }) => (
@@ -52,11 +52,8 @@ const TrainerDashboard = () => {
         setLoading(true);
 
         /* FETCH ASSIGNMENTS */
-        const memberRes = await fetch(
-          `${API_BASE}/assignments`
-        );
-
-        const memberData = await memberRes.json();
+        const memberRes = await api.get("/assignments");
+        const memberData = memberRes.data;
 
         const membersRaw = Array.isArray(memberData)
           ? memberData
@@ -117,50 +114,38 @@ const TrainerDashboard = () => {
 
         try {
           /* WORKOUT PLANS for assigned members only */
-          const workoutRes = await fetch(
-            `${API_BASE}/workouts`
+          const workoutRes = await api.get("/workouts");
+          const workoutData = workoutRes.data;
+          const workoutsRaw = Array.isArray(workoutData) ? workoutData : workoutData?.data || [];
+          const userWorkouts = workoutsRaw.filter(w => 
+            assignedMemberIds.includes(String(w.member_id || w.memberId))
           );
-          if (workoutRes.ok) {
-            const workoutData = await workoutRes.json();
-            const workoutsRaw = Array.isArray(workoutData) ? workoutData : workoutData?.data || [];
-            const userWorkouts = workoutsRaw.filter(w => 
-              assignedMemberIds.includes(String(w.member_id || w.memberId))
-            );
-            workoutCount = userWorkouts.length;
-            console.log("💪 Workouts:", workoutCount);
-          }
+          workoutCount = userWorkouts.length;
+          console.log("💪 Workouts:", workoutCount);
         } catch (e) {
           console.error("Workout fetch error:", e);
         }
 
         try {
           /* DIET PLANS for assigned members only */
-          const dietRes = await fetch(
-            `${API_BASE}/diet-plans`
+          const dietRes = await api.get("/diet-plans");
+          const dietData = dietRes.data;
+          const dietsRaw = Array.isArray(dietData) ? dietData : dietData?.data || [];
+          const userDiets = dietsRaw.filter(d => 
+            assignedMemberIds.includes(String(d.member_id || d.memberId))
           );
-          if (dietRes.ok) {
-            const dietData = await dietRes.json();
-            const dietsRaw = Array.isArray(dietData) ? dietData : dietData?.data || [];
-            const userDiets = dietsRaw.filter(d => 
-              assignedMemberIds.includes(String(d.member_id || d.memberId))
-            );
-            dietCount = userDiets.length;
-            console.log("🥗 Diets:", dietCount);
-          }
+          dietCount = userDiets.length;
+          console.log("🥗 Diets:", dietCount);
         } catch (e) {
           console.error("Diet fetch error:", e);
         }
 
         try {
           /* TODAY CHECKINS */
-          const checkinRes = await fetch(
-            `${API_BASE}/checkins/today?trainerId=${trainerId}`
-          );
-          if (checkinRes.ok) {
-            const checkinData = await checkinRes.json();
-            checkinCount = checkinData?.count || checkinData?.length || 0;
-            console.log("📅 Checkins:", checkinCount);
-          }
+          const checkinRes = await api.get(`/checkins/today?trainerId=${trainerId}`);
+          const checkinData = checkinRes.data;
+          checkinCount = checkinData?.count || checkinData?.length || 0;
+          console.log("📅 Checkins:", checkinCount);
         } catch (e) {
           console.error("Checkin fetch error:", e);
         }

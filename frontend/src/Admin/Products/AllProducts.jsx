@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { API_URL } from "../../api";
-const API = `${API_URL}/products`;
+import api from "../../api";
+const API = `/products`;
 
 /* ================= IMAGE HELPER ================= */
 
@@ -59,8 +59,8 @@ const AllProducts = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(API);
-      const data = await res.json();
+      const res = await api.get(API);
+      const data = res.data || [];
       setProducts(data);
     } catch (err) {
       console.error(err);
@@ -80,11 +80,7 @@ const AllProducts = () => {
     if (!window.confirm("Delete this product?")) return;
 
     try {
-      const res = await fetch(`${API}/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error();
+      const res = await api.delete(`${API}/${id}`);
 
       toast.success("Product deleted");
       setProducts((prev) => prev.filter((p) => p.id !== id));

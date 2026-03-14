@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import { Edit2, Eye, Trash2, X, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../PrivateRouter/AuthContext";
-import { API_URL } from "../../api";
+import api from "../../api";
 
 const weekDays = [
   "MONDAY",
@@ -53,9 +53,9 @@ const AllWorkouts = () => {
     if (!trainerId) return;
     setLoading(true);
 
-    fetch(`${API_URL}/workouts?trainerId=${encodeURIComponent(trainerId)}`)
-      .then((res) => res.json())
-      .then((data) => {
+    api.get(`/workouts?trainerId=${encodeURIComponent(trainerId)}`)
+      .then((res) => {
+        const data = res.data;
         // convert snake_case database fields to camelCase; keep legacy shape
         const normalized = data.map((w) => ({
           id: w.id,
@@ -87,7 +87,7 @@ const AllWorkouts = () => {
     if (!window.confirm("Delete this workout program?")) return;
 
     try {
-      await fetch(`${API_URL}/workouts/${id}`, { method: "DELETE" });
+      await api.delete(`/workouts/${id}`);
       toast.success("Workout deleted");
       // refresh list after deletion
       setWorkouts((w) => w.filter((item) => item.id !== id));

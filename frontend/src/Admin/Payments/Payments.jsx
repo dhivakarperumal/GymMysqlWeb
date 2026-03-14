@@ -3,7 +3,7 @@ import { Search, Users, CheckCircle, XCircle, AlertTriangle } from "lucide-react
 import * as XLSX from "xlsx";
 
 // backend API
-import api, { API_URL } from "../../api";
+import api from "../../api";
 const MEMBERSHIPS_API = `memberships`;
 const MEMBERS_API = `members`;
 

@@ -8,7 +8,7 @@ import api from "../../api";
 import toast from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-import { API_URL as API_BASE } from "../../api";
+import api from "../../api";
 
 const TrainerSendMessage = () => {
   const { user } = useAuth();
@@ -39,10 +39,8 @@ const TrainerSendMessage = () => {
     const fetchAssignedMembers = async () => {
       try {
         setLoading(true);
-        const aRes = await fetch(`${API_BASE}/assignments`);
-        if (!aRes.ok) throw new Error("Failed to fetch assignments");
-
-        const aData = await aRes.json();
+        const aRes = await api.get("/assignments");
+        const aData = aRes.data;
         const assignments = Array.isArray(aData) ? aData : aData.data || aData.assignments || [];
 
         const assignedMembers = [];

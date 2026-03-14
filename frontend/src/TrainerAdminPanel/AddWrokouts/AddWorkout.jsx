@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-import { API_URL as API_BASE } from "../../api";
+import api from "../../api";
 
 const inputClass =
   "w-full bg-black/40 border border-white/20 rounded-lg px-3 py-3.5 text-white text-sm";
@@ -69,10 +69,8 @@ const AddWorkout = () => {
         setLoading(true);
 
         // fetch only assignments
-        const aRes = await fetch(`${API_BASE}/assignments`);
-        if (!aRes.ok) throw new Error("Failed to fetch assignments");
-
-        const aData = await aRes.json();
+        const aRes = await api.get("/assignments");
+        const aData = aRes.data;
         const assignments = Array.isArray(aData)
           ? aData
           : aData.data || aData.assignments || [];
@@ -134,11 +132,8 @@ const AddWorkout = () => {
 
     const fetchWorkout = async () => {
       try {
-        const res = await fetch(`/api/workouts/${id}`);
-        if (!res.ok) {
-          throw new Error("not found");
-        }
-        const data = await res.json();
+        const res = await api.get(`/workouts/${id}`);
+        const data = res.data;
         setForm({
           memberId: data.member_id,
           memberName: data.member_name,
@@ -224,18 +219,10 @@ const AddWorkout = () => {
       };
 
       if (isEditMode) {
-        await fetch(`/api/workouts/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        await api.put(`/workouts/${id}`, payload);
         toast.success("Workout Updated ✅");
       } else {
-        await fetch(`/api/workouts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        await api.post(`/workouts`, payload);
         toast.success("Workout Program Created 💪");
       }
 

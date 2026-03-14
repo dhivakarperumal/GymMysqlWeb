@@ -7,8 +7,7 @@ import {
 import api from "../../api";
 import toast from "react-hot-toast";
 
-import { API_URL } from "../../api";
-const API_MEMBERS = `${API_URL}/members`;
+import api from "../../api";
 
 /* =====================
    STATUS BADGE
@@ -49,9 +48,9 @@ const SendMessage = () => {
   };
 
   useEffect(() => {
-    fetch(API_MEMBERS)
-      .then((r) => r.json())
-      .then((data) => {
+    api.get("/members")
+      .then((res) => {
+        const data = res.data;
         const withEmail = Array.isArray(data)
           ? data.filter((m) => m.email || m.user_email)
           : [];

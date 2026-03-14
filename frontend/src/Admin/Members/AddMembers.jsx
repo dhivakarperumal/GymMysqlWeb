@@ -4,8 +4,8 @@ import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
-import { API_URL } from "../../api";
-const API = `${API_URL}/members`;
+import api from "../../api";
+const API = `/members`;
 
 
 const AddMember = () => {
@@ -44,8 +44,8 @@ const AddMember = () => {
     if (isEdit) {
       const fetchMember = async () => {
         try {
-          const res = await fetch(`${API}/${id}`);
-          const data = await res.json();
+          const res = await api.get(`${API}/${id}`);
+          const data = res.data;
 
           setForm({
             ...data,
@@ -70,8 +70,8 @@ const AddMember = () => {
       // Fetch user info to prefill
       const fetchUser = async () => {
         try {
-          const res = await fetch(`${API_URL}/users/${userId}`);
-          const data = await res.json();
+          const res = await api.get(`/users/${userId}`);
+          const data = res.data;
           setForm(prev => ({
             ...prev,
             name: data.username || "",
@@ -163,19 +163,14 @@ const AddMember = () => {
 
       console.log('Submitting payload:', payload);
 
-      const url = isEdit ? `${API}/${id}` : API;
-      const method = isEdit ? "PUT" : "POST";
+      const res = isEdit 
+        ? await api.put(`${API}/${id}`, payload)
+        : await api.post(API, payload);
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
+      const data = res.data;
       console.log('Response:', data);
 
-      if (!res.ok) {
+      if (res.status !== 200 && res.status !== 201) {
         toast.error(data.message || data.error || "Error saving member");
         setLoading(false);
         return;

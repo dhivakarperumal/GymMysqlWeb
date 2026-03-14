@@ -70,8 +70,12 @@ export default function Products() {
 
       <PageContainer>
         {loading ? (
-          <div className="flex justify-center items-center py-20 ">
-            <p className="text-gray-400 text-lg">Loading products...</p>
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
+             <div className="relative">
+                <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+                <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+             </div>
+            <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Scanning Inventory</p>
           </div>
         ) : (
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:py-25">

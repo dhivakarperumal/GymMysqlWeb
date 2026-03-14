@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { API_URL } from "../api";
+import api from "../api";
 
 export default function AddressForm() {
     const [form, setForm] = useState({
@@ -26,15 +26,8 @@ export default function AddressForm() {
 
   try {
 
-    const response = await fetch(`${API_URL}/address/add`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(form)
-    });
-
-    const data = await response.json();
+    const res = await api.post("/address/add", form);
+    const data = res.data;
 
     console.log(data);
 

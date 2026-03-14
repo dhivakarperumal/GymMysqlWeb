@@ -9,8 +9,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { API_URL } from "../../api";
-const API = `${API_URL}/plans`;
+import api from "../../api";
+const API = `/plans`;
 
 /* ================= STYLES ================= */
 const glassCard =
@@ -32,14 +32,8 @@ const PlansAll = () => {
   const loadPlans = async () => {
     try {
       setLoading(true);
-      const res = await fetch(API);
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error("Failed to load plans");
-        return;
-      }
-
+      const res = await api.get(API);
+      const data = res.data || [];
       setPlans(data.map((p) => ({ id: p.id, ...p })));
     } catch (err) {
       console.error(err);
@@ -56,16 +50,10 @@ const PlansAll = () => {
   /* ================= TOGGLE STATUS ================= */
   const toggleStatus = async (id, active) => {
     try {
-      const res = await fetch(`${API}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: !active }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || data.error || "Failed to update plan");
+      const res = await api.put(`${API}/${id}`, { active: !active });
+      
+      if (res.status !== 200) {
+        toast.error("Failed to update plan");
         return;
       }
 

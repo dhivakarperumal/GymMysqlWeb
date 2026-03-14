@@ -59,15 +59,12 @@ const Members = () => {
     if (!window.confirm(`Delete ${m.name || "this member"}?`)) return;
 
     try {
-      const res = await fetch(`${API}/${idToDelete}`, { method: "DELETE" });
-      if (!res.ok) {
-        toast.error("Delete failed");
-        return;
-      }
+      await api.delete(`/members/${idToDelete}`);
       toast.success("Deleted successfully");
       fetchMembers();
-    } catch {
-      toast.error("Server error");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.error || "Delete failed");
     }
   };
 

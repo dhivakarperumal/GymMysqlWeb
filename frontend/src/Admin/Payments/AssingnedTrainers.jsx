@@ -22,8 +22,7 @@ const AssingnedTrainers = () => {
         const res = await api.get("/memberships");
         const membershipsData = Array.isArray(res.data) ? res.data : [];
 
-        // Group memberships by user or treat Each membership as a unique row
-        // User wants to see based on membership table
+       
         const usersData = membershipsData.map((m) => ({
           uid: m.userId || `m_${m.id}`,
           membershipId: m.id,

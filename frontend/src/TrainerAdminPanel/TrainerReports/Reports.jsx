@@ -12,7 +12,7 @@ import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { API_URL } from "../../api";
+import api from "../../api";
 
 /* ================= HELPERS ================= */
 
@@ -41,39 +41,36 @@ const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
 
   /* ================= FIRESTORE ================= */
- useEffect(() => {
-  if (!trainerId) return;
+  useEffect(() => {
+    if (!trainerId) return;
 
-  // load members via assignments
-  fetch(`${API_URL}/assignments`)
-    .then((res) => res.json())
-    .then((data) => {
-      setMembers(
-        data.filter(
-          (a) => a.trainerId === trainerId && a.status === "active"
-        )
-      );
-    })
-    .catch((err) => console.error("failed to fetch members", err));
+    const loadData = async () => {
+      try {
+        // load members via assignments
+        const assignRes = await api.get("/assignments");
+        setMembers(
+          (assignRes.data || []).filter(
+            (a) => a.trainerId === trainerId && a.status === "active"
+          )
+        );
 
-  // diets still fire-based for now (migration not implemented)
-  // workouts from our new mysql endpoint
-  fetch(`${API_URL}/workouts?trainerId=${trainerId}`)
-    .then((res) => res.json())
-    .then((data) => {
-      const normalized = data.map((w) => ({
-        ...w,
-        memberName: w.member_name,
-        name: w.member_name, // reports sometimes uses name
-        status: w.level || w.status,
-        createdAt: w.created_at,
-      }));
-      setWorkouts(normalized);
-    })
-    .catch((err) => console.error("failed to fetch workouts", err));
+        // workouts from our new mysql endpoint
+        const workoutRes = await api.get(`/workouts?trainerId=${trainerId}`);
+        const normalized = (workoutRes.data || []).map((w) => ({
+          ...w,
+          memberName: w.member_name,
+          name: w.member_name,
+          status: w.level || w.status,
+          createdAt: w.created_at,
+        }));
+        setWorkouts(normalized);
+      } catch (err) {
+        console.error("failed to fetch reports data", err);
+      }
+    };
 
-  // attendance left unchanged until backend endpoint exists
-}, [trainerId]);
+    loadData();
+  }, [trainerId]);
 
 
   /* ================= GROUP REPORTS ================= */

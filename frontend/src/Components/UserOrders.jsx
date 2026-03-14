@@ -16,7 +16,7 @@ const makeImageUrl = (img) => {
     return `data:image/webp;base64,${img}`;
   }
   // otherwise treat as relative path on API server
-  const base = import.meta.env.VITE_API_URL || "";
+  const base = API_URL;
   return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
 };
 

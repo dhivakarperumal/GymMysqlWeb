@@ -25,7 +25,7 @@ function App() {
     // Simulate initial asset check/auth check
     const timer = setTimeout(() => {
       setInitialLoading(false);
-    }, 1200);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, []);
@@ -92,7 +92,12 @@ function App() {
             exit={{ opacity: 0, x: 10 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <React.Suspense fallback={null}>
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <PacmanLoader color="#ef4444" size={25} />
+                <p className="text-white/30 text-[10px] tracking-widest uppercase">Loading Components...</p>
+              </div>
+            }>
               <Outlet />
             </React.Suspense>
           </motion.div>

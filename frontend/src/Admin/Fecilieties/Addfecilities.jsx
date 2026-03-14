@@ -46,8 +46,8 @@ const AddEditFacility = () => {
 
     const load = async () => {
       try {
-        const res = await fetch(`${api}/facilities/${id}`);
-        const data = await res.json();
+        const res = await api.get(`/facilities/${id}`);
+        const data = res.data;
 
         // if fetch failed, bail out before using data
         if (!res.ok) {
@@ -152,35 +152,14 @@ const AddEditFacility = () => {
     console.log('Submitting payload:', payload);
 
     try {
-      const url = isEdit ? `${API}/${id}` : API;
-      const method = isEdit ? "PUT" : "POST";
-
-      console.log(`${method} request to:`, url);
-      console.log('Payload being sent:', JSON.stringify(payload, null, 2));
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      console.log('Response status:', res.status);
-      const text = await res.text();
-      console.log('Response text:', text);
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { error: 'Invalid JSON response', raw: text };
+      let res;
+      if (isEdit) {
+        res = await api.put(`/facilities/${id}`, payload);
+      } else {
+        res = await api.post(`/facilities`, payload);
       }
 
-      console.log('Response data:', data);
-
-      if (!res.ok) {
-        toast.error(data.message || data.error || "Save failed");
-        return;
-      }
+      const data = res.data;
 
       toast.success(isEdit ? "Facility updated ✅" : "Facility added 💪");
       navigate(-1);

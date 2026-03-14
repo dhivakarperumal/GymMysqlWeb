@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-import { API_URL as API_BASE } from "../../api";
+import api from "../../api";
 
 const inputClass =
   "w-full bg-black/40 border border-white/20 rounded-lg px-3 py-3.5 text-white text-sm";
@@ -67,10 +67,8 @@ const AddDietPlans = () => {
       try {
         setLoading(true);
 
-        const res = await fetch(`${API_BASE}/assignments`);
-        if (!res.ok) throw new Error("Failed to fetch assignments");
-
-        const data = await res.json();
+        const res = await api.get("/assignments");
+        const data = res.data;
 
         const assignments = Array.isArray(data)
           ? data
@@ -134,10 +132,8 @@ const AddDietPlans = () => {
 
     const fetchDiet = async () => {
       try {
-        const res = await fetch(`${API_BASE}/diet-plans/${id}`);
-        if (!res.ok) throw new Error("diet not found");
-
-        const data = await res.json();
+        const res = await api.get(`/diet-plans/${id}`);
+        const data = res.data;
 
         const memberId = data.memberId || data.member_id;
         const memberName = data.memberName || data.member_name;
@@ -281,20 +277,12 @@ const AddDietPlans = () => {
       let res;
 
       if (id) {
-        res = await fetch(`${API_BASE}/diet-plans/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        res = await api.put(`/diet-plans/${id}`, payload);
       } else {
-        res = await fetch(`${API_BASE}/diet-plans`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        res = await api.post(`/diet-plans`, payload);
       }
 
-      const data = await res.json();
+      const data = res.data;
 
       if (!res.ok) {
         throw new Error(data.message || "Failed to save diet");
