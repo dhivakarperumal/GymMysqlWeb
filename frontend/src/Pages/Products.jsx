@@ -6,6 +6,7 @@ import { useAuth } from "../PrivateRouter/AuthContext";
 import PageHeader from "../Components/PageHeader";
 import PageContainer from "../Components/PageContainer";
 import ProductCard from "../Components/ProductsCard";
+import cache from "../cache";
 
 export default function Products() {
   const navigate = useNavigate();
@@ -17,12 +18,25 @@ export default function Products() {
 
   useEffect(() => {
     const load = async () => {
+      // 1. If we have cached data, use it immediately to avoid "loading..."
+      if (cache.products) {
+        setProducts(cache.products);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get("/products");
-        setProducts(Array.isArray(res.data) ? res.data : []);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setProducts(data);
+        cache.products = data; // 2. Update cache
       } catch (err) {
         console.error("load products", err);
-        toast.error("Failed to load products");
+        // Only show toast if we don't have cached data (avoid noise)
+        if (!cache.products) {
+          toast.error("Failed to load products");
+        }
       } finally {
         setLoading(false);
       }

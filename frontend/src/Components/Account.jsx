@@ -8,6 +8,7 @@ import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import MemberSBuyPlans from "../WorkoutsDiet/MemberBuyPlans";
+import cache from "../cache";
 
 const Account = () => {
   const navigate = useNavigate();
@@ -28,9 +29,14 @@ const Account = () => {
     if (!userId) return;
 
     const fetchUser = async () => {
+      if (cache.userInfo) {
+        setUserInfo(cache.userInfo);
+      }
       try {
         const res = await api.get(`/users/${userId}`);
-        setUserInfo(res.data || {});
+        const data = res.data || {};
+        setUserInfo(data);
+        cache.userInfo = data;
       } catch (err) {
         console.error("failed to fetch user info", err);
       }
@@ -44,10 +50,16 @@ const Account = () => {
     if (!userId) return;
 
     const fetchPlans = async () => {
+      if (cache.userPlans) {
+        setPlans(cache.userPlans);
+        const active = cache.userPlans.find((p) => p.status === "active");
+        setHasActivePlan(!!active);
+      }
       try {
         const res = await api.get(`/memberships/user/${userId}`);
         const list = Array.isArray(res.data) ? res.data : [];
         setPlans(list);
+        cache.userPlans = list;
         const active = list.find((p) => p.status === "active");
         setHasActivePlan(!!active);
       } catch (err) {

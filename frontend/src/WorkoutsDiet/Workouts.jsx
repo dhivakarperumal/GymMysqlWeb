@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import PageContainer from "../Components/PageContainer";
 import { FaDumbbell } from "react-icons/fa";
+import cache from "../cache";
 
 export default function Workouts() {
   const navigate = useNavigate();
@@ -22,19 +23,24 @@ export default function Workouts() {
   }, [user]);
 
   const fetchWorkouts = async () => {
+    if (cache.workouts) {
+      setWorkouts(cache.workouts);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get("/workouts");
-
       const data = Array.isArray(res.data) ? res.data : [];
-
       const myWorkouts = data.filter(
         (item) => item.member_email === user.email,
       );
-
       setWorkouts(myWorkouts);
+      cache.workouts = myWorkouts;
     } catch (err) {
       console.error("Workout fetch error:", err);
-      toast.error("Failed to load workouts");
+      if (!cache.workouts) toast.error("Failed to load workouts");
     } finally {
       setLoading(false);
     }
@@ -44,8 +50,12 @@ export default function Workouts() {
     <div className="bg-black text-white min-h-screen flex flex-col">
       <PageContainer className="max-w-none w-full px-10">
         {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <p className="text-gray-400 text-lg">Loading workouts...</p>
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+            </div>
+            <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Assembling Routine</p>
           </div>
         ) : workouts.length === 0 ? (
           <div className="flex flex-col items-center mt-20 text-center">

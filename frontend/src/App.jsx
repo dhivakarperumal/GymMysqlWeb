@@ -22,9 +22,15 @@ function App() {
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
     
-    // Simulate initial asset check/auth check
+    const hasLoaded = sessionStorage.getItem("app_loaded");
+    if (hasLoaded) {
+      setInitialLoading(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setInitialLoading(false);
+      sessionStorage.setItem("app_loaded", "true");
     }, 800);
 
     return () => clearTimeout(timer);
@@ -35,7 +41,7 @@ function App() {
     setIsTransitioning(true);
     const timer = setTimeout(() => {
       setIsTransitioning(false);
-    }, 400); // Match transition speed
+    }, 180); // Match transition speed
 
     return () => clearTimeout(timer);
   }, [location.pathname]);

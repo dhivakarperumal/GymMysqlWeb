@@ -7,6 +7,7 @@ import { Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import PricingCard from "./PricingCard";
+import cache from "../cache";
 import PageContainer from "./PageContainer";
 
 export default function PricingSwiper() {
@@ -21,12 +22,18 @@ export default function PricingSwiper() {
   /* ---------------- FETCH PLANS ---------------- */
   useEffect(() => {
     const fetchPlans = async () => {
+      if (cache.plans) {
+        setServices(cache.plans);
+      }
+
       try {
         const response = await api.get("/plans");
-        setServices(Array.isArray(response.data) ? response.data : []);
+        const plans = Array.isArray(response.data) ? response.data : [];
+        setServices(plans);
+        cache.plans = plans;
       } catch (err) {
         console.error("Failed to fetch plans:", err);
-        setServices([]);
+        if (!cache.plans) setServices([]);
       }
     };
 

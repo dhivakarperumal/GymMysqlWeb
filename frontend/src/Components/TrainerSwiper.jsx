@@ -3,6 +3,7 @@ import TrainersCard from "./TrainersCard";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import api from "../api";
+import cache from "../cache";
 
 import "swiper/css";
 import PageContainer from "./PageContainer";
@@ -13,9 +14,17 @@ export default function TrainerSwiper() {
 
   useEffect(() => {
     const fetchTrainers = async () => {
+      if (cache.trainers) {
+        setTrainers(cache.trainers);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const response = await api.get("/staff");
         setTrainers(response.data);
+        cache.trainers = response.data;
       } catch (err) {
         console.error("Failed to fetch trainers", err);
       } finally {

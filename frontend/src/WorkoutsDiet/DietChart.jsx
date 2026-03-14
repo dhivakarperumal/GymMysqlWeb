@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
+import cache from "../cache";
 
 const DietChart = () => {
   const { user } = useAuth();
@@ -11,6 +12,15 @@ const DietChart = () => {
   const [activeDay, setActiveDay] = useState(null);
 
   const fetchDietPlan = async () => {
+    if (cache.diets) {
+      setDiet(cache.diets);
+      setTitle(cache.dietTitle || "");
+      setActiveDay(Object.keys(cache.diets)[0]);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get("/diet-plans");
       const data = res.data;
@@ -28,14 +38,15 @@ const DietChart = () => {
       )[0];
 
       setTitle(latestPlan.title);
+      cache.dietTitle = latestPlan.title;
 
       let daysData = latestPlan.days;
-
       if (typeof daysData === "string") {
         daysData = JSON.parse(daysData);
       }
 
       setDiet(daysData);
+      cache.diets = daysData;
 
       // set first day as default
       const firstDay = Object.keys(daysData)[0];
@@ -53,7 +64,15 @@ const DietChart = () => {
   }, [user]);
 
   if (loading) {
-    return <p className="text-gray-400">Loading diet plan...</p>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Calculating Nutrition</p>
+      </div>
+    );
   }
 
   if (!diet) {

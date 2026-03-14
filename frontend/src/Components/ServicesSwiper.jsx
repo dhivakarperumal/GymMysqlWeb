@@ -8,6 +8,7 @@ import "swiper/css";
 
 import ServiceCard from "./ServicesCard";
 import PageContainer from "./PageContainer";
+import cache from "../cache";
 
 export default function ServiceSwiper() {
   const [services, setServices] = useState([]);
@@ -15,9 +16,14 @@ export default function ServiceSwiper() {
   // Fetch services
   useEffect(() => {
     const fetchServices = async () => {
+      if (cache.services) {
+        setServices(cache.services);
+      }
+
       try {
         const response = await api.get("/services");
         setServices(response.data);
+        cache.services = response.data;
       } catch (err) {
         console.error("Failed to fetch services:", err);
       }

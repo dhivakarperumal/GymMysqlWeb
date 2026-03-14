@@ -9,15 +9,21 @@ import "swiper/css/navigation";
 
 import ProductCard from "./ProductsCard";
 import PageContainer from "./PageContainer";
+import cache from "../cache";
 
 export default function ProductSwiper() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
+      if (cache.products) {
+        setProducts(cache.products);
+      }
+
       try {
         const response = await api.get("/products");
         setProducts(response.data);
+        cache.products = response.data;
       } catch (err) {
         console.error("Failed to fetch products:", err);
       }

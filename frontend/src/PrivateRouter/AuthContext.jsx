@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import cache from "../cache";
 
 // simple auth context backed by localStorage (backend JWT)
 const AuthContext = createContext(null);
@@ -36,6 +37,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     setUser(null);
     setRole(null);
+    cache.clear();
   };
 
   return (
