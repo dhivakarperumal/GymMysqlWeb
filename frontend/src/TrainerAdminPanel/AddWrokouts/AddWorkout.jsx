@@ -333,13 +333,19 @@ const AddWorkout = () => {
                   <Users size={18} className="text-orange-400" />
                   Select Members ({selected.size} / {members.length})
                 </label>
-                <button
-                  type="button"
+                <div 
                   onClick={selectAll}
-                  className="text-xs font-medium text-orange-400 hover:text-orange-300 transition"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer transition border border-white/5"
                 >
-                  {allSelected ? "Deselect All" : "Select All Available"}
-                </button>
+                  {allSelected ? (
+                    <CheckSquare size={16} className="text-orange-400" />
+                  ) : (
+                    <Square size={16} className="text-white/20" />
+                  )}
+                  <span className="text-xs font-medium text-white/70">
+                    {allSelected ? "Deselect All" : "Select All"}
+                  </span>
+                </div>
               </div>
 
               {/* Member Search */}

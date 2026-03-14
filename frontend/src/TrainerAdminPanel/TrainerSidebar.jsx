@@ -14,6 +14,7 @@ import {
   Home,
   MessageSquare,
   Send,
+  Scale,
 } from "lucide-react";
 
 
@@ -29,25 +30,30 @@ const navItems = [
     exact: true,
   },
 
-  {
-    path: "/trainer/addworkouts",
-    label: "Add Workouts",
-    icon: Dumbbell,
-  },
+  // {
+  //   path: "/trainer/addworkouts",
+  //   label: "Add Workouts",
+  //   icon: Dumbbell,
+  // },
   {
     path: "/trainer/alladdworkouts",
     label: "All Workouts",
     icon: Activity,
   },
-  {
-    path: "/trainer/adddietplans",
-    label: "Add Diet Plans",
-    icon: Receipt,
-  },
+  // {
+  //   path: "/trainer/adddietplans",
+  //   label: "Add Diet Plans",
+  //   icon: Receipt,
+  // },
   {
     path: "/trainer/alladddietplans",
     label: "All Diet Plans",
     icon: Boxes,
+  },
+  {
+    path: "/trainer/update-weight",
+    label: "Update Weight",
+    icon: Scale,
   },
 
   {
