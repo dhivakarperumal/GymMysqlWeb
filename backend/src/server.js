@@ -31,10 +31,11 @@ const dietRoutes = require("./routes/dietRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const messageRoutes = require("./routes/messageRoutes");
-
+const cartRoutes = require("./routes/cartRoutes");
+const attendanceRoutes = require("./routes/attendanceRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
 
-// other routes can be added later
+
 
 const app = express();
 
@@ -108,7 +109,8 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/diet-plans", dietRoutes);
-app.use("/api/cart", require("./routes/cartRoutes"));
+app.use("/api/cart", cartRoutes);
+app.use("/api/attendance", attendanceRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/addresses", addressRoutes);
