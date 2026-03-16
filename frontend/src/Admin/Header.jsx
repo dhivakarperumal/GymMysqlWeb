@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import dayjs from "dayjs";
 
 const pageTitles = {
   "/admin": "Dashboard",
@@ -86,18 +85,40 @@ const Header = ({ onMenuClick }) => {
     const fetchAllAlerts = async () => {
       try {
         setLoadingAlerts(true);
-        const [orders, lowStock, expiring, regs] = await Promise.all([
-          api.get('/orders/alerts/today'),
-          api.get('/products/alerts/low-stock'),
-          api.get('/memberships/alerts/expiring-soon'),
-          api.get('/memberships/alerts/today')
+
+        const [ordersRes, productsRes, membershipsRes] = await Promise.all([
+          api.get("/orders"),
+          api.get("/products"),
+          api.get("/memberships"),
         ]);
 
+        const today = dayjs().format("YYYY-MM-DD");
+
+        // Orders created today
+        const todayOrders = (ordersRes.data || []).filter(
+          (o) => dayjs(o.createdAt).format("YYYY-MM-DD") === today
+        );
+
+        // Low stock products
+        const lowStockProducts = (productsRes.data || []).filter(
+          (p) => p.stock <= 5
+        );
+
+        // Expiring memberships (next 7 days)
+        const expiringSoon = (membershipsRes.data || []).filter((m) =>
+          dayjs(m.expiryDate).diff(dayjs(), "day") <= 7
+        );
+
+        // New registrations today
+        const todayRegistrations = (membershipsRes.data || []).filter(
+          (m) => dayjs(m.createdAt).format("YYYY-MM-DD") === today
+        );
+
         setAlerts({
-          orders: orders.data || [],
-          lowStock: lowStock.data || [],
-          expiring: expiring.data || [],
-          registrations: regs.data || []
+          orders: todayOrders,
+          lowStock: lowStockProducts,
+          expiring: expiringSoon,
+          registrations: todayRegistrations,
         });
       } catch (err) {
         console.error("Dashboard alerts error:", err);
@@ -107,21 +128,24 @@ const Header = ({ onMenuClick }) => {
     };
 
     fetchAllAlerts();
-    const interval = setInterval(fetchAllAlerts, 5 * 60 * 1000); // 5 mins
+
+    const interval = setInterval(fetchAllAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const totalAlerts = 
-    alerts.orders.length + 
-    alerts.lowStock.length + 
-    alerts.expiring.length + 
+  const totalAlerts =
+    alerts.orders.length +
+    alerts.lowStock.length +
+    alerts.expiring.length +
     alerts.registrations.length;
 
   const getPageTitle = () => {
     if (pageTitles[location.pathname]) return pageTitles[location.pathname];
+
     for (const [path, title] of Object.entries(pageTitles)) {
       if (location.pathname.startsWith(path + "/")) return title;
     }
+
     return "Dashboard";
   };
 
@@ -150,7 +174,7 @@ const Header = ({ onMenuClick }) => {
     else if (location.pathname.includes("orders")) target = "/admin/orders";
     else if (location.pathname.includes("members")) target = "/admin/members";
     else if (location.pathname.includes("staff") || location.pathname.includes("trainer")) target = "/admin/staff";
-    
+
     navigate(`${target}?search=${encodeURIComponent(searchQuery)}`);
     setShowSearch(false);
     setSearchQuery("");
@@ -205,9 +229,9 @@ const Header = ({ onMenuClick }) => {
               )}
             </button>
             {activeDropdown === 'orders' && (
-              <AlertDropdown 
-                title="Today's Orders" 
-                items={alerts.orders} 
+              <AlertDropdown
+                title="Today's Orders"
+                items={alerts.orders}
                 icon={<ShoppingBag className="w-4 h-4 text-green-500" />}
                 type="orders"
                 onClose={() => setActiveDropdown(null)}
@@ -226,14 +250,14 @@ const Header = ({ onMenuClick }) => {
               <Package className="w-5 h-5" />
               {alerts.lowStock.length > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white ring-2 ring-[#0b0c10]">
-                   {alerts.lowStock.length}
+                  {alerts.lowStock.length}
                 </span>
               )}
             </button>
             {activeDropdown === 'stock' && (
-              <AlertDropdown 
-                title="Stock Alerts" 
-                items={alerts.lowStock} 
+              <AlertDropdown
+                title="Stock Alerts"
+                items={alerts.lowStock}
                 icon={<Package className="w-4 h-4 text-orange-500" />}
                 type="stock"
                 onClose={() => setActiveDropdown(null)}
@@ -257,9 +281,9 @@ const Header = ({ onMenuClick }) => {
               )}
             </button>
             {activeDropdown === 'expiry' && (
-              <AlertDropdown 
-                title="Expirations" 
-                items={alerts.expiring} 
+              <AlertDropdown
+                title="Expirations"
+                items={alerts.expiring}
                 icon={<Clock className="w-4 h-4 text-red-500" />}
                 type="expiry"
                 onClose={() => setActiveDropdown(null)}
@@ -285,9 +309,9 @@ const Header = ({ onMenuClick }) => {
               )}
             </button>
             {activeDropdown === 'members' && (
-              <AlertDropdown 
-                title="New Members" 
-                items={alerts.registrations} 
+              <AlertDropdown
+                title="New Members"
+                items={alerts.registrations}
                 icon={<User className="w-4 h-4 text-blue-500" />}
                 type="members"
                 onClose={() => setActiveDropdown(null)}
@@ -391,24 +415,24 @@ const Header = ({ onMenuClick }) => {
       {/* SEARCH OVERLAY */}
       {showSearch && (
         <div className="absolute inset-0 z-50 bg-gray-950 flex items-center px-4 sm:px-6 animate-in slide-in-from-top duration-300">
-           <form onSubmit={handleSearch} className="flex-1 flex items-center gap-4 max-w-4xl mx-auto">
-              <Search className="w-6 h-6 text-orange-500" />
-              <input 
-                ref={searchInputRef}
-                type="text" 
-                placeholder="Search products, orders, members..." 
-                className="flex-1 bg-transparent border-none text-white focus:ring-0 text-xl font-medium outline-none"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button 
-                type="button"
-                onClick={() => setShowSearch(false)}
-                className="p-2 rounded-full hover:bg-white/10 text-gray-400 transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-           </form>
+          <form onSubmit={handleSearch} className="flex-1 flex items-center gap-4 max-w-4xl mx-auto">
+            <Search className="w-6 h-6 text-orange-500" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search products, orders, members..."
+              className="flex-1 bg-transparent border-none text-white focus:ring-0 text-xl font-medium outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowSearch(false)}
+              className="p-2 rounded-full hover:bg-white/10 text-gray-400 transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </form>
         </div>
       )}
     </header>

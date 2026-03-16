@@ -48,13 +48,16 @@ const Members = () => {
 
   // 🔎 SEARCH - Robust filtering
   const filtered = (members || []).filter((m) => {
+    if (!search) return true;
     const s = search.toLowerCase();
     return (
-      m.name?.toLowerCase().includes(s) ||
-      m.username?.toLowerCase().includes(s) ||
-      m.phone?.includes(s) ||
-      m.email?.toLowerCase().includes(s) ||
-      m.user_email?.toLowerCase().includes(s)
+      String(m.name || "").toLowerCase().includes(s) ||
+      String(m.username || "").toLowerCase().includes(s) ||
+      String(m.phone || "").includes(s) ||
+      String(m.mobile || "").includes(s) ||
+      String(m.email || "").toLowerCase().includes(s) ||
+      String(m.user_email || "").toLowerCase().includes(s) ||
+      String(m.plan || "").toLowerCase().includes(s)
     );
   });
 
