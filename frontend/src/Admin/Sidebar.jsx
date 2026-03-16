@@ -92,7 +92,11 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   /* ================= HELPERS ================= */
   const isRouteActive = (basePath) => {
     const paths = activeRouteMap[basePath];
-    if (!paths) return location.pathname === basePath;
+    if (!paths) {
+      if (basePath === "/admin") return location.pathname === "/admin";
+      if (basePath === "/") return location.pathname === "/";
+      return location.pathname.startsWith(basePath);
+    }
     return paths.some((p) => location.pathname.startsWith(p));
   };
 

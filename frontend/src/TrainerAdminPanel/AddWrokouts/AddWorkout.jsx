@@ -10,14 +10,6 @@ import { Search, Users, CheckSquare, Square, X, RefreshCw } from "lucide-react";
 const inputClass =
   "w-full bg-black/40 border border-white/20 rounded-lg px-3 py-3.5 text-white text-sm";
 
-const timeOptions = [
-  "06:00-08:00",
-  "08:00-10:00",
-  "12:00-14:00",
-  "16:00-18:00",
-  "20:00-22:00",
-];
-
 const workoutTypes = [
   "Weight Training",
   "Cardio",
@@ -475,18 +467,14 @@ const AddWorkout = () => {
                     {/* Time Slot */}
                     <div className="space-y-1">
                       <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Time Slot</label>
-                      <select
+                      <input
+                        type="time"
                         className={inputClass}
                         value={item.time}
                         onChange={(e) =>
                           updateExercise(dayKey, index, "time", e.target.value)
                         }
-                      >
-                        <option value="">Select Time</option>
-                        {timeOptions.map((t) => (
-                          <option key={t}>{t}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     {/* Workout Type */}

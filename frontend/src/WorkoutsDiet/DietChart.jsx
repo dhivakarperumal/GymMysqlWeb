@@ -3,6 +3,19 @@ import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import cache from "../cache";
 
+const format12h = (time) => {
+  if (!time) return "";
+  if (typeof time !== "string") return time;
+  if (time.toLowerCase().includes("am") || time.toLowerCase().includes("pm")) return time;
+  if (!time.includes(":")) return time;
+
+  const [hours, minutes] = time.split(":");
+  let h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${minutes} ${ampm}`;
+};
+
 const DietChart = () => {
   const { user } = useAuth();
 
@@ -102,10 +115,9 @@ const DietChart = () => {
             key={day}
             onClick={() => setActiveDay(day)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer
-              ${
-                activeDay === day
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              ${activeDay === day
+                ? "bg-red-500 text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
           >
             {day}
@@ -119,19 +131,38 @@ const DietChart = () => {
         {Object.entries(meals).map(([meal, value]) => (
           <div
             key={meal}
-            className="bg-gray-900 rounded-xl p-5 border border-red-500/20"
+            className="bg-gray-900/50 backdrop-blur-md rounded-xl p-5 border border-red-500/20 hover:border-red-500/40 transition-all group"
           >
-            <h3 className="text-red-400 text-sm font-semibold mb-2">
-              {meal}
-            </h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-red-500 text-xs font-bold uppercase tracking-wider">
+                {meal}
+              </h3>
+              {value.time && (
+                <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-full font-medium">
+                  {format12h(value.time)}
+                </span>
+              )}
+            </div>
 
-            <p className="text-gray-300 text-sm">
-              {value.food} ({value.quantity})
-            </p>
+            <div className="space-y-1">
+              <p className="text-white text-sm font-medium group-hover:text-red-400 transition-colors">
+                {value.food || "No food item"}
+              </p>
+              {value.quantity && (
+                <p className="text-white/40 text-[11px]">
+                  Quantity: <span className="text-white/60">{value.quantity}</span>
+                </p>
+              )}
+            </div>
 
-            <p className="text-gray-500 text-xs mt-1">
-              {value.calories} calories
-            </p>
+            {value.calories && (
+              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[10px] text-white/30 uppercase tracking-tighter">Energy</span>
+                <span className="text-xs font-semibold text-emerald-400">
+                  {value.calories} <span className="text-[10px] opacity-70">kcal</span>
+                </span>
+              </div>
+            )}
           </div>
         ))}
 

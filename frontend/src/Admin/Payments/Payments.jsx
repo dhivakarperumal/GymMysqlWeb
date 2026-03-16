@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Users, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Search, Users, CheckCircle, XCircle, AlertTriangle, Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
 
 // backend API
@@ -12,6 +12,9 @@ const Payments = () => {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [viewType, setViewType] = useState("table");
   const [loading, setLoading] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -60,6 +63,7 @@ const Payments = () => {
             pricePaid: m.pricePaid || 0,
             startDate: m.startDate,
             endDate: m.endDate,
+            createdAt: m.createdAt,
             status: m.status || "active",
             paymentStatus: m.paymentId ? "Paid" : "Paid",
           });
@@ -86,6 +90,47 @@ const Payments = () => {
     const today = new Date();
     const days = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
     return days <= 7 && days > 0;
+  };
+
+  const isToday = (date) => {
+    if (!date) return false;
+    const d = new Date(date);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  };
+
+  const isYesterday = (date) => {
+    if (!date) return false;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const d = new Date(date);
+    return d.toDateString() === yesterday.toDateString();
+  };
+
+  const isThisWeek = (date) => {
+    if (!date) return false;
+    const d = new Date(date);
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    return d >= startOfWeek;
+  };
+
+  const isThisMonth = (date) => {
+    if (!date) return false;
+    const d = new Date(date);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  };
+
+  const isInCustomRange = (date) => {
+    if (!date || !customStart || !customEnd) return true;
+    const d = new Date(date);
+    const start = new Date(customStart);
+    const end = new Date(customEnd);
+    end.setHours(23, 59, 59, 999);
+    return d >= start && d <= end;
   };
 
   const getSerialNumber = (index) =>
@@ -163,7 +208,17 @@ const Payments = () => {
   const allInitialPlans = [];
   members.forEach((member) => {
     member.plans.forEach((plan) => {
-      allInitialPlans.push(plan);
+      // Date Filter for counts
+      let passDate = true;
+      if (dateFilter === "today" && !isToday(plan.createdAt)) passDate = false;
+      if (dateFilter === "yesterday" && !isYesterday(plan.createdAt)) passDate = false;
+      if (dateFilter === "this week" && !isThisWeek(plan.createdAt)) passDate = false;
+      if (dateFilter === "this month" && !isThisMonth(plan.createdAt)) passDate = false;
+      if (dateFilter === "custom" && !isInCustomRange(plan.createdAt)) passDate = false;
+
+      if (passDate) {
+        allInitialPlans.push(plan);
+      }
     });
   });
 
@@ -187,9 +242,17 @@ const Payments = () => {
 
         if (!match) return false;
 
-        if (filterType === "active") return plan.status === "active";
-        if (filterType === "inactive") return plan.status === "inactive";
-        if (filterType === "expiry") return isExpiringPlan(plan.endDate);
+        // Status Filter
+        if (filterType === "active" && plan.status !== "active") return false;
+        if (filterType === "inactive" && plan.status !== "inactive") return false;
+        if (filterType === "expiry" && !isExpiringPlan(plan.endDate)) return false;
+
+        // Date Filter
+        if (dateFilter === "today" && !isToday(plan.createdAt)) return false;
+        if (dateFilter === "yesterday" && !isYesterday(plan.createdAt)) return false;
+        if (dateFilter === "this week" && !isThisWeek(plan.createdAt)) return false;
+        if (dateFilter === "this month" && !isThisMonth(plan.createdAt)) return false;
+        if (dateFilter === "custom" && !isInCustomRange(plan.createdAt)) return false;
 
         return true;
       }),
@@ -214,7 +277,7 @@ const Payments = () => {
   /* RESET PAGE ON SEARCH/FILTER */
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterType]);
+  }, [search, filterType, dateFilter, customStart, customEnd]);
 
   const formatDate = (date) => {
     if (!date) return "—";
@@ -424,19 +487,60 @@ const Payments = () => {
         </div>
 
         {/* RIGHT → FILTER BUTTONS */}
-        <div className="flex flex-wrap gap-3 md:justify-end">
-          {["all", "active", "inactive", "expiry"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap ${filterType === type
-                ? "bg-orange-500 text-white"
-                : "bg-white/10 border border-white/20"
-                }`}
-            >
-              {type}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-4 md:justify-end items-center">
+          {/* Date Filters */}
+          <div className="flex items-center bg-white/5 border border-white/20 rounded-xl p-1 gap-1">
+            <div className="px-3 text-gray-400 border-r border-white/10 hidden lg:block">
+              <Calendar size={16} />
+            </div>
+            {["all", "today", "yesterday", "this week", "this month", "custom"].map((df) => (
+              <button
+                key={df}
+                onClick={() => setDateFilter(df)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === df
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+              >
+                {df.charAt(0).toUpperCase() + df.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Range Inputs */}
+          {dateFilter === "custom" && (
+            <div className="flex items-center gap-2 bg-white/5 border border-white/20 rounded-xl p-1 animate-in slide-in-from-right-2 duration-300">
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="bg-transparent border-none text-xs text-white focus:ring-0 px-2 py-1 cursor-pointer"
+              />
+              <span className="text-gray-500 text-xs">to</span>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="bg-transparent border-none text-xs text-white focus:ring-0 px-2 py-1 cursor-pointer"
+              />
+            </div>
+          )}
+
+          {/* Status Filters */}
+          <div className="flex items-center bg-white/5 border border-white/20 rounded-xl p-1 gap-1">
+            {["all", "active", "inactive", "expiry"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-medium transition ${filterType === type
+                  ? "bg-orange-600 text-white shadow-lg shadow-orange-500/20"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
       </div>

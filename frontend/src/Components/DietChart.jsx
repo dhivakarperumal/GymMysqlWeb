@@ -20,6 +20,19 @@ const timeSlots = [
   { label: "20:00-22:00", meal: "Dinner" },
 ];
 
+const format12h = (time) => {
+  if (!time) return "";
+  if (typeof time !== "string") return time;
+  if (time.toLowerCase().includes("am") || time.toLowerCase().includes("pm")) return time;
+  if (!time.includes(":")) return time;
+
+  const [hours, minutes] = time.split(":");
+  let h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${minutes} ${ampm}`;
+};
+
 const DietChart = ({ planId }) => {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -160,7 +173,16 @@ const DietChart = ({ planId }) => {
                   key={day + meal}
                   className="border border-gray-700 p-3 text-sm bg-gray-800 hover:bg-red-700/30 transition"
                 >
-                  {selectedPlan.days[dayKey]?.[meal] || "-"}
+                  {typeof selectedPlan.days[dayKey]?.[meal] === "object" ? (
+                    <div className="flex flex-col">
+                      <span className="font-medium">{selectedPlan.days[dayKey][meal].food || "-"}</span>
+                      {selectedPlan.days[dayKey][meal].time && (
+                        <span className="text-[10px] text-red-400">{format12h(selectedPlan.days[dayKey][meal].time)}</span>
+                      )}
+                    </div>
+                  ) : (
+                    selectedPlan.days[dayKey]?.[meal] || "-"
+                  )}
                 </div>
               ))}
             </React.Fragment>
@@ -198,7 +220,21 @@ const DietChart = ({ planId }) => {
                     </div>
 
                     <div className="text-sm text-white text-right leading-snug">
-                      {selectedPlan.days[dayKey]?.[meal] || "-"}
+                      {typeof selectedPlan.days[dayKey]?.[meal] === "object" ? (
+                         <div className="flex flex-col items-end">
+                            <span className="font-medium">{selectedPlan.days[dayKey][meal].food || "-"}</span>
+                            <div className="flex gap-2 mt-1">
+                               {selectedPlan.days[dayKey][meal].time && (
+                                 <span className="text-[10px] text-red-500 font-bold">{format12h(selectedPlan.days[dayKey][meal].time)}</span>
+                               )}
+                               {selectedPlan.days[dayKey][meal].calories && (
+                                 <span className="text-[10px] text-gray-500">{selectedPlan.days[dayKey][meal].calories} kcal</span>
+                               )}
+                            </div>
+                         </div>
+                      ) : (
+                        selectedPlan.days[dayKey]?.[meal] || "-"
+                      )}
                     </div>
                   </div>
                 ))}

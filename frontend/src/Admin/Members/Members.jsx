@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api"
 import cache from "../../cache";
+import * as XLSX from "xlsx";
 
 
 const Members = () => {
@@ -75,6 +76,116 @@ const Members = () => {
     }
   };
 
+  /* ================= EXPORT TO EXCEL ================= */
+  const exportToExcel = () => {
+    if (members.length === 0) {
+      toast.error("No members to export");
+      return;
+    }
+
+    const dataToExport = members.map((m, index) => ({
+      "S.No": index + 1,
+      Name: m.name || "N/A",
+      Phone: m.phone || "N/A",
+      Email: m.email || m.user_email || "-",
+      Role: m.role || m.plan || "Member",
+      Source: m.source === "users" ? "User" : "Gym Member",
+      "Join Date": m.join_date || "-",
+      "Expiry Date": m.expiry_date || "-",
+      Status: m.status || "active"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Members");
+    XLSX.writeFile(workbook, "members_directory.xlsx");
+    toast.success("Exported successfully");
+  };
+
+  /* ================= IMPORT FROM EXCEL ================= */
+  const excelDateToJSDate = (value) => {
+    if (!value) return null;
+    if (typeof value === "string") return value;
+    const date = new Date((value - 25569) * 86400 * 1000);
+    return date.toISOString().split("T")[0];
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        setLoading(true);
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        for (const row of jsonData) {
+          const email = row.Email || row.email;
+          if (!email) continue;
+          
+          const username = email.split('@')[0];
+          const joinDate = excelDateToJSDate(row["Join Date"] || row.joinDate || row["JoinDate"]);
+          const duration = Number(row.Duration || row.duration || 0);
+          
+          // Calculate Expiry Date
+          let expiryDate = row["Expiry Date"] || row.expiryDate || row["ExpiryDate"];
+          if (!expiryDate && joinDate && duration) {
+            const d = new Date(joinDate);
+            d.setMonth(d.getMonth() + duration);
+            expiryDate = d.toISOString().split("T")[0];
+          } else if (expiryDate) {
+            expiryDate = excelDateToJSDate(expiryDate);
+          }
+
+          // Calculate BMI
+          const height = row.Height || row.height || "";
+          const weight = row.Weight || row.weight || "";
+          let bmi = row.BMI || row.bmi || "";
+          if (!bmi && height && weight) {
+            const h = Number(height) / 100;
+            const w = Number(weight);
+            if (h > 0) bmi = (w / (h * h)).toFixed(1);
+          }
+
+          const payload = {
+            name: row.Name || row.name,
+            username: username,
+            phone: String(row.Phone || row.phone || row.Mobile || ""),
+            email: email,
+            gender: row.Gender || row.gender || "",
+            height: height,
+            weight: weight,
+            bmi: bmi,
+            plan: row.Plan || row.plan || "",
+            duration: duration,
+            joinDate: joinDate,
+            expiryDate: expiryDate,
+            status: row.Status || row.status || "active",
+            address: row.Address || row.address || "",
+            notes: row.Notes || row.notes || "",
+            password: String(row.Phone || row.phone || row.Mobile || "123456")
+          };
+
+          await api.post("/members", payload);
+        }
+
+        toast.success("Imported successfully");
+        fetchMembers();
+      } catch (err) {
+        console.error(err);
+        toast.error("Import failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   if (loading && !cache.adminMembers) {
     return (
       <div className="flex flex-col items-center justify-center py-40 gap-6">
@@ -103,16 +214,32 @@ const Members = () => {
           />
         </div>
 
-        {/* ➕ ADD MEMBER */}
-        <button
-          onClick={() => navigate("/admin/addmembers")}
-          className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-white
-          bg-gradient-to-r from-orange-500 to-orange-600
-          hover:scale-105 active:scale-95 transition-all shadow-lg whitespace-nowrap w-full sm:w-auto"
-        >
-          <Plus size={16} />
-          Add Member
-        </button>
+        {/* ➕ ADD MEMBER + IMPORT/EXPORT */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Import */}
+          <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-600 transition shadow-lg whitespace-nowrap flex-1 sm:flex-none">
+            Import Excel
+            <input type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+          </label>
+
+          {/* Export */}
+          <button
+            onClick={exportToExcel}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition shadow-lg whitespace-nowrap flex-1 sm:flex-none"
+          >
+            Export Excel
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/addmembers")}
+            className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-white
+            bg-gradient-to-r from-orange-500 to-orange-600
+            hover:scale-105 active:scale-95 transition-all shadow-lg whitespace-nowrap flex-1 sm:flex-none"
+          >
+            <Plus size={16} />
+            Add Member
+          </button>
+        </div>
       </div>
 
       {/* DESKTOP TABLE */}

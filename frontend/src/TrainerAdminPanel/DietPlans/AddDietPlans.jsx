@@ -22,6 +22,7 @@ const generateSingleDay = () => {
       food: "",
       quantity: "",
       calories: "",
+      time: "",
     };
   });
   return day;
@@ -147,6 +148,7 @@ const AddDietPlans = () => {
                 food: mealData?.food || "",
                 quantity: mealData?.quantity || "",
                 calories: mealData?.calories || "",
+                time: mealData?.time || "",
               };
             }
           });
@@ -521,30 +523,48 @@ const AddDietPlans = () => {
                   <h3 className="font-semibold text-emerald-400">{day}</h3>
 
                   {meals.map((meal) => (
-                    <div key={meal} className="grid md:grid-cols-3 gap-3">
+                    <div key={meal} className="grid grid-cols-1 md:grid-cols-6 items-center gap-3">
+                      {/* Meal Label */}
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-3.5 text-emerald-400 text-xs font-bold uppercase tracking-widest text-center">
+                        {meal}
+                      </div>
 
+                      {/* Timing first */}
                       <input
+                        type="time"
                         className={inputClass}
-                        placeholder={`${meal} Food`}
+                        placeholder="Timing"
+                        value={form.days[day][meal]?.time || ""}
+                        onChange={(e) =>
+                          handleMealChange(day, meal, "time", e.target.value)
+                        }
+                      />
+
+                      {/* Food */}
+                      <input
+                        className={`${inputClass} md:col-span-2`}
+                        placeholder="Food Item"
                         value={form.days[day][meal]?.food || ""}
                         onChange={(e) =>
                           handleMealChange(day, meal, "food", e.target.value)
                         }
                       />
 
+                      {/* Quantity */}
                       <input
                         className={inputClass}
-                        placeholder="Quantity"
+                        placeholder="Qty"
                         value={form.days[day][meal]?.quantity || ""}
                         onChange={(e) =>
                           handleMealChange(day, meal, "quantity", e.target.value)
                         }
                       />
 
+                      {/* Calories */}
                       <input
                         type="number"
                         className={inputClass}
-                        placeholder="Calories"
+                        placeholder="Kcal"
                         value={form.days[day][meal]?.calories || ""}
                         onChange={(e) =>
                           handleMealChange(day, meal, "calories", e.target.value)
