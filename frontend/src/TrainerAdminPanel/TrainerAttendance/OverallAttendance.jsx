@@ -18,6 +18,26 @@ import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import api from "../../api";
 
+/* ================= CONFIG ================= */
+const GYM_LOCATION = {
+  lat: 12.479724, // Tirupattur Gym Location
+  lng: 78.573769,
+  radius: 1000, // 1km radius
+  name: "Tirupattur Gym Main Office"
+};
+
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  return R * c * 1000; // Distance in meters
+};
+
 const StatusBadge = ({ status }) => {
   const isPresent = status === "Present";
   return (
@@ -123,17 +143,31 @@ const OverallAttendance = () => {
         const { latitude, longitude } = pos.coords;
         setTrainerCoords({ lat: latitude, lng: longitude });
         
+        // Auto-mark based on distance
+        const dist = getDistance(latitude, longitude, GYM_LOCATION.lat, GYM_LOCATION.lng);
+        const isAtGym = dist <= GYM_LOCATION.radius;
+
+        const newStates = {};
+        assignedMembers.forEach(m => {
+          newStates[m.id] = isAtGym;
+        });
+        setAttendanceStates(newStates);
+
         try {
-          // CALL BACKEND PROXY instead of external API to avoid CSP issues
           const response = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
           const data = response.data;
-          const address = data.display_name || "Unknown Location";
+          const address = data.display_name || (isAtGym ? GYM_LOCATION.name : "External Location");
           setLocationName(address);
           setLocationStatus("verified");
+          if (isAtGym) {
+            toast.success("Verified at Gym Location! Members auto-marked as Present.");
+          } else {
+            toast.warning(`Outside Gym Area (${Math.round(dist)}m away). Members auto-marked as Absent.`);
+          }
         } catch (err) {
           console.error("Reverse geocoding error:", err);
-          setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          setLocationStatus("verified"); // Still verified if coordinates are set
+          setLocationName(isAtGym ? GYM_LOCATION.name : "External Location");
+          setLocationStatus("verified");
         }
       },
       () => {
@@ -326,13 +360,15 @@ const OverallAttendance = () => {
                        </div>
                     </td>
                     <td className="px-8 py-5">
-                      {r.lat ? (
-                        <span className="flex items-center gap-1 text-xs text-green-400 font-medium">
-                          <MapPin className="w-3 h-3 text-orange-500" /> Verified
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-600 italic">No GPS data</span>
-                      )}
+                        <div className="flex items-center gap-3">
+                           <MapPin className={`w-4 h-4 ${r.lat ? 'text-green-500' : 'text-white/10'}`} />
+                           <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase leading-none">{r.location_name || (r.lat ? 'Verified Location' : 'No GPS')}</p>
+                              <p className="text-[10px] font-bold text-gray-600 mt-1 flex items-center gap-1">
+                                <Clock className="w-3 h-3"/> {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
+                              </p>
+                           </div>
+                        </div>
                     </td>
                   </tr>
                 ))
@@ -369,23 +405,44 @@ const OverallAttendance = () => {
                       </label>
                    </div>
                    
-                   <div className="flex flex-col gap-2">
+                   <div className="flex flex-col gap-3">
                        <button 
                         onClick={verifyLocation}
-                        className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 shadow-lg ${
+                        className={`px-6 py-4 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg ${
                           locationStatus === "verified" 
                             ? "bg-green-500/20 text-green-400 border border-green-500/30" 
-                            : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+                            : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-xl shadow-orange-500/20"
                         }`}
                        >
                          {locationStatus === "checking" ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                         {locationStatus === "verified" ? "Location Verified" : "Fetch My Location"}
+                         {locationStatus === "verified" ? "Location Verified" : "Verify My Location"}
                        </button>
-                       {locationName && (
-                         <p className="text-[10px] text-gray-500 font-medium italic max-w-[200px] truncate text-right">
-                           {locationName}
-                         </p>
-                       )}
+
+                       <div className="flex flex-col gap-3 p-4 bg-black/40 rounded-2xl border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
+                               <MapPin className="w-4 h-4" />
+                            </div>
+                            <div>
+                               <p className="text-[9px] font-black text-gray-500 uppercase">Trainer Current Location</p>
+                               <p className="text-xs font-bold text-white truncate max-w-[200px]">
+                                 {locationStatus === "verified" ? locationName : (locationStatus === "checking" ? "Fetching..." : "Not Verified")}
+                               </p>
+                            </div>
+                          </div>
+
+                          <div className="h-px bg-white/5 w-full" />
+
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                               <Check className="w-4 h-4" />
+                            </div>
+                            <div>
+                               <p className="text-[9px] font-black text-gray-500 uppercase">Gym Office Location</p>
+                               <p className="text-xs font-bold text-white uppercase italic">{GYM_LOCATION.name}</p>
+                            </div>
+                          </div>
+                       </div>
                    </div>
                 </div>
 

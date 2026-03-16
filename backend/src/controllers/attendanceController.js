@@ -7,7 +7,7 @@ const db = require('../config/db');
 async function getAttendance(req, res) {
   try {
     const { date, trainerId } = req.query;
-    
+
     // Improved query to get names from either users or staff
     let sql = `
       SELECT 
@@ -21,7 +21,7 @@ async function getAttendance(req, res) {
       WHERE 1=1
     `;
     let params = [];
-    
+
     if (date) {
       sql += " AND (a.`date` = ? OR DATE(a.check_in) = ?)";
       params.push(date, date);
@@ -34,13 +34,13 @@ async function getAttendance(req, res) {
         [trainerId]
       );
       const resolvedStaffId = staffRows.length > 0 ? staffRows[0].id : null;
-      
+
       sql += " AND a.trainer_id = ?";
       params.push(resolvedStaffId);
     }
-    
+
     sql += " GROUP BY a.id ORDER BY a.check_in DESC";
-    
+
     const [rows] = await db.query(sql, params);
     res.json(rows);
   } catch (err) {
@@ -89,7 +89,7 @@ async function markAttendance(req, res) {
     // Resolve trainerUserId (users.id) to staffId (staff.id)
     let resolvedStaffId = null;
     if (trainerId) {
-       const [staffRows] = await db.query(
+      const [staffRows] = await db.query(
         "SELECT s.id FROM staff s JOIN users u ON (s.email = u.email OR s.username = u.username) WHERE u.id = ?",
         [trainerId]
       );
@@ -124,7 +124,7 @@ async function markAttendance(req, res) {
   }
 }
 
-module.exports = { 
+module.exports = {
   getAttendance,
   markAttendance,
   reverseGeocode

@@ -403,7 +403,8 @@ import api from "../../api";
 const GYM_LOCATION = {
   lat: 12.479724, // Tirupattur Gym Location
   lng: 78.573769,
-  radius: 500 // 500 meters
+  radius: 1000, // 1km radius
+  name: "Tirupattur Gym Main Office"
 };
 
 /* ================= STATUS BADGE ================= */
@@ -477,12 +478,18 @@ const OverallAttendance = () => {
       const res = await api.get('/users');
       const allUsers = res.data || [];
       
+      // Filter to only include Trainers
+      const trainers = allUsers.filter(u => 
+        u.role?.toLowerCase() === 'trainer' || 
+        u.role?.toLowerCase() === 'staff'
+      );
+      
       // Map to consistent format
-      const formatted = allUsers.map(u => ({
+      const formatted = trainers.map(u => ({
         id: u.id,
-        name: u.username || u.email || "Member",
+        name: u.username || u.email || "Trainer",
         email: u.email,
-        role: u.role || 'Member'
+        role: u.role || 'Trainer'
       }));
 
       setStaffMembers(formatted);
@@ -518,7 +525,7 @@ const OverallAttendance = () => {
 
         try {
           const resProxy = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
-          setLocationName(resProxy.data.display_name || "Gym Premises");
+          setLocationName(resProxy.data.display_name || (isAtGym ? GYM_LOCATION.name : "External Location"));
           setLocationStatus("verified");
           if (isAtGym) {
             toast.success(`Verified at Gym Location! Staff auto-marked as Present.`);
@@ -526,7 +533,7 @@ const OverallAttendance = () => {
             toast.warning(`Outside Gym Area (${Math.round(dist)}m away). Staff auto-marked as Absent.`);
           }
         } catch (err) {
-          setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          setLocationName(isAtGym ? GYM_LOCATION.name : "External Location");
           setLocationStatus("verified");
         }
       },
@@ -551,8 +558,9 @@ const OverallAttendance = () => {
         const statusText = isPresent ? "Present" : "Absent";
         
         const payload = {
-          memberId: staff.id, // This is u.id now
+          memberId: staff.id,
           status: statusText,
+          role: staff.role, // Added role to payload
           date: date,
           lat: currentCoords?.lat || null,
           lng: currentCoords?.lng || null,
@@ -576,6 +584,13 @@ const OverallAttendance = () => {
   /* ---------------- HELPERS ---------------- */
   const filteredRecords = useMemo(() => {
     return attendanceData.filter(r => {
+      // Only show trainers or staff
+      const isTrainer = 
+        r.role?.toLowerCase() === 'trainer' || 
+        r.role?.toLowerCase() === 'staff';
+      
+      if (!isTrainer) return false;
+
       const name = r.name || r.email || "Unknown";
       const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || r.status === statusFilter;
@@ -584,10 +599,10 @@ const OverallAttendance = () => {
   }, [attendanceData, searchTerm, statusFilter]);
 
   const stats = useMemo(() => {
-    const present = attendanceData.filter(r => r.status === "Present").length;
-    const absent = attendanceData.filter(r => r.status === "Absent").length;
-    return { present, absent, total: attendanceData.length };
-  }, [attendanceData]);
+    const present = filteredRecords.filter(r => r.status === "Present").length;
+    const absent = filteredRecords.filter(r => r.status === "Absent").length;
+    return { present, absent, total: filteredRecords.length };
+  }, [filteredRecords]);
 
   const downloadCSV = () => {
     if (!attendanceData.length) return toast.error("No data to download");
@@ -612,7 +627,7 @@ const OverallAttendance = () => {
             OVERALL ATTENDANCE
           </h1>
           <p className="text-gray-400 mt-2 flex items-center gap-2 font-medium">
-            <Users className="w-5 h-5 text-orange-500" /> Staff Management • {staffMembers.length} Active Staff
+            <Users className="w-5 h-5 text-orange-500" /> Trainer Management • {staffMembers.length} Active Trainers
           </p>
         </div>
 
@@ -783,12 +798,31 @@ const OverallAttendance = () => {
                       </button>
                    </div>
                    
-                   {locationName && (
-                     <div className="flex items-center gap-2 text-orange-500 animate-in fade-in slide-in-from-top-2">
-                        <MapPin className="w-4 h-4" />
-                        <p className="text-[10px] font-bold italic truncate">{locationName}</p>
-                     </div>
-                   )}
+                   <div className="flex flex-col gap-3 p-4 bg-black/40 rounded-2xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-orange-500" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-gray-500 uppercase">Trainer Current Location</p>
+                          <p className="text-xs font-bold text-white truncate max-w-[300px]">
+                            {locationName || (locationStatus === "checking" ? "Fetching..." : "Not Verified")}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="h-px bg-white/5 w-full" />
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-gray-500 uppercase">Gym Office Location</p>
+                          <p className="text-xs font-bold text-white uppercase italic">{GYM_LOCATION.name}</p>
+                        </div>
+                      </div>
+                   </div>
                 </div>
 
                 <div className="space-y-3">

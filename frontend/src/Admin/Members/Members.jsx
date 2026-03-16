@@ -128,11 +128,11 @@ const Members = () => {
         for (const row of jsonData) {
           const email = row.Email || row.email;
           if (!email) continue;
-          
+
           const username = email.split('@')[0];
           const joinDate = excelDateToJSDate(row["Join Date"] || row.joinDate || row["JoinDate"]);
           const duration = Number(row.Duration || row.duration || 0);
-          
+
           // Calculate Expiry Date
           let expiryDate = row["Expiry Date"] || row.expiryDate || row["ExpiryDate"];
           if (!expiryDate && joinDate && duration) {
@@ -245,18 +245,16 @@ const Members = () => {
           <div className="flex bg-white/10 p-1 rounded-xl border border-white/20 ml-0 sm:ml-2">
             <button
               onClick={() => setViewMode("card")}
-              className={`p-2 rounded-lg transition ${
-                viewMode === "card" ? "bg-orange-500 text-white" : "text-gray-400 hover:text-white"
-              }`}
+              className={`p-2 rounded-lg transition ${viewMode === "card" ? "bg-orange-500 text-white" : "text-gray-400 hover:text-white"
+                }`}
               title="Card View"
             >
               <LayoutGrid size={20} />
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`p-2 rounded-lg transition ${
-                viewMode === "table" ? "bg-orange-500 text-white" : "text-gray-400 hover:text-white"
-              }`}
+              className={`p-2 rounded-lg transition ${viewMode === "table" ? "bg-orange-500 text-white" : "text-gray-400 hover:text-white"
+                }`}
               title="Table View"
             >
               <List size={20} />
@@ -311,11 +309,10 @@ const Members = () => {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                        m.source === "users"
+                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${m.source === "users"
                           ? "bg-blue-500/20 text-blue-400"
                           : "bg-purple-500/20 text-purple-400"
-                      }`}>
+                        }`}>
                         {m.source === "users" ? "User" : "Gym Member"}
                       </span>
                     </td>
@@ -405,11 +402,10 @@ const Members = () => {
                       <span className="px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold bg-orange-500/20 text-orange-400 ring-1 ring-orange-500/30">
                         {m.plan || m.role || "Member"}
                       </span>
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold ring-1 ${
-                        m.source === "users"
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold ring-1 ${m.source === "users"
                           ? "bg-blue-500/20 text-blue-400 ring-blue-500/30"
                           : "bg-purple-500/20 text-purple-400 ring-purple-500/30"
-                      }`}>
+                        }`}>
                         {m.source === "users" ? "User" : "Gym Member"}
                       </span>
                     </div>
@@ -468,11 +464,10 @@ const Members = () => {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
-                      currentPage === pageNum
+                    className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum
                         ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110 z-10"
                         : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
-                    }`}
+                      }`}
                   >
                     {pageNum}
                   </button>

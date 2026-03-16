@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
+import api from "../api";
 
 const pageTitles = {
   "/trainer": "Dashboard",
@@ -101,7 +102,7 @@ const Header = ({ onMenuClick }) => {
           </button>
 
           <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold 
-            text-white tracking-wide truncate">
+            text-white tracking-wide truncate leading-tight">
             {getPageTitle()}
           </h1>
         </div>

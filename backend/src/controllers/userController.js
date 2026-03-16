@@ -14,12 +14,12 @@ async function getUserById(req, res) {
   try {
     const { id } = req.params;
     const idNum = parseInt(id, 10);
-    
+
     const [rows] = await db.query(
       'SELECT id, username, email, mobile, role, created_at FROM users WHERE id = ?',
       [idNum]
     );
-    
+
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
