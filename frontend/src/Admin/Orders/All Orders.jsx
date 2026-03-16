@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../../api";
+import cache from "../../cache";
 import {
   FaPrint,
   FaTruck,
@@ -11,7 +12,7 @@ import {
   FaThLarge,
   FaList,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 /* ================= HELPERS ================= */
 
@@ -24,6 +25,29 @@ const formatOrderId = (id) => {
 
 const normalizeKey = (s) =>
   String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const formatStatus = (s) => s.replace(/([A-Z])/g, " $1").trim();
+
+const normalizeStatus = (status) => {
+  if (!status) return "OrderPlaced";
+
+  const clean = status
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+
+  // ⚠️ Order matters — most specific first
+  if (clean === "delivered") return "Delivered";
+  if (clean === "cancelled" || clean === "canceled") return "Cancelled";
+  if (clean === "shipped") return "Shipped";
+  if (clean === "outfordelivery" || clean === "outdelivery" || clean === "outofdelivery") return "OutForDelivery";
+  if (clean === "packing" || clean === "paking" || clean === "packed") return "Packing";
+  if (clean === "processing" || clean === "procceing") return "Processing";
+  if (clean === "orderplaced" || clean === "ordered" || clean === "orderplace") return "OrderPlaced";
+
+  return "OrderPlaced";
+};
 
 const formatStatusLabel = (status) => {
   const k = normalizeKey(status);
@@ -52,7 +76,8 @@ const STATUS_SEQUENCE = [
 const makeImageUrl = (img) => {
   if (!img) return "";
   if (img.startsWith("http") || img.startsWith("data:")) return img;
-  const base = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const baseUrl = import.meta.env.VITE_API_URL || "";
+  const base = baseUrl.replace(/\/api$/, "");
   return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
 };
 
@@ -82,13 +107,22 @@ const StatCard = ({ title, value, icon, gradient }) => (
 /* ================= PAGE ================= */
 const AllOrders = () => {
   const [orders, setOrders] = useState([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [view, setView] = useState("table");
-  const navigate=useNavigate();
-  
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
+  const [search, setSearch] = useState(querySearch);
+
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [querySearch]);
+
   /* MODALS */
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [modalType, setModalType] = useState(""); // "cancelled" or "shipped"
@@ -104,6 +138,13 @@ const AllOrders = () => {
   /* ================= LOAD ================= */
   useEffect(() => {
     const fetch = async () => {
+      if (cache.adminOrders) {
+        setOrders(cache.adminOrders);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get("/orders");
         const raw = res.data || [];
@@ -117,8 +158,11 @@ const AllOrders = () => {
           createdAt: o.created_at,
         }));
         setOrders(formatted);
+        cache.adminOrders = formatted;
       } catch (err) {
         console.error("failed to load orders", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetch();
@@ -201,13 +245,13 @@ const AllOrders = () => {
   const confirmAndSendStatus = async (orderId, newStatus, extra = {}) => {
     try {
       setSubmitting(true);
-      await api.patch(`/orders/${orderId}/status`, { 
-        status: newStatus, 
+      await api.patch(`/orders/${orderId}/status`, {
+        status: newStatus,
         cancelledReason: extra.reason,
         courierName: extra.courier,
         docketNumber: extra.docket
       });
-      
+
       const res = await api.get("/orders");
       const raw = res.data || [];
       const formatted = raw.map((o) => ({
@@ -229,17 +273,254 @@ const AllOrders = () => {
     }
   };
 
-  /* ================= PRINT ================= */
-  const printOrder = (o) => {
-    const w = window.open("", "_blank");
-    if (!w) return alert("Popup blocked");
 
-    w.document.write(`<h2>Order ${o.orderId}</h2>`);
-    w.document.write(
-      `<p>Total: ₹ ${Number(o.total).toLocaleString("en-IN")}</p>`
-    );
-    w.document.close();
-    w.print();
+
+  const printOrder = async (order) => {
+    try {
+      const res = await api.get(`/orders/${order.order_id}`);
+      const orderDetails = res.data;
+
+      const shipping =
+        typeof orderDetails.shipping === "string"
+          ? JSON.parse(orderDetails.shipping)
+          : orderDetails.shipping;
+
+      const items = orderDetails.items || [];
+
+      const subtotal = items.reduce(
+        (sum, i) => sum + Number(i.price) * Number(i.qty),
+        0,
+      );
+
+      const win = window.open("", "", "width=900,height=700");
+
+      win.document.write(`
+<html>
+<head>
+<title>Invoice</title>
+
+<style>
+
+body{
+font-family:Arial, Helvetica, sans-serif;
+padding:40px;
+background:#fafafa;
+color:#333;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+border-bottom:2px solid #eee;
+padding-bottom:15px;
+}
+
+.logo{
+font-size:22px;
+font-weight:bold;
+color:#dc2626;
+}
+
+.invoice-title{
+font-size:28px;
+font-weight:bold;
+color:#111;
+}
+
+.section{
+margin-top:25px;
+}
+
+.card{
+background:#fff;
+border:1px solid #eee;
+border-radius:10px;
+padding:20px;
+margin-top:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.label{
+font-weight:bold;
+color:#555;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+background:#fff;
+border-radius:10px;
+overflow:hidden;
+}
+
+th{
+background:#111;
+color:#fff;
+padding:12px;
+font-size:14px;
+}
+
+td{
+padding:12px;
+border-bottom:1px solid #eee;
+font-size:14px;
+}
+
+.product{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.product img{
+width:50px;
+height:50px;
+object-fit:cover;
+border-radius:6px;
+border:1px solid #eee;
+}
+
+.total-box{
+margin-top:25px;
+background:#fff;
+padding:20px;
+border-radius:10px;
+border:1px solid #eee;
+width:280px;
+margin-left:auto;
+}
+
+.total-row{
+display:flex;
+justify-content:space-between;
+margin-bottom:8px;
+font-size:14px;
+}
+
+.grand{
+font-size:18px;
+font-weight:bold;
+color:#dc2626;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div class="logo">
+<img src="/images/logo-dark.png" style="height:50px; object-fit:contain;" />
+</div>
+<div class="invoice-title">INVOICE</div>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<p class="label">Order Details</p>
+<p><b>Order ID:</b> ${orderDetails.order_id}</p>
+<p><b>Status:</b> ${formatStatus(normalizeStatus(orderDetails.status))}</p>
+<p><b>Date:</b> ${new Date(orderDetails.created_at).toLocaleString()}</p>
+<p><b>Payment Method:</b> ${orderDetails.payment_method}</p>
+<p><b>Payment Status:</b> ${orderDetails.payment_status}</p>
+</div>
+
+${shipping
+          ? `
+<div class="card">
+<p class="label">Shipping Address</p>
+<p>${shipping.name}</p>
+<p>${shipping.phone}</p>
+<p>${shipping.email || ""}</p>
+<p>${shipping.address}</p>
+<p>${shipping.city || ""}, ${shipping.state || ""}</p>
+<p>${shipping.zip || ""}</p>
+<p>${shipping.country || ""}</p>
+</div>
+`
+          : ""
+        }
+
+</div>
+
+
+<div class="section">
+<h3>Order Items</h3>
+
+<table>
+
+<tr>
+<th>Product</th>
+<th>Variant</th>
+<th>Qty</th>
+<th>Price</th>
+<th>Total</th>
+</tr>
+
+${items
+          .map(
+            (i) => `
+<tr>
+
+<td>
+<div class="product">
+<img src="${makeImageUrl(i.image) || "https://via.placeholder.com/50"}"/>
+<span>${i.product_name}</span>
+</div>
+</td>
+
+<td>${i.size || i.color || i.variant || "-"}</td>
+
+<td>${i.qty}</td>
+
+<td>₹${Number(i.price).toLocaleString()}</td>
+
+<td>₹${(i.price * i.qty).toLocaleString()}</td>
+
+</tr>
+`,
+          )
+          .join("")}
+
+</table>
+</div>
+
+
+<div class="total-box">
+
+<div class="total-row">
+<span>Subtotal</span>
+<span>₹${subtotal.toLocaleString()}</span>
+</div>
+
+<div class="total-row grand">
+<span>Total</span>
+<span>₹${Number(orderDetails.total).toLocaleString()}</span>
+</div>
+
+</div>
+
+
+</body>
+</html>
+`);
+
+      win.document.close();
+      win.focus();
+      win.print();
+    } catch (err) {
+      console.error("Failed to fetch order details for print", err);
+      alert("Failed to load order details for printing");
+    }
   };
 
   /* ================= STATUS BADGE ================= */
@@ -260,6 +541,18 @@ const AllOrders = () => {
       </span>
     );
   };
+
+  if (loading && !cache.adminOrders) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Shipments</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 text-white">
@@ -318,8 +611,8 @@ const AllOrders = () => {
           <button
             onClick={() => setDeliveryOnly((prev) => !prev)}
             className={`px-3 py-2 rounded-xl text-sm border flex items-center gap-2 ${deliveryOnly
-                ? "bg-orange-500 border-orange-500"
-                : "bg-white/10 border-white/20"
+              ? "bg-orange-500 border-orange-500"
+              : "bg-white/10 border-white/20"
               }`}
           >
             <FaTruck /> Delivery Only
@@ -352,21 +645,22 @@ const AllOrders = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-white/20">
                 <tr>
-                  
+
                   <th className="px-4 py-4 text-left">Order ID</th>
                   <th className="px-4 py-4 text-left">Member</th>
                   <th className="px-4 py-4 text-left">Amount</th>
                   <th className="px-4 py-4 text-left">Payment</th>
                   <th className="px-4 py-4 text-left">Status</th>
-                 
+
                   <th className="px-4 py-4 text-left">Actions</th>
+                  <th className="px-4 py-4 text-left">Printer</th>
 
                 </tr>
               </thead>
               <tbody>
                 {paginatedOrders.map((o) => (
                   <tr key={o.order_id} className="border-b border-white/10 hover:bg-white/5">
-                   
+
                     <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3 cursor-pointer hover:text-orange-400">{formatOrderId(o.order_id)}</td>
                     <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3">
                       {o.shipping?.name || o.pickup?.name || "-"}
@@ -375,20 +669,19 @@ const AllOrders = () => {
                       ₹{Number(o.total).toLocaleString("en-IN")}
                     </td>
                     <td onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${o.order_id}`) }} className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        normalizeKey(o.paymentStatus) === "paid" 
-                          ? "bg-green-500/20 text-green-300" 
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${normalizeKey(o.paymentStatus) === "paid"
+                          ? "bg-green-500/20 text-green-300"
                           : "bg-amber-500/20 text-amber-300"
-                      }`}>
+                        }`}>
                         {o.paymentStatus}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {statusBadge(o.status)}
                     </td>
-                   
+
                     <td className="px-4 py-3 flex gap-2">
-                       <select
+                      <select
                         value={normalizeKey(o.status)}
                         onChange={(e) => updateStatus(o.order_id, e.target.value)}
                         className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-orange-500 outline-none"
@@ -403,7 +696,7 @@ const AllOrders = () => {
                               if (idx < currentIdx && currentIdx !== -1) return null;
                               return <option key={step} value={step}>{formatStatusLabel(step)}</option>;
                             })}
-                            
+
                             {/* Only show Cancelled if NOT yet shipped or beyond */}
                             {(STATUS_SEQUENCE.indexOf(normalizeKey(o.status)) < STATUS_SEQUENCE.indexOf("shipped")) && (
                               <option value="cancelled">Cancelled</option>
@@ -412,6 +705,9 @@ const AllOrders = () => {
                         )}
                       </select>
 
+
+                    </td>
+                    <td>
                       <button
                         onClick={() => printOrder(o)}
                         className="px-2 py-1 bg-gray-700 rounded-lg text-xs flex items-center gap-1"
@@ -447,17 +743,17 @@ const AllOrders = () => {
               <div className="flex flex-wrap gap-2 py-2">
                 {(o.items || []).map((item, idx) => (
                   <div key={idx} className="flex items-center gap-2 bg-black/20 p-1.5 rounded-xl border border-white/5">
-                     {item.image && (
-                       <img 
-                         src={makeImageUrl(item.image)} 
-                         className="w-8 h-8 object-cover rounded-lg" 
-                         alt="" 
-                       />
-                     )}
-                     <div className="min-w-0">
-                       <p className="text-[10px] font-medium truncate w-[100px]">{item.product_name}</p>
-                       <p className="text-[9px] text-gray-400">Qty: {item.qty} | ₹{item.price}</p>
-                     </div>
+                    {item.image && (
+                      <img
+                        src={makeImageUrl(item.image)}
+                        className="w-8 h-8 object-cover rounded-lg"
+                        alt=""
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium truncate w-[100px]">{item.product_name}</p>
+                      <p className="text-[9px] text-gray-400">Qty: {item.qty} | ₹{item.price}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -483,7 +779,7 @@ const AllOrders = () => {
                         if (idx < currentIdx && currentIdx !== -1) return null;
                         return <option key={step} value={step}>{formatStatusLabel(step)}</option>;
                       })}
-                      
+
                       {/* Hide Cancelled if Shipped/Delivered */}
                       {(STATUS_SEQUENCE.indexOf(normalizeKey(o.status)) < STATUS_SEQUENCE.indexOf("shipped")) && (
                         <option value="cancelled">Cancelled</option>
@@ -519,8 +815,8 @@ const AllOrders = () => {
             key={i}
             onClick={() => setCurrentPage(i + 1)}
             className={`px-3 py-1 rounded-lg border ${currentPage === i + 1
-                ? "bg-orange-500 text-white border-orange-500"
-                    : "bg-white/10 border-white/20"
+              ? "bg-orange-500 text-white border-orange-500"
+              : "bg-white/10 border-white/20"
               }`}
           >
             {i + 1}
@@ -549,40 +845,40 @@ const AllOrders = () => {
                 )}
               </h3>
               <p className="text-sm text-gray-400 mb-6">
-                {modalType === "cancelled" 
-                  ? "Please provide a reason for cancelling this order." 
+                {modalType === "cancelled"
+                  ? "Please provide a reason for cancelling this order."
                   : "Enter the tracking information for this shipment."}
               </p>
 
               <div className="space-y-4">
                 {modalType === "cancelled" ? (
-                   <div>
+                  <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Reason</label>
-                    <textarea 
+                    <textarea
                       autoFocus
                       value={modalInput.reason}
-                      onChange={(e) => setModalInput({...modalInput, reason: e.target.value})}
+                      onChange={(e) => setModalInput({ ...modalInput, reason: e.target.value })}
                       className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-red-500/50 outline-none min-h-[100px]"
                       placeholder="Customer changed their mind..."
                     />
-                   </div>
+                  </div>
                 ) : (
                   <>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Courier Name</label>
-                      <input 
+                      <input
                         autoFocus
                         value={modalInput.courier}
-                        onChange={(e) => setModalInput({...modalInput, courier: e.target.value})}
+                        onChange={(e) => setModalInput({ ...modalInput, courier: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none"
                         placeholder="e.g. BlueDart, DTDC"
                       />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Docket Number</label>
-                      <input 
+                      <input
                         value={modalInput.docket}
-                        onChange={(e) => setModalInput({...modalInput, docket: e.target.value})}
+                        onChange={(e) => setModalInput({ ...modalInput, docket: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none"
                         placeholder="e.g. 123456789"
                       />
@@ -592,20 +888,19 @@ const AllOrders = () => {
               </div>
 
               <div className="flex gap-3 mt-8">
-                <button 
+                <button
                   onClick={() => setShowStatusModal(false)}
                   className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-2xl font-bold text-sm transition"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={() => confirmAndSendStatus(pendingStatus.orderId, pendingStatus.newStatus, modalInput)}
                   disabled={submitting}
-                  className={`flex-1 py-3 rounded-2xl font-bold text-sm transition shadow-lg ${
-                    modalType === "cancelled" 
-                      ? "bg-red-600 hover:bg-red-700 shadow-red-600/20" 
+                  className={`flex-1 py-3 rounded-2xl font-bold text-sm transition shadow-lg ${modalType === "cancelled"
+                      ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
                       : "bg-orange-600 hover:bg-orange-700 shadow-orange-600/20"
-                  } disabled:opacity-50`}
+                    } disabled:opacity-50`}
                 >
                   {submitting ? "Updating..." : "Confirm Update"}
                 </button>

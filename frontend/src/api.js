@@ -1,9 +1,7 @@
 import axios from "axios";
 
-/* ✅ VITE ENV (NO process.env) */
-// prefer explicit env var, fall back to same‑origin relative path
-const API_URL = import.meta.env.VITE_API_URL || "/api";
-console.log("API base URL:", API_URL);
+const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+export const API_URL = rawApiUrl.endsWith("/") ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,13 +11,19 @@ const api = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Add token automatically
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export default api;
 

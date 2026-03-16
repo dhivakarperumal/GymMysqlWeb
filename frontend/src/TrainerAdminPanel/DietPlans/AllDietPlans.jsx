@@ -5,7 +5,7 @@ import { Eye, Trash2, Edit2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-const API_BASE = "/api";
+import api from "../../api";
 
 
 const weekDays = [
@@ -58,9 +58,8 @@ const AllDietPlans = () => {
 
     const fetchPlans = async () => {
       try {
-        const res = await fetch(`${API_BASE}/diet-plans?trainerId=${trainerId}`);
-        if (!res.ok) throw new Error("fetch failed");
-        const data = await res.json();
+        const res = await api.get(`/diet-plans?trainerId=${trainerId}`);
+        const data = res.data;
         // normalize snake_case to camelCase for frontend convenience
         const normalized = data.map((p) => ({
           ...p,
@@ -85,8 +84,7 @@ const AllDietPlans = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this diet plan?")) return;
     try {
-      const res = await fetch(`${API_BASE}/diet-plans/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("delete failed");
+      await api.delete(`/diet-plans/${id}`);
       toast.success("Diet plan deleted");
       setDietPlans((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {

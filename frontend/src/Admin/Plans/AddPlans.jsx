@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FaArrowLeft, FaPlus, FaTrash } from "react-icons/fa";
 
-const API = "http://localhost:5000/api/plans";
+import api from "../../api";
 
 /* ================= STYLES ================= */
 const glassCard =
@@ -80,8 +80,8 @@ const AddEditGymPlan = () => {
 
     const loadPlan = async () => {
       try {
-        const res = await fetch(`${API}/${id}`);
-        const data = await res.json();
+        const res = await api.get(`/plans/${id}`);
+        const data = res.data;
 
         if (!res.ok) {
           toast.error("Plan not found");
@@ -189,16 +189,14 @@ const AddEditGymPlan = () => {
         finalPrice: Number(form.finalPrice),
       };
 
-      const url = isEdit ? `${API}/${id}` : API;
-      const method = isEdit ? "PUT" : "POST";
+      let res;
+      if (isEdit) {
+        res = await api.put(`/plans/${id}`, payload);
+      } else {
+        res = await api.post(`/plans`, payload);
+      }
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
+      const data = res.data;
 
       if (!res.ok) {
         toast.error(data.message || data.error || "Save failed");

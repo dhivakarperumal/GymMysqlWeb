@@ -318,4 +318,43 @@ async function getUserOrders(req, res) {
   }
 }
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, createOrder, generateOrderId, getUserOrders };
+// fetch today's orders
+async function getTodayOrders(req, res) {
+  try {
+    const [orders] = await pool.query(
+      'SELECT * FROM orders WHERE DATE(created_at) = CURDATE() ORDER BY created_at DESC'
+    );
+    
+    if (orders.length === 0) {
+      return res.json([]);
+    }
+
+    const orderIds = orders.map(o => o.order_id);
+    const [items] = await pool.query(
+      'SELECT * FROM order_items WHERE order_id IN (?)',
+      [orderIds]
+    );
+
+    const ordersWithItems = orders.map(order => {
+      return {
+        ...parseOrder(order),
+        items: items.filter(item => item.order_id === order.order_id)
+      };
+    });
+
+    return res.json(ordersWithItems);
+  } catch (err) {
+    console.error('getTodayOrders error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+module.exports = { 
+  getAllOrders, 
+  getOrder, 
+  updateOrderStatus, 
+  createOrder, 
+  generateOrderId, 
+  getUserOrders,
+  getTodayOrders
+};

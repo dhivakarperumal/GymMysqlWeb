@@ -153,8 +153,12 @@ export default function ProductDetails() {
 
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-red-500 tracking-widest">
-        LOADING PRODUCT...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Specifications</p>
       </div>
     );
 

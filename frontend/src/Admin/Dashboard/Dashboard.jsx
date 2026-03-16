@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
+import cache from "../../cache";
 // import AddressForm from "../Address";
 
 
@@ -88,6 +89,10 @@ export default function Dashboard() {
     equipmentDue: 0,
     totalOrders: 0,
     totalProducts: 0,
+    newMembersToday: 0,
+    lowStockCount: 0,
+    expiringCount: 0,
+    todayOrdersCount: 0
   });
 
   /* ---------- LOADING STATE ---------- */
@@ -95,15 +100,37 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      try {
+      // 1. Initial Cache Check
+      if (cache.dashboardStats) {
+        setStats(cache.dashboardStats);
+        setLoading(false);
+      } else {
         setLoading(true);
-        const [membersRes, plansRes, ordersRes, staffRes, equipmentRes, productsRes] = await Promise.all([
-          api.get('/members'),
-          api.get('/plans'),
-          api.get('/orders'),
-          api.get('/staff'),
-          api.get('/equipment'),
-          api.get('/products'),
+      }
+
+      try {
+        const [
+          membersRes, 
+          plansRes, 
+          ordersRes, 
+          staffRes, 
+          equipmentRes, 
+          productsRes,
+          todayOrdersRes,
+          lowStockRes,
+          expiringRes,
+          todayMembersRes
+        ] = await Promise.all([
+          api.get('/members').catch(() => ({ data: [] })),
+          api.get('/plans').catch(() => ({ data: [] })),
+          api.get('/orders').catch(() => ({ data: [] })),
+          api.get('/staff').catch(() => ({ data: [] })),
+          api.get('/equipment').catch(() => ({ data: [] })),
+          api.get('/products').catch(() => ({ data: [] })),
+          api.get('/orders/today').catch(() => ({ data: [] })),
+          api.get('/products/alerts/low-stock').catch(() => ({ data: [] })),
+          api.get('/memberships/alerts/expiring-soon').catch(() => ({ data: [] })),
+          api.get('/memberships/today').catch(() => ({ data: [] }))
         ]);
 
         const members = membersRes.data || [];
@@ -113,7 +140,7 @@ export default function Dashboard() {
         const equipment = equipmentRes.data || [];
         const products = productsRes.data || [];
 
-        setStats({
+        const newStats = {
           members: members.length,
           checkinsToday: 0, 
           activePlans: plans.length,
@@ -122,10 +149,25 @@ export default function Dashboard() {
           equipmentDue: equipment.length,
           totalOrders: orders.length,
           totalProducts: products.length,
-        });
+          newMembersToday: (todayMembersRes.data || []).length,
+          lowStockCount: (lowStockRes.data || []).length,
+          expiringCount: (expiringRes.data || []).length,
+          todayOrdersCount: (todayOrdersRes.data || []).length
+        };
+
+        setStats(newStats);
+        cache.dashboardStats = newStats;
+        
+        // Populate individual caches too since we already fetched them
+        cache.adminMembers = members;
+        cache.adminStaff = staffRes.data;
+        cache.adminOrders = orders;
+        cache.adminProducts = products;
+        cache.adminEquipment = equipment;
+
       } catch (err) {
         console.error('Error fetching stats:', err);
-        toast.error('Failed to load dashboard stats');
+        if (!cache.dashboardStats) toast.error('Failed to load dashboard stats');
       } finally {
         setLoading(false);
       }
@@ -288,6 +330,17 @@ export default function Dashboard() {
 
 
   /* -------------------- UI -------------------- */
+  if (loading && !cache.dashboardStats) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-6 bg-white/5 rounded-3xl border border-white/10">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Initializing Command Center</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 space-y-8 relative min-h-[80vh]">
@@ -300,7 +353,9 @@ export default function Dashboard() {
         <StatCard title="Available Trainers" value={loading ? "..." : stats.trainers} icon={<FaUserTie />} color="from-indigo-500 to-violet-500" />
         <StatCard title="Equipment Due" value={loading ? "..." : stats.equipmentDue} icon={<FaBox />} color="from-green-500 to-emerald-500" />
         <StatCard title="Total Products" value={loading ? "..." : stats.totalProducts} icon={<FaBox />} color="from-green-500 to-emerald-500" />
-        <StatCard title="Total Orders" value={loading ? "..." : stats.totalOrders} icon={<FaTools />} color="from-red-500 to-rose-500" />
+        <StatCard title="Low Stock Alert" value={loading ? "..." : stats.lowStockCount} icon={<FaBox />} color="from-orange-500 to-red-500" />
+        <StatCard title="Expiring Plans" value={loading ? "..." : stats.expiringCount} icon={<FaCalendarCheck />} color="from-red-500 to-rose-700" />
+        <StatCard title="Today's Orders" value={loading ? "..." : stats.todayOrdersCount} icon={<FaTools />} color="from-emerald-500 to-green-600" />
       </div>
 
 

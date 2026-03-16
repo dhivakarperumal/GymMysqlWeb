@@ -3,7 +3,7 @@ import api from "../../api";
 import { useParams, useNavigate } from "react-router-dom";
 
 // base url used when appending relative image paths
-const API_BASE = "http://localhost:5000/api";
+import { API_URL as API_BASE } from "../../api";
 import {
   FaArrowLeft,
   FaUser,

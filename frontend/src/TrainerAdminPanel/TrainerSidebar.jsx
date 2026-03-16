@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   CalendarCheck,
   Receipt,
@@ -14,6 +14,7 @@ import {
   Home,
   MessageSquare,
   Send,
+  Scale,
 } from "lucide-react";
 
 
@@ -29,25 +30,30 @@ const navItems = [
     exact: true,
   },
 
-  {
-    path: "/trainer/addworkouts",
-    label: "Add Workouts",
-    icon: Dumbbell,
-  },
+  // {
+  //   path: "/trainer/addworkouts",
+  //   label: "Add Workouts",
+  //   icon: Dumbbell,
+  // },
   {
     path: "/trainer/alladdworkouts",
     label: "All Workouts",
     icon: Activity,
   },
-  {
-    path: "/trainer/adddietplans",
-    label: "Add Diet Plans",
-    icon: Receipt,
-  },
+  // {
+  //   path: "/trainer/adddietplans",
+  //   label: "Add Diet Plans",
+  //   icon: Receipt,
+  // },
   {
     path: "/trainer/alladddietplans",
     label: "All Diet Plans",
     icon: Boxes,
+  },
+  {
+    path: "/trainer/update-weight",
+    label: "Update Weight",
+    icon: Scale,
   },
 
   {
@@ -73,7 +79,39 @@ const navItems = [
 /* ================= SIDEBAR ================= */
 const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   const { userProfile } = useAuth();
+  const location = useLocation();
   const [openMenu, setOpenMenu] = useState(null);
+
+  /* ================= ACTIVE ROUTE MAP ================= */
+  const activeRouteMap = {
+    "/trainer/alladdworkouts": ["/trainer/alladdworkouts", "/trainer/addworkouts"],
+    "/trainer/alladddietplans": ["/trainer/alladddietplans", "/trainer/adddietplans"],
+  };
+
+  /* ================= HELPERS ================= */
+  const isRouteActive = (basePath) => {
+    const paths = activeRouteMap[basePath];
+    if (!paths) {
+      if (basePath === "/trainer") return location.pathname === "/trainer";
+      if (basePath === "/") return location.pathname === "/";
+      return location.pathname.startsWith(basePath);
+    }
+    return paths.some((p) => location.pathname.startsWith(p));
+  };
+
+  /* ===== AUTO OPEN DROPDOWN WHEN CHILD ACTIVE ===== */
+  useEffect(() => {
+    navItems.forEach((item) => {
+      if (item.children) {
+        const isChildActive = item.children.some((child) =>
+          isRouteActive(child.path)
+        );
+        if (isChildActive) {
+          setOpenMenu(item.label);
+        }
+      }
+    });
+  }, [location.pathname]);
 
   const toggleMenu = (label) => {
     setOpenMenu(openMenu === label ? null : label);
@@ -167,19 +205,18 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                             `}>
                             {item.children.map((sub) => {
                               const SubIcon = sub.icon;
+                              const isActive = isRouteActive(sub.path);
                               return (
                                 <NavLink
                                   key={sub.path}
                                   to={sub.path}
                                   onClick={() => isOpen && onClose()}
-                                  className={({ isActive }) =>
-                                    `
+                                  className={`
                                       flex items-center gap-2 px-3 py-2 rounded-lg text-sm
                                       ${isActive
-                                        ? "bg-orange-500 text-white"
+                                        ? "bg-orange-500 text-white shadow-md shadow-orange-500/20"
                                         : "text-white/70 hover:bg-white/20"}
-                                    `
-                                  }
+                                    `}
                                 >
                                   {SubIcon && <SubIcon className="w-4 h-4 mr-1 shrink-0" />}
                                   <span>{sub.label}</span>
@@ -192,20 +229,19 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                     }
         
                     /* ===== NORMAL ITEM ===== */
+                    const isActive = isRouteActive(item.path);
                     return (
                       <NavLink
                         key={item.path}
                         to={item.path}
                         end={item.exact}
                         onClick={() => isOpen && onClose()}
-                        className={({ isActive }) =>
-                          `
+                        className={`
                             flex items-center gap-3 px-4 py-2.5 rounded-xl
                             ${isActive
-                              ? "bg-orange-500 text-white"
-                              : "text-white/80 hover:bg-white/20"}
-                          `
-                        }
+                                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                                : "text-white/80 hover:bg-white/20"}
+                          `}
                       >
                         <Icon className="w-5 h-5 shrink-0" />
                         {!collapsed && <span>{item.label}</span>}

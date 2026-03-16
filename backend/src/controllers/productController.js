@@ -129,4 +129,33 @@ async function updateProduct(req, res) {
   }
 }
 
-module.exports = { createProduct, listProducts, getProduct, deleteProduct, updateProduct };
+async function getLowStockAlerts(req, res) {
+  try {
+    const [rows] = await db.query('SELECT * FROM products');
+    const parsed = rows.map(parseProduct);
+    
+    // Logic: if total sum of all stock variants < 5 or any variant < 5
+    const lowStock = parsed.filter(p => {
+      if (typeof p.stock === 'object' && !Array.isArray(p.stock) && Object.keys(p.stock).length > 0) {
+        const values = Object.values(p.stock).map(v => parseInt(v) || 0);
+        const total = values.reduce((acc, val) => acc + val, 0);
+        return total < 5 || values.some(v => v < 5);
+      }
+      return false;
+    });
+
+    res.json(lowStock.slice(0, 10)); // Limit to most urgent 10
+  } catch (err) {
+    console.error('getLowStockAlerts error', err);
+    res.status(500).json({ error: 'Query failed' });
+  }
+}
+
+module.exports = { 
+  createProduct, 
+  listProducts, 
+  getProduct, 
+  deleteProduct, 
+  updateProduct,
+  getLowStockAlerts 
+};

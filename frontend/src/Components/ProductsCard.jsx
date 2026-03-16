@@ -63,7 +63,7 @@ export default function ProductCard({ product, index = 0 }) {
   return (
     <div
       data-aos="fade-up"
-      data-aos-delay={index * 120}
+      data-aos-delay={(index % 4) * 100}
       className="
         relative h-full flex flex-col
         bg-gradient-to-br from-[#0e1016] via-black to-[#0e1016]

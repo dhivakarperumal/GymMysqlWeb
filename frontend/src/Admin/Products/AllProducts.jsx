@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Pencil,
@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API = "/api/products";
+import api from "../../api";
+import cache from "../../cache";
+const API = `/products`;
 
 /* ================= IMAGE HELPER ================= */
 
@@ -43,27 +45,42 @@ const getOfferPrice = (product) => {
 
 const AllProducts = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(querySearch);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("table");
+
+  // Update search state if URL search param changes
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [querySearch]);
 
   const itemsPerPage = 10;
 
   /* ================= LOAD PRODUCTS ================= */
 
   const loadProducts = async () => {
-    try {
+    if (cache.adminProducts) {
+      setProducts(cache.adminProducts);
+    } else {
       setLoading(true);
-      const res = await fetch(API);
-      const data = await res.json();
+    }
+
+    try {
+      const res = await api.get(API);
+      const data = res.data || [];
       setProducts(data);
+      cache.adminProducts = data;
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load products");
+      if (!cache.adminProducts) toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -79,11 +96,7 @@ const AllProducts = () => {
     if (!window.confirm("Delete this product?")) return;
 
     try {
-      const res = await fetch(`${API}/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error();
+      const res = await api.delete(`${API}/${id}`);
 
       toast.success("Product deleted");
       setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -191,7 +204,16 @@ const AllProducts = () => {
 
         {/* CONTENT AREA */}
         <div className="relative min-h-[400px]">
-          <React.Fragment>
+          {loading && !cache.adminProducts ? (
+            <div className="flex flex-col items-center justify-center py-40 gap-6">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+                <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+              </div>
+              <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Syncing Inventory</p>
+            </div>
+          ) : (
+            <React.Fragment>
             {/* CARD VIEW */}
             {viewMode === "card" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -356,11 +378,12 @@ const AllProducts = () => {
               </tbody>
             </table>
           </div>
-        )}
+            )}
           </React.Fragment>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   );
 };
 

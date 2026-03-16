@@ -5,7 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 
 /* ================= API BASE ================= */
-const API = "/api/products"; // 🔥 change to your backend
+import api from "../../api";
+const API = `/products`;
 
 /* ================= CONSTANTS ================= */
 
@@ -57,8 +58,8 @@ const AddProducts = () => {
 
     const loadProduct = async () => {
       try {
-        const res = await fetch(`${API}/${id}`);
-        const data = await res.json();
+        const res = await api.get(`${API}/${id}`);
+        const data = res.data;
         setForm({ ...initialForm, ...data });
       } catch {
         toast.error("Failed to load product");
@@ -178,16 +179,11 @@ const AddProducts = () => {
     setLoading(true);
 
     try {
-      const method = id ? "PUT" : "POST";
-      const url = id ? `${API}/${id}` : API;
+      const res = id 
+        ? await api.put(`${API}/${id}`, form)
+        : await api.post(API, form);
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!res.ok) throw new Error();
+      if (res.status !== 200 && res.status !== 201) throw new Error();
 
       toast.success(id ? "Product updated" : "Product added");
       navigate("/admin/products");

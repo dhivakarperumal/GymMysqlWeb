@@ -6,10 +6,12 @@ const {
   updateOrderStatus,
   createOrder,
   generateOrderId,
-  getUserOrders
+  getUserOrders,
+  getTodayOrders
 } = require('../controllers/orderController');
 
 router.get('/', getAllOrders);
+router.get('/today', getTodayOrders);
 router.get('/user/:userId', getUserOrders);
 router.get('/:id', getOrder);
 router.post('/', createOrder);

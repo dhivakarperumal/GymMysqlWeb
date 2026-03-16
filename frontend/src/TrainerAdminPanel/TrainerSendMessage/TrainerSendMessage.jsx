@@ -8,7 +8,6 @@ import api from "../../api";
 import toast from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
-const API_BASE = "http://localhost:5000/api";
 
 const TrainerSendMessage = () => {
   const { user } = useAuth();
@@ -39,50 +38,21 @@ const TrainerSendMessage = () => {
     const fetchAssignedMembers = async () => {
       try {
         setLoading(true);
-        const aRes = await fetch(`${API_BASE}/assignments`);
-        if (!aRes.ok) throw new Error("Failed to fetch assignments");
-
-        const aData = await aRes.json();
+        // Server-side filter — avoids users.id vs staff.id mismatch
+        const aRes = await api.get(`/assignments?trainerUserId=${user.id}`);
+        const aData = aRes.data;
         const assignments = Array.isArray(aData) ? aData : aData.data || aData.assignments || [];
 
-        const assignedMembers = [];
+        const assignedMembers = assignments
+          .filter((a) => a.userEmail || a.user_email || a.userMobile || a.user_mobile)
+          .map((a) => ({
+            id: String(a.userId || a.user_id),
+            name: a.username || a.user_name || "Member",
+            email: a.userEmail || a.user_email || "",
+            phone: a.userMobile || a.user_mobile || "",
+          }));
 
-        assignments.forEach((a) => {
-          let include = false;
-          if (user.id) {
-            const assignTrainerId = Number(a.trainerId || a.trainer_id);
-            const currentTrainerId = Number(user.id);
-            if (!isNaN(assignTrainerId) && assignTrainerId === currentTrainerId) {
-              include = true;
-            }
-          }
-          if (!include && user.username && (a.trainerName || a.trainer_name)) {
-            if ((a.trainerName || a.trainer_name).toLowerCase() === user.username.toLowerCase()) {
-              include = true;
-            }
-          }
-          if (!include && user.email && (a.trainerEmail || a.trainer_email)) {
-            if ((a.trainerEmail || a.trainer_email).toLowerCase() === user.email.toLowerCase()) {
-              include = true;
-            }
-          }
-          if (!include && user.firebaseId && a.trainerId === user.firebaseId) {
-            include = true;
-          }
-          if (!include) return;
-
-          // Only add members who have email or phone
-          if (a.userEmail || a.user_email || a.userMobile || a.user_mobile) {
-            assignedMembers.push({
-              id: String(a.userId || a.user_id),
-              name: a.username || a.user_name || "Member",
-              email: a.userEmail || a.user_email || "",
-              phone: a.userMobile || a.user_mobile || "",
-            });
-          }
-        });
-
-        // Remove duplicates if assigned multiple times
+        // Remove duplicates
         const uniqueIds = new Set();
         const uniqueMembers = [];
         assignedMembers.forEach(m => {

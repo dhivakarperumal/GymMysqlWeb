@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api";
+import cache from "../../cache";
 import {
   FaUsers,
   FaUserCheck,
@@ -19,6 +20,7 @@ const statCard =
 
 const Staffs = () => {
   const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
@@ -30,6 +32,13 @@ const Staffs = () => {
 
 
   const loadStaff = async () => {
+    if (cache.adminStaff) {
+      setStaff(cache.adminStaff);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await api.get('/staff');
       const rows = res.data || [];
@@ -47,9 +56,12 @@ const Staffs = () => {
         status: r.status,
       }));
       setStaff(mapped);
+      cache.adminStaff = mapped;
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load staff');
+      if (!cache.adminStaff) toast.error('Failed to load staff');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +115,18 @@ const Staffs = () => {
   const activeStaff = staff.filter(s => s.status === "active").length;
   const inactiveStaff = staff.filter(s => s.status !== "active").length;
   const departments = new Set(staff.map(s => s.department)).size;
+
+  if (loading && !cache.adminStaff) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+        </div>
+        <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Scanning Personnel Records</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 min-h-screen space-y-6">

@@ -6,6 +6,7 @@ import PageHeader from "./PageHeader";
 import TrainersCard from "./TrainersCard";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import cache from "../cache";
 
 export default function Trainers() {
   const [trainers, setTrainers] = useState([]);
@@ -13,9 +14,17 @@ export default function Trainers() {
 
   useEffect(() => {
     const fetchTrainers = async () => {
+      if (cache.trainers) {
+        setTrainers(cache.trainers);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const response = await api.get("/staff");
         setTrainers(response.data);
+        cache.trainers = response.data;
       } catch (err) {
         console.error("Failed to load trainers:", err);
       } finally {
@@ -55,7 +64,7 @@ export default function Trainers() {
                 <div
                   key={trainer.id}
                   data-aos="fade-up"
-                  data-aos-delay={index * 120}
+                  data-aos-delay={(index % 4) * 100}
                 >
                   <TrainersCard trainer={trainer} />
                 </div>

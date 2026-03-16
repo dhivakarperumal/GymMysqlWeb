@@ -5,16 +5,22 @@ import "swiper/css";
 import FacilityCard from "./FacilityCard";
 import PageContainer from "./PageContainer";
 import api from "../api";
+import cache from "../cache";
 
 export default function FacilitiesSwiper() {
   const [facilities, setFacilities] = useState([]);
 
   useEffect(() => {
     const fetchFacilities = async () => {
+      if (cache.facilities) {
+        setFacilities(cache.facilities);
+      }
+
       try {
         const res = await api.get("/facilities");
         const data = res.data || [];
         setFacilities(data);
+        cache.facilities = data;
       } catch (error) {
         console.error("Failed to load facilities", error);
       }

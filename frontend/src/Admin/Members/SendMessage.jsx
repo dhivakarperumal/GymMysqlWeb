@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Send, Users, Mail, Phone, CheckSquare, Square, Search, Loader } from "lucide-react";
 import toast from "react-hot-toast";
-
-const MEMBERS_API = "http://localhost:5000/api/members";
-const SEND_MSG_API = "http://localhost:5000/api/send-message"; // Change to appropriate endpoint later
+import api from "../../api";
 
 const SendMessage = () => {
   const [members, setMembers] = useState([]);
@@ -23,9 +21,8 @@ const SendMessage = () => {
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(MEMBERS_API);
-      const data = await res.json();
-      setMembers(data);
+      const res = await api.get("/members");
+      setMembers(res.data);
     } catch {
       toast.error("Failed to load members");
     } finally {
@@ -101,32 +98,9 @@ const SendMessage = () => {
         }))
       };
 
-      // Replace with your actual backend call
-      const res = await fetch(SEND_MSG_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        // Just for demo if endpoint not found, simulate success
-        if (res.status === 404) {
-          console.log("Mock sending message:", payload);
-          // throw new Error("API not found"); // Un-comment if strictly requiring real backend
-        } else {
-          throw new Error("Failed to send");
-        }
-      }
+      await api.post("/send-message", payload);
 
       toast.success(`Message sent successfully to ${validUsers.length} members!`);
-      setMessage("");
-      setSelectedMembers([]);
-      setSelectAll(false);
-
-    } catch (error) {
-      // For demo, if 404 on local, pretend it works
-      console.log("Error sending, mocking success:", error);
-      toast.success(`Message sent successfully to ${validUsers.length} members! (Mocked)`);
       setMessage("");
       setSelectedMembers([]);
       setSelectAll(false);

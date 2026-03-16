@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-const API_BASE = "http://localhost:5000/api";
+import api from "../../api";
 
 const inputClass =
   "w-full bg-[#0f172a]/70 border border-white/10 rounded-xl px-4 py-4 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500";
@@ -25,10 +25,8 @@ const Billing = () => {
   useEffect(() => {
     const loadMembers = async () => {
       try {
-        const res = await fetch(`${API_BASE}/members`);
-        if (!res.ok) throw new Error("Failed to load members");
-        const data = await res.json();
-        setMembers(data);
+        const res = await api.get("/members");
+        setMembers(res.data || []);
       } catch (err) {
         console.error("Failed to load members:", err);
       }
@@ -84,10 +82,8 @@ const Billing = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const res = await fetch(`${API_BASE}/products`);
-        if (!res.ok) throw new Error("Failed to load products");
-        const data = await res.json();
-        setProducts(data);
+        const res = await api.get("/products");
+        setProducts(res.data || []);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load products");
@@ -100,9 +96,8 @@ const Billing = () => {
   useEffect(() => {
     const loadRecentOrders = async () => {
       try {
-        const res = await fetch(`${API_BASE}/orders`);
-        if (!res.ok) throw new Error("Failed to load orders");
-        const data = await res.json();
+        const res = await api.get("/orders");
+        const data = res.data || [];
         // Sort by created_at DESC and take last 5
         const sorted = (data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setRecentOrders(sorted.slice(0, 5));
@@ -116,11 +111,8 @@ const Billing = () => {
   /* ================= GENERATE ORDER NUMBER ================= */
   const generateOrderNumber = async () => {
     try {
-      const res = await fetch(`${API_BASE}/orders/generate-order-id`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
+      const res = await api.post("/orders/generate-order-id");
+      const data = res.data;
 
       return data.order_id;
 
@@ -227,15 +219,7 @@ const Billing = () => {
           qty: newQty,
         };
 
-        const updateRes = await fetch(`${API_BASE}/products/${item.productId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stock: updatedStock }),
-        });
-
-        if (!updateRes.ok) {
-          throw new Error(`Failed to update stock for ${productData.name}`);
-        }
+        await api.put(`/products/${item.productId}`, { stock: updatedStock });
       }
 
       /* 3️⃣ CREATE ORDER WITH ITEMS */
@@ -275,16 +259,7 @@ const Billing = () => {
         }),
       };
 
-      const orderRes = await fetch(`${API_BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!orderRes.ok) {
-        const errData = await orderRes.json();
-        throw new Error(errData.message || "Failed to create order");
-      }
+      await api.post("/orders", orderPayload);
 
       // ✅ Order created successfully - show order ID to user
       setCreatedOrderId(orderId);
@@ -332,10 +307,10 @@ const Billing = () => {
           value={selectedMember}
           onChange={(e) => handleMemberChange(e.target.value)}
         >
-          <option value="">-- Choose Member or User (Optional) --</option>
+          <option value="">-- Choose Member</option>
           {members.map((m) => (
             <option key={m.id || m.member_id || m.u_id} value={m.id || m.member_id || m.u_id} className="text-black">
-              {m.name || m.displayName || m.username} ({m.phone || m.mobile || "No Phone"}) - {m.source === 'users' ? 'User' : 'Gym Member'}
+              {m.name || m.displayName || m.username} ({m.phone || m.mobile || "No Phone"}) 
             </option>
           ))}
         </select>

@@ -25,20 +25,65 @@ function normalizeAssignment(row) {
 
 async function getAllAssignments(req, res) {
   try {
-    const [rows] = await db.query(`
-      SELECT a.*, 
-             m.name as member_name, 
-             m.email as member_email, 
+    const { trainerUserId } = req.query;
+
+    let staffId = null;
+
+    // If called by a trainer, resolve their users.id → staff.id
+    if (trainerUserId) {
+      const [userRows] = await db.query(
+        'SELECT id, email, username FROM users WHERE id = ?',
+        [trainerUserId]
+      );
+
+      if (userRows.length === 0) {
+        // User not found — return nothing
+        return res.json([]);
+      }
+
+      const u = userRows[0];
+      console.log('[assignments] resolving trainer user:', u.id, u.email, u.username);
+
+      // Find matching staff record by email or username
+      const [staffRows] = await db.query(
+        'SELECT id, name FROM staff WHERE email = ? OR username = ? LIMIT 1',
+        [u.email, u.username]
+      );
+
+      console.log('[assignments] staff match:', staffRows.length, staffRows[0]);
+
+      if (staffRows.length > 0) {
+        staffId = staffRows[0].id;
+      } else {
+        // staffId couldn't be resolved — return empty to avoid leaking all assignments
+        console.warn('[assignments] Could not resolve staff for user', u.id, '- returning empty');
+        return res.json([]);
+      }
+    }
+
+    let sql = `
+      SELECT a.*,
+             m.name as member_name,
+             m.email as member_email,
              m.phone as member_mobile,
-             s.name as current_trainer_name, 
+             s.name as current_trainer_name,
              s.role as trainer_source
       FROM trainer_assignments a
       LEFT JOIN users u ON u.id = a.user_id
       LEFT JOIN gym_members m ON (m.id = a.user_id OR m.email = u.email OR m.phone = u.mobile)
       LEFT JOIN staff s ON s.id = a.trainer_id
-      GROUP BY a.id
-      ORDER BY a.updated_at DESC
-    `);
+    `;
+    const params = [];
+
+    if (staffId) {
+      sql += ' WHERE a.trainer_id = ?';
+      params.push(staffId);
+    }
+
+    sql += ' GROUP BY a.id ORDER BY a.updated_at DESC';
+
+    const [rows] = await db.query(sql, params);
+    console.log('[assignments] returning', rows.length, 'rows for staffId', staffId);
     res.json(rows.map(normalizeAssignment));
   } catch (err) {
     console.error('getAllAssignments error', err);

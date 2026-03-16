@@ -22,17 +22,32 @@ const staffRoutes = require("../src/routes/staffRoutes");
 const serviceRoutes = require("../src/routes/serviceRoutes");
 const authRoutes = require("../src/routes/authRoutes");
 const orderRoutes = require("../src/routes/orderRoutes");
+const reviewRoutes = require("../src/routes/reviewRoutes");
 const assignmentRoutes = require("../src/routes/assignmentRoutes");
-const addressRoutes = require("./routes/addressRoutes");
-const membershipRoutes = require("./routes/membershipRoutes");
+const userRoutes = require("../src/routes/userRoutes");
+const workoutRoutes = require("../src/routes/workoutRoutes");
+const enquiryRoutes = require("../src/routes/enquiryRoutes");
+const dietRoutes = require("../src/routes/dietRoutes");
+const reportRoutes = require("../src/routes/reportRoutes");
+const addressRoutes = require("../src/routes/addressRoutes");
+const messageRoutes = require("../src/routes/messageRoutes");
+const cartRoutes = require("../src/routes/cartRoutes");
+const attendanceRoutes = require("../src/routes/attendanceRoutes");
+const checkinRoutes = require("../src/routes/checkinRoutes");
+const membershipRoutes = require("../src/routes/membershipRoutes");
+
+// other routes can be added later
 
 const app = express();
 
-/* ✅ CORS - Allow multiple ports */
+/* ✅ EXACT CORS FIX - Allow multiple ports */
+
+// allow requests from localhost on any port plus typical dev hosts
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) {
+        // some tools (curl, Postman) omit origin
         return callback(null, true);
       }
       try {
@@ -45,53 +60,66 @@ app.use(
       } catch (err) {
         // malformed origin, reject
       }
-      // Allow production domains
+      // optionally allow your production domain(s) here:
       const allowed = [
-        "http://localhost:3000",
-        "http://localhost:5000",
-        "http://localhost:5173",
+        "https://yourproductiondomain.com",
+        "https://api.yourproductiondomain.com",
       ];
       if (allowed.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error("Not allowed by CORS"));
+      callback(new Error("Not allowed by CORS"));
     },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// allow large payloads (images encoded as base64 can be big)
+app.use(express.json({ limit: '50mb' }));
 
-// API routes
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+// simple database connectivity check (useful during development)
+app.get("/api/db-check", async (req, res) => {
+  try {
+    const db = require("../src/config/db");
+    const [rows] = await db.query("SELECT 1 AS ok");
+    res.json({ ok: true, rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+
 app.use("/api/products", productRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/facilities", facilityRoutes);
 app.use("/api/equipment", equipmentRoutes);
 app.use("/api/staff", staffRoutes);
-app.use("/api/services", serviceRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/services", serviceRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/assignments", assignmentRoutes);
-app.use("/api/workouts", require("../src/routes/workoutRoutes"));
+app.use("/api/users", userRoutes);
+app.use("/api/workouts", workoutRoutes);
+app.use("/api/diet-plans", dietRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/checkins", checkinRoutes);
+app.use('/api/enquiries', enquiryRoutes);
+app.use("/api/reports", reportRoutes);
 app.use("/api/addresses", addressRoutes);
+app.use("/api/send-message", messageRoutes);
 
 app.use("/api/memberships", membershipRoutes);
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Not Found", path: req.path });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: "Internal Server Error", message: err.message });
-});
-
+// Export for Vercel
 module.exports = app;
+

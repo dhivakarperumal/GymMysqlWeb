@@ -5,8 +5,8 @@ import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import AOS from "aos";
-import "aos/dist/aos.css";
 import PricingCard from "./PricingCard";
+import cache from "../cache";
 
 const Pricing = () => {
   const [services, setServices] = useState([]);
@@ -23,13 +23,19 @@ const Pricing = () => {
   /* 🔥 Fetch Plans */
   useEffect(() => {
     const fetchPlans = async () => {
+      if (cache.plans) {
+        setServices(cache.plans);
+        const durations = [...new Set(cache.plans.map((p) => p.duration || p.duration_months).filter(Boolean))];
+        setAvailableDurations(durations);
+      }
+
       try {
         const response = await api.get("/plans");
         const plans = Array.isArray(response.data) ? response.data : [];
 
         setServices(plans);
+        cache.plans = plans;
 
-        // Get unique durations from plans
         const durations = [
           ...new Set(plans.map((p) => p.duration || p.duration_months).filter(Boolean)),
         ];

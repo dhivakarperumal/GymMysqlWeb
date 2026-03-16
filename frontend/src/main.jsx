@@ -283,7 +283,7 @@ const Settings = lazy(() => import("./Admin/Settingss/Settings.jsx"));
 const Enquiry = lazy(() => import("./Admin/Enquiry/Enquiry.jsx"));
 
 const AddEditEquipment = lazy(() => import("./Admin/Equipment/AddEquipments.jsx"));
-const ViewEquipment = lazy(() => import("./Admin/Equipment/ViewEquipment.jsx"));
+
 const ProfileSettings = lazy(() => import("./Admin/Settingss/ProfileSettings.jsx"));
 const UserManagement = lazy(() => import("./Admin/Settingss/UserManagement.jsx"));
 const Staffs = lazy(() => import("./Admin/Staff/Staffs.jsx"));
@@ -325,6 +325,7 @@ const TrainerReports = lazy(() => import("./TrainerAdminPanel/TrainerReports/Rep
 const TrainerSendMessage = lazy(() => import("./TrainerAdminPanel/TrainerSendMessage/TrainerSendMessage.jsx"));
 const AssingnedTrainers = lazy(() => import("./Admin/Payments/AssingnedTrainers.jsx"));
 const GymWorkoutManager = lazy(() => import("./Admin/CommenWorkDiet/CommenWorkDiet.jsx"));
+const UpdateWeight = lazy(() => import("./TrainerAdminPanel/UpdateWeight/UpdateWeight.jsx"));
 
 
 const router = createBrowserRouter([
@@ -397,7 +398,7 @@ const router = createBrowserRouter([
       { path: "equipment", element: <Equipment /> },
       { path: "addequipment", element: <AddEditEquipment /> },
       { path: "addequipment/:id", element: <AddEditEquipment /> },
-      { path: "viewequipment/:id", element: <ViewEquipment /> },
+
 
 
       { path: "reports", element: <Reports /> },
@@ -445,6 +446,7 @@ const router = createBrowserRouter([
       { path: "adddietplans", element: <AddDietPlans /> },
       { path: "adddietplans/:id", element: <AddDietPlans /> },
       { path: "alladddietplans", element: <AllDietPlans /> },
+      { path: "update-weight", element: <UpdateWeight /> },
       { path: "send-message", element: <TrainerSendMessage /> },
 
       { path: "settings", element: <Settings /> },

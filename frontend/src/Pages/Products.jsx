@@ -6,6 +6,7 @@ import { useAuth } from "../PrivateRouter/AuthContext";
 import PageHeader from "../Components/PageHeader";
 import PageContainer from "../Components/PageContainer";
 import ProductCard from "../Components/ProductsCard";
+import cache from "../cache";
 
 export default function Products() {
   const navigate = useNavigate();
@@ -17,12 +18,25 @@ export default function Products() {
 
   useEffect(() => {
     const load = async () => {
+      // 1. If we have cached data, use it immediately to avoid "loading..."
+      if (cache.products) {
+        setProducts(cache.products);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const res = await api.get("/products");
-        setProducts(Array.isArray(res.data) ? res.data : []);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setProducts(data);
+        cache.products = data; // 2. Update cache
       } catch (err) {
         console.error("load products", err);
-        toast.error("Failed to load products");
+        // Only show toast if we don't have cached data (avoid noise)
+        if (!cache.products) {
+          toast.error("Failed to load products");
+        }
       } finally {
         setLoading(false);
       }
@@ -70,8 +84,12 @@ export default function Products() {
 
       <PageContainer>
         {loading ? (
-          <div className="flex justify-center items-center py-20 ">
-            <p className="text-gray-400 text-lg">Loading products...</p>
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
+             <div className="relative">
+                <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+                <div className="absolute inset-0 bg-red-500/10 blur-xl rounded-full animate-pulse" />
+             </div>
+            <p className="text-white/40 text-xs uppercase tracking-[0.4em] animate-pulse">Scanning Inventory</p>
           </div>
         ) : (
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:py-25">

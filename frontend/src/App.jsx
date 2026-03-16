@@ -22,10 +22,16 @@ function App() {
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
     
-    // Simulate initial asset check/auth check
+    const hasLoaded = sessionStorage.getItem("app_loaded");
+    if (hasLoaded) {
+      setInitialLoading(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setInitialLoading(false);
-    }, 1200);
+      sessionStorage.setItem("app_loaded", "true");
+    }, 800);
 
     return () => clearTimeout(timer);
   }, []);
@@ -35,7 +41,7 @@ function App() {
     setIsTransitioning(true);
     const timer = setTimeout(() => {
       setIsTransitioning(false);
-    }, 400); // Match transition speed
+    }, 180); // Match transition speed
 
     return () => clearTimeout(timer);
   }, [location.pathname]);
@@ -92,7 +98,12 @@ function App() {
             exit={{ opacity: 0, x: 10 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <React.Suspense fallback={null}>
+            <React.Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <PacmanLoader color="#ef4444" size={25} />
+                <p className="text-white/30 text-[10px] tracking-widest uppercase">Loading Components...</p>
+              </div>
+            }>
               <Outlet />
             </React.Suspense>
           </motion.div>
