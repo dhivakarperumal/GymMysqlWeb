@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import api from "../../api"; // backend HTTP client
 import cache from "../../cache";
 import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
 
 const AssingnedTrainers = () => {
   const [members, setMembers] = useState([]);
@@ -17,6 +19,7 @@ const AssingnedTrainers = () => {
   const [viewMode, setViewMode] = useState("card"); // card, table
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [dateRange, setDateRange] = useState({ type: 'All Time', range: null });
 
   /* ================= FETCH MEMBERSHIPS ================= */
   useEffect(() => {
@@ -193,16 +196,18 @@ const AssingnedTrainers = () => {
     if (!matchesSearch) return false;
 
     // Filter type
+    let matchesType = true;
     if (filterType === "assigned") {
-      return assignments[m.uid] && assignments[m.uid].length > 0;
+      matchesType = assignments[m.uid] && assignments[m.uid].length > 0;
+    } else if (filterType === "unassigned") {
+      matchesType = !assignments[m.uid] || assignments[m.uid].length === 0;
     }
-    if (filterType === "unassigned") {
-      // Check if this specific membership is unassigned
-      // Since we map memberships 1:1 to members in this view, we check if the user has ANY assignment
-      // Or more precisely if there's an assignment matching this membershipId if we had it
-      return !assignments[m.uid] || assignments[m.uid].length === 0;
-    }
-    return true; // all
+
+    if (!matchesType) return false;
+
+    // Date Range Filter (using startDate of first plan)
+    const firstPlanDate = (m.plans || []).length > 0 ? m.plans[0].startDate : null;
+    return filterByDateRange([{ date: firstPlanDate }], 'date', dateRange.type, dateRange.range).length > 0;
   });
 
   // 📄 PAGINATION LOGIC
@@ -254,7 +259,8 @@ const AssingnedTrainers = () => {
     </div>
 
     {/* 🎛 Filter Buttons — Right */}
-    <div className="flex flex-wrap gap-3 justify-start md:justify-end">
+    <div className="flex flex-wrap gap-3 justify-start md:justify-end items-center">
+      <DateRangeFilter onRangeChange={(type, range) => setDateRange({ type, range })} />
       <button
         onClick={() => handleFilterChange("all")}
         className={`px-4 py-2 rounded-lg font-medium transition ${

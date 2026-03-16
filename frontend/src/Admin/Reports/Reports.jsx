@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Users, ShoppingCart, CreditCard, MessageSquare,
   Download, Eye, X, TrendingUp, FileText,
@@ -8,6 +8,8 @@ import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
 
 /* ========================
    STAT CARD
@@ -66,6 +68,7 @@ const Reports = () => {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("members");
+  const [dateRange, setDateRange] = useState({ type: 'All Time', range: null });
   const [preview, setPreview] = useState(null);
 
   /* ========================
@@ -94,6 +97,29 @@ const Reports = () => {
   }, []);
 
   /* ========================
+     FILTERED DATA
+  ======================== */
+  const filteredMembers = useMemo(() => 
+    filterByDateRange(members, 'join_date', dateRange.type, dateRange.range),
+    [members, dateRange]
+  );
+
+  const filteredOrders = useMemo(() => 
+    filterByDateRange(orders, 'created_at', dateRange.type, dateRange.range),
+    [orders, dateRange]
+  );
+
+  const filteredMemberships = useMemo(() => 
+    filterByDateRange(memberships, 'startDate', dateRange.type, dateRange.range),
+    [memberships, dateRange]
+  );
+
+  const filteredEnquiries = useMemo(() => 
+    filterByDateRange(enquiries, 'created_at', dateRange.type, dateRange.range),
+    [enquiries, dateRange]
+  );
+
+  /* ========================
      TABLE CONFIGS
   ======================== */
   const tabs = [
@@ -102,9 +128,9 @@ const Reports = () => {
       label: "Members",
       icon: Users,
       color: "bg-blue-500/20 text-blue-400",
-      data: members,
+      data: filteredMembers,
       headers: ["#", "Name", "Email", "Phone", "Plan", "Status", "Join Date"],
-      rows: members.map((m, i) => [
+      rows: filteredMembers.map((m, i) => [
         i + 1,
         m.name || "N/A",
         m.email || m.user_email || "-",
@@ -119,9 +145,9 @@ const Reports = () => {
       label: "Orders",
       icon: ShoppingCart,
       color: "bg-orange-500/20 text-orange-400",
-      data: orders,
+      data: filteredOrders,
       headers: ["#", "Order ID", "Customer", "Total", "Status", "Date"],
-      rows: orders.map((o, i) => [
+      rows: filteredOrders.map((o, i) => [
         i + 1,
         o.id || o.order_id || "-",
         o.name || o.user_name || o.customer_name || "-",
@@ -135,9 +161,9 @@ const Reports = () => {
       label: "Plans / Payments",
       icon: CreditCard,
       color: "bg-green-500/20 text-green-400",
-      data: memberships,
+      data: filteredMemberships,
       headers: ["#", "Member", "Email", "Plan", "Amount", "Mode", "Status", "Start", "End"],
-      rows: memberships.map((p, i) => [
+      rows: filteredMemberships.map((p, i) => [
         i + 1,
         p.userName || p.username || "-",
         p.userEmail || p.email || "-",
@@ -154,9 +180,9 @@ const Reports = () => {
       label: "Enquiries",
       icon: MessageSquare,
       color: "bg-purple-500/20 text-purple-400",
-      data: enquiries,
+      data: filteredEnquiries,
       headers: ["#", "Name", "Email", "Phone", "Subject", "Status", "Date"],
-      rows: enquiries.map((e, i) => [
+      rows: filteredEnquiries.map((e, i) => [
         i + 1,
         e.name || "-",
         e.email || "-",
@@ -186,28 +212,28 @@ const Reports = () => {
             <p className="text-white/50 text-sm">Download and view gym data reports</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <DateRangeFilter onRangeChange={(type, range) => setDateRange({ type, range })} />
           <button
             onClick={() => downloadPDF(currentTab.label, currentTab.headers, currentTab.rows)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition whitespace-nowrap"
           >
             <Download size={15} /> PDF
           </button>
           <button
             onClick={() => downloadExcel(currentTab.label, currentTab.headers, currentTab.rows)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition whitespace-nowrap"
           >
             <Download size={15} /> Excel
           </button>
         </div>
       </div>
 
-      {/* STAT CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat title="Total Members" value={members.length} icon={Users} color="bg-blue-500/20 text-blue-400" />
-        <Stat title="Total Orders" value={orders.length} icon={ShoppingCart} color="bg-orange-500/20 text-orange-400" />
-        <Stat title="Plan Purchases" value={memberships.length} icon={CreditCard} color="bg-green-500/20 text-green-400" />
-        <Stat title="Enquiries" value={enquiries.length} icon={MessageSquare} color="bg-purple-500/20 text-purple-400" />
+        <Stat title="Total Members" value={filteredMembers.length} icon={Users} color="bg-blue-500/20 text-blue-400" />
+        <Stat title="Total Orders" value={filteredOrders.length} icon={ShoppingCart} color="bg-orange-500/20 text-orange-400" />
+        <Stat title="Plan Purchases" value={filteredMemberships.length} icon={CreditCard} color="bg-green-500/20 text-green-400" />
+        <Stat title="Enquiries" value={filteredEnquiries.length} icon={MessageSquare} color="bg-purple-500/20 text-purple-400" />
       </div>
 
       {/* TABS */}

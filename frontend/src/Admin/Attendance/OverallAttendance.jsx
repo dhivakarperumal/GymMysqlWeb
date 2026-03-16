@@ -398,6 +398,8 @@ import { Search, Download, Users, CheckCircle, XCircle, MapPin, Calendar, Refres
 import toast from "react-hot-toast";
 import dayjs from "dayjs";
 import api from "../../api";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
 
 /* ================= CONFIG ================= */
 const GYM_LOCATION = {
@@ -432,6 +434,7 @@ const OverallAttendance = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [dateRange, setDateRange] = useState({ type: 'Today', range: null }); // Default to Today
   const [loading, setLoading] = useState(false);
   const [savingMulti, setSavingMulti] = useState(false);
 
@@ -443,7 +446,7 @@ const OverallAttendance = () => {
   useEffect(() => {
     loadAttendanceData();
     loadStaffMembers();
-  }, [date]);
+  }, [dateRange, date]); // Reload when date or range changes
 
   /* ---------------- DISTANCE CALCULATION ---------------- */
   const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -462,7 +465,14 @@ const OverallAttendance = () => {
   const loadAttendanceData = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/attendance?date=${date}`);
+      // If filtering by a specific date, pass it. Otherwise fetch all and filter in frontend
+      let url = '/attendance';
+      if (dateRange.type === 'Today' || dateRange.type === 'Yesterday') {
+        const d = dateRange.type === 'Today' ? dayjs() : dayjs().subtract(1, 'day');
+        url += `?date=${d.format("YYYY-MM-DD")}`;
+      }
+      
+      const res = await api.get(url);
       setAttendanceData(res.data || []);
     } catch (err) {
       console.error(err);
@@ -583,20 +593,33 @@ const OverallAttendance = () => {
 
   /* ---------------- HELPERS ---------------- */
   const filteredRecords = useMemo(() => {
-    return attendanceData.filter(r => {
+    const trainersOnly = attendanceData.filter(r => {
       // Only show trainers or staff
       const isTrainer = 
         r.role?.toLowerCase() === 'trainer' || 
         r.role?.toLowerCase() === 'staff';
-      
-      if (!isTrainer) return false;
+      return isTrainer;
+    });
 
+    // 1. Date Filter
+    let rangeFiltered = trainersOnly;
+    if (dateRange.type !== 'All Time') {
+      // Map check_in to 'date' if 'date' field is missing or inconsistent
+      const dataWithUnifiedDate = trainersOnly.map(r => ({
+        ...r,
+        recordDate: r.date || r.check_in
+      }));
+      rangeFiltered = filterByDateRange(dataWithUnifiedDate, 'recordDate', dateRange.type, dateRange.range);
+    }
+
+    // 2. Search & Status
+    return rangeFiltered.filter(r => {
       const name = r.name || r.email || "Unknown";
       const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [attendanceData, searchTerm, statusFilter]);
+  }, [attendanceData, searchTerm, statusFilter, dateRange]);
 
   const stats = useMemo(() => {
     const present = filteredRecords.filter(r => r.status === "Present").length;
@@ -605,9 +628,9 @@ const OverallAttendance = () => {
   }, [filteredRecords]);
 
   const downloadCSV = () => {
-    if (!attendanceData.length) return toast.error("No data to download");
+    if (!filteredRecords.length) return toast.error("No data to download");
     let csv = "Name,Role,Status,Log Time,Location\n";
-    attendanceData.forEach(r => {
+    filteredRecords.forEach(r => {
       csv += `"${r.name}","${r.role || 'Staff'}","${r.status}","${r.check_in ? dayjs(r.check_in).format("h:mm A") : '-'}","${r.location_name || '-'}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -630,17 +653,11 @@ const OverallAttendance = () => {
             <Users className="w-5 h-5 text-orange-500" /> Trainer Management • {staffMembers.length} Active Trainers
           </p>
         </div>
-
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative">
-            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-2xl pl-12 pr-6 py-4 text-white focus:ring-2 focus:ring-orange-500 outline-none font-bold"
-            />
-          </div>
+          <DateRangeFilter 
+            initialRange="Today"
+            onRangeChange={(type, range) => setDateRange({ type, range })} 
+          />
           
           <button
             onClick={() => setShowMarkModal(true)}
@@ -648,7 +665,7 @@ const OverallAttendance = () => {
           >
             <CheckCircle className="w-6 h-6" /> Mark Today
           </button>
-
+          
           <button
             onClick={downloadCSV}
             className="p-4 bg-white/10 rounded-2xl border border-white/20 hover:bg-white/20 transition-all text-orange-500"
@@ -678,15 +695,14 @@ const OverallAttendance = () => {
         ))}
       </div>
 
-      {/* SEARCH & FILTERS */}
-      <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
-         <div className="relative w-full max-w-md">
+      <div className="flex flex-col sm:flex-row gap-6 items-center justify-between">
+         <div className="relative w-full sm:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
             <input
               placeholder="Search staff members..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-4 w-full outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+              className="bg-white/5 border border-white/10 rounded-2xl pl-12 pr-6 py-3.5 w-full outline-none focus:ring-2 focus:ring-orange-500 font-medium transition-all shadow-sm"
             />
          </div>
 

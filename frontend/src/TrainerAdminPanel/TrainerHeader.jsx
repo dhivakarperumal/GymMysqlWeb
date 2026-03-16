@@ -8,11 +8,16 @@ import {
   User,
   LogOut,
   ChevronDown,
+  MapPin,
+  CheckCircle,
+  RefreshCcw
 } from "lucide-react";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import api from "../api";
+import toast from "react-hot-toast";
+import { getDistance, GYM_LOCATION } from "../utils/locationUtils";
 
 const pageTitles = {
   "/trainer": "Dashboard",
@@ -31,6 +36,8 @@ const Header = ({ onMenuClick }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [fetchingAlerts, setFetchingAlerts] = useState(false);
+  const [markingAttendance, setMarkingAttendance] = useState(false);
+  const [attendanceStatus, setAttendanceStatus] = useState("idle"); // idle, success, error
 
   const searchInputRef = useRef(null);
 
@@ -93,6 +100,74 @@ const Header = ({ onMenuClick }) => {
     }
   };
 
+  const handleCheckIn = async () => {
+    if (!user?.id) return;
+    
+    setMarkingAttendance(true);
+    setAttendanceStatus("idle");
+
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      setMarkingAttendance(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        
+        // Verify distance
+        const distance = getDistance(latitude, longitude, GYM_LOCATION.lat, GYM_LOCATION.lng);
+        const isAtGym = distance <= GYM_LOCATION.radius;
+
+        if (!isAtGym) {
+          toast.error(`You are not at the gym! Distance: ${Math.round(distance)}m`);
+          setMarkingAttendance(false);
+          return;
+        }
+
+        try {
+          // Fetch location name first (optional but good)
+          let locationName = GYM_LOCATION.name;
+          try {
+            const geoRes = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+            if (geoRes.data && geoRes.data.display_name) {
+              locationName = geoRes.data.display_name;
+            }
+          } catch (e) {
+            console.error("Geocoding failed, using default name", e);
+          }
+
+          // Mark attendance
+          const payload = {
+            memberId: user.id, // Trainer marking their own attendance
+            trainerId: user.id,
+            status: "Present",
+            date: new Date().toISOString().split('T')[0],
+            lat: latitude,
+            lng: longitude,
+            locationName: locationName
+          };
+
+          await api.post("/attendance", payload);
+          toast.success("Attendance marked successfully! Have a great session.");
+          setAttendanceStatus("success");
+        } catch (err) {
+          console.error("Failed to mark attendance:", err);
+          toast.error(err.response?.data?.message || "Failed to mark attendance");
+        } finally {
+          setMarkingAttendance(false);
+        }
+      },
+      (err) => {
+        console.error("Geolocation error:", err);
+        toast.error("Failed to get your location. Please check your permissions.");
+        setMarkingAttendance(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   // ✅ Safe values with fallbacks
   const userName =
     profileName || user?.username || user?.name || "User";
@@ -131,6 +206,23 @@ const Header = ({ onMenuClick }) => {
 
         {/* RIGHT */}
         <div className="flex items-center gap-3">
+          {/* QUICK CHECK-IN BUTTON */}
+          <button
+            onClick={handleCheckIn}
+            disabled={markingAttendance}
+            className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase transition-all shadow-lg active:scale-95 ${
+              markingAttendance 
+                ? "bg-white/10 text-white/50 cursor-not-allowed" 
+                : "bg-gradient-to-r from-orange-600 to-orange-400 text-white hover:shadow-orange-500/30"
+            }`}
+          >
+            {markingAttendance ? (
+              <RefreshCcw className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <MapPin className="w-4 h-4 text-white" />
+            )}
+            {markingAttendance ? "Verifying..." : "Check-in"}
+          </button>
 
           {/* EXPIRING PLANS ICON */}
           <div className="relative">

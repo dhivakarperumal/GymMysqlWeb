@@ -17,26 +17,8 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import api from "../../api";
+import { getDistance, GYM_LOCATION } from "../../utils/locationUtils";
 
-/* ================= CONFIG ================= */
-const GYM_LOCATION = {
-  lat: 12.479724, // Tirupattur Gym Location
-  lng: 78.573769,
-  radius: 1000, // 1km radius
-  name: "Tirupattur Gym Main Office"
-};
-
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Radius of the earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-  return R * c * 1000; // Distance in meters
-};
 
 const StatusBadge = ({ status }) => {
   const isPresent = status === "Present";
@@ -84,6 +66,7 @@ const OverallAttendance = () => {
 
       const activeMembers = membersRaw
         .filter((m) => !m.status || m.status.toLowerCase() === "active")
+        .filter((m) => String(m.userId || m.user_id) !== String(trainerUserId))
         .map((m) => ({
           id: m.userId || m.user_id,
           name: m.username || m.user_name || "Unknown Member",
@@ -235,17 +218,20 @@ const OverallAttendance = () => {
   /* ---------------- FILTERING & STATS ---------------- */
   const filteredRecords = useMemo(() => {
     return attendanceData.filter(r => {
+      // Exclude the trainer's own attendance if present in the data
+      const isNotTrainer = String(r.member_id) !== String(trainerUserId);
       const matchesSearch = r.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || r.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      return isNotTrainer && matchesSearch && matchesStatus;
     });
-  }, [attendanceData, searchTerm, statusFilter]);
+  }, [attendanceData, searchTerm, statusFilter, trainerUserId]);
 
   const stats = useMemo(() => {
-    const present = attendanceData.filter(r => r.status === "Present").length;
-    const absent = attendanceData.filter(r => r.status === "Absent").length;
-    return { present, absent, total: attendanceData.length };
-  }, [attendanceData]);
+    const memberOnlyData = attendanceData.filter(r => String(r.member_id) !== String(trainerUserId));
+    const present = memberOnlyData.filter(r => r.status === "Present").length;
+    const absent = memberOnlyData.filter(r => r.status === "Absent").length;
+    return { present, absent, total: memberOnlyData.length };
+  }, [attendanceData, trainerUserId]);
 
   /* ---------------- UI ---------------- */
   return (
@@ -263,14 +249,11 @@ const OverallAttendance = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative">
+          <div className="relative bg-white/10 border border-white/20 rounded-2xl pl-12 pr-6 py-3.5 flex items-center gap-2">
             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-2xl pl-12 pr-6 py-3 text-white focus:ring-2 focus:ring-orange-500 outline-none"
-            />
+            <span className="font-bold text-white uppercase tracking-wider">
+              {dayjs().format("DD MMM YYYY")}
+            </span>
           </div>
           
           <button

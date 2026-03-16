@@ -13,6 +13,8 @@ import {
   FaList,
 } from "react-icons/fa";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
 
 /* ================= HELPERS ================= */
 
@@ -112,6 +114,7 @@ const AllOrders = () => {
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [view, setView] = useState("table");
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ type: 'All Time', range: null });
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const querySearch = searchParams.get("search") || "";
@@ -208,8 +211,10 @@ const AllOrders = () => {
       if (!normalizeKey(o.status).includes("delivered")) return false;
     }
 
+    if (!(matchSearch && matchStatus && matchPayment)) return false;
 
-    return matchSearch && matchStatus && matchPayment;
+    // 2. Date Range Filter
+    return filterByDateRange([o], 'createdAt', dateRange.type, dateRange.range).length > 0;
   });
 
   /* ================= PAGINATION LOGIC ================= */
@@ -576,12 +581,13 @@ ${items
             placeholder="Search Order ID or Member"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white"
+            className="pl-9 w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
         {/* FILTERS */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <DateRangeFilter onRangeChange={(type, range) => setDateRange({ type, range })} />
 
           <select
             value={statusFilter}
