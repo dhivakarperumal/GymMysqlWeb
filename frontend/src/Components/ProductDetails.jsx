@@ -133,7 +133,7 @@ export default function ProductDetails() {
   // ---------- FETCH CART QUANTITY ----------
   const fetchCartQuantity = async () => {
     if (!product || !userId) return;
-    
+
     try {
       const res = await api.get("/cart", { params: { userId } });
       const pid = product.id ?? product.product_id;
@@ -278,6 +278,12 @@ export default function ProductDetails() {
               )}
             </div>
 
+            {remainingStock === 0 && (
+              <div className="text-red-500 font-semibold mb-4">
+                OUT OF STOCK
+              </div>
+            )}
+
             {/* DESCRIPTION */}
             <p className="text-red-500 leading-relaxed mb-5">
               Description :
@@ -379,7 +385,9 @@ export default function ProductDetails() {
 
                 <button
                   onClick={() =>
-                    setQuantity((q) => Math.min(q + 1, remainingStock))
+                    setQuantity((q) =>
+                      q + 1 > remainingStock ? remainingStock : q + 1
+                    )
                   }
                   className="px-4 py-2 hover:bg-red-600"
                 >
@@ -388,10 +396,18 @@ export default function ProductDetails() {
               </div>
             </div>
 
+            {/* STOCK DISPLAY */}
+            <div className="text-sm text-gray-400 mb-5">
+              Stock Available:{" "}
+              <span className={remainingStock > 0 ? "text-green-400" : "text-red-500"}>
+                {remainingStock}
+              </span>
+            </div>
+
             {/* BUTTONS */}
             <div className="flex gap-4 flex-col sm:flex-row">
               <button
-                disabled={remainingStock === 0}
+                disabled={remainingStock === 0 || quantity > remainingStock}
                 onClick={async () => {
                   if (!userId) {
                     navigate('/login');
@@ -425,13 +441,14 @@ export default function ProductDetails() {
                     toast.error(message);
                   }
                 }}
+
                 className="flex-1 py-4 rounded-full bg-gradient-to-r from-[#eb613e] to-red-700 shadow hover:scale-105"
               >
                 ADD TO CART
               </button>
 
               <button
-                disabled={remainingStock === 0}
+                disabled={remainingStock === 0 || quantity > remainingStock}
                 onClick={() =>
                   navigate("/checkout", {
                     state: {
