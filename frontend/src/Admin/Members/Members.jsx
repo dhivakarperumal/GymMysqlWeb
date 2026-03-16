@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import api from "../../api"
 import cache from "../../cache";
 import * as XLSX from "xlsx";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
 
 
 const Members = () => {
@@ -14,6 +16,7 @@ const Members = () => {
   const [members, setMembers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [dateRange, setDateRange] = useState({ type: 'All Time', range: null });
 
   useEffect(() => {
     setSearch(querySearch);
@@ -46,19 +49,27 @@ const Members = () => {
     fetchMembers();
   }, []);
 
-  // 🔎 SEARCH - Robust filtering
+  // 🔎 SEARCH & DATE FILTER - Robust filtering
   const filtered = (members || []).filter((m) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return (
-      String(m.name || "").toLowerCase().includes(s) ||
-      String(m.username || "").toLowerCase().includes(s) ||
-      String(m.phone || "").includes(s) ||
-      String(m.mobile || "").includes(s) ||
-      String(m.email || "").toLowerCase().includes(s) ||
-      String(m.user_email || "").toLowerCase().includes(s) ||
-      String(m.plan || "").toLowerCase().includes(s)
-    );
+    // 1. Text Search
+    let matchesText = true;
+    if (search) {
+      const s = search.toLowerCase();
+      matchesText = (
+        String(m.name || "").toLowerCase().includes(s) ||
+        String(m.username || "").toLowerCase().includes(s) ||
+        String(m.phone || "").includes(s) ||
+        String(m.mobile || "").includes(s) ||
+        String(m.email || "").toLowerCase().includes(s) ||
+        String(m.user_email || "").toLowerCase().includes(s) ||
+        String(m.plan || "").toLowerCase().includes(s)
+      );
+    }
+
+    if (!matchesText) return false;
+
+    // 2. Date Range Filter
+    return filterByDateRange([m], 'join_date', dateRange.type, dateRange.range).length > 0;
   });
 
   // 📄 PAGINATION
@@ -220,12 +231,13 @@ const Members = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 px-4 sm:px-0">
         {/* 🔍 SEARCH */}
         <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
             placeholder="Search name or phone"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-4 pr-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -254,6 +266,8 @@ const Members = () => {
             <Plus size={16} />
             Add Member
           </button>
+
+          <DateRangeFilter onRangeChange={(type, range) => setDateRange({ type, range })} />
 
           {/* 🖥 View Toggle */}
           <div className="flex bg-white/10 p-1 rounded-xl border border-white/20 ml-0 sm:ml-2">

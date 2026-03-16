@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Filter, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import api from "../../api";
+import DateRangeFilter from "../DateRangeFilter";
+import { filterByDateRange } from "../utils/dateUtils";
+import dayjs from "dayjs";
 
 const Enquiry = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -8,6 +11,7 @@ const Enquiry = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [dateRange, setDateRange] = useState({ type: 'All Time', range: null });
   const [showForm, setShowForm] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [formData, setFormData] = useState({
@@ -142,9 +146,11 @@ const Enquiry = () => {
                          enquiry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          enquiry.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          enquiry.location?.toLowerCase().includes(searchTerm.toLowerCase());
-                         enquiry.location?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || enquiry.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    if (!(matchesSearch && matchesStatus)) return false;
+
+    // 2. Date Range Filter
+    return filterByDateRange([enquiry], 'created_at', dateRange.type, dateRange.range).length > 0;
   });
 
   const getStatusIcon = (status) => {
@@ -193,36 +199,36 @@ const Enquiry = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-         
+        <h1 className="text-2xl font-bold text-white">Enquiries</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-bold shadow-lg hover:scale-105 transition-all outline-none"
+          >
+            <Plus className="w-4 h-4" />
+            Add Enquiry
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Enquiry
-        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4" />
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
           <input
             type="text"
             placeholder="Search enquiries..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-1/4 pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-11 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter onRangeChange={(type, range) => setDateRange({ type, range })} />
          
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>

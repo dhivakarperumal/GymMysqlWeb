@@ -27,7 +27,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
 import cache from "../../cache";
-// import AddressForm from "../Address";
+import DateRangeFilter from "../DateRangeFilter";
+import { getDateRangeBounds } from "../utils/dateUtils";
 
 
 
@@ -98,15 +99,16 @@ export default function Dashboard() {
   /* ---------- LOADING STATE ---------- */
   const [loading, setLoading] = useState(true);
 
+  /* ---------- FILTER STATE ---------- */
+  const [filterRange, setFilterRange] = useState({ type: 'Today', range: null });
+
+  const handleRangeChange = (type, range = null) => {
+    setFilterRange({ type, range });
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
-      // 1. Initial Cache Check
-      if (cache.dashboardStats) {
-        setStats(cache.dashboardStats);
-        setLoading(false);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
 
       try {
         const [
@@ -116,10 +118,7 @@ export default function Dashboard() {
           staffRes, 
           equipmentRes, 
           productsRes,
-          todayOrdersRes,
-          lowStockRes,
-          expiringRes,
-          todayMembersRes
+          attendanceRes,
         ] = await Promise.all([
           api.get('/members').catch(() => ({ data: [] })),
           api.get('/plans').catch(() => ({ data: [] })),
@@ -127,10 +126,7 @@ export default function Dashboard() {
           api.get('/staff').catch(() => ({ data: [] })),
           api.get('/equipment').catch(() => ({ data: [] })),
           api.get('/products').catch(() => ({ data: [] })),
-          api.get('/orders/today').catch(() => ({ data: [] })),
-          api.get('/products/alerts/low-stock').catch(() => ({ data: [] })),
-          api.get('/memberships/alerts/expiring-soon').catch(() => ({ data: [] })),
-          api.get('/memberships/today').catch(() => ({ data: [] }))
+          api.get('/attendance').catch(() => ({ data: [] })),
         ]);
 
         const members = membersRes.data || [];
@@ -139,42 +135,85 @@ export default function Dashboard() {
         const staff = (staffRes.data || []).filter(s => s.status === 'active');
         const equipment = equipmentRes.data || [];
         const products = productsRes.data || [];
+        const attendance = attendanceRes.data || [];
+
+        // Determine date bounds
+        const { start, end } = getDateRangeBounds(filterRange.type, filterRange.range);
+
+        const filteredOrders = orders.filter(o => {
+          const d = dayjs(o.created_at || o.createdAt);
+          if (filterRange.type === 'All Time') return true;
+          return (d.isAfter(start) || d.isSame(start)) && (d.isBefore(end) || d.isSame(end));
+        });
+
+        const filteredMembers = members.filter(m => {
+          const d = dayjs(m.created_at || m.createdAt);
+          if (filterRange.type === 'All Time') return true;
+          return (d.isAfter(start) || d.isSame(start)) && (d.isBefore(end) || d.isSame(end));
+        });
+
+        const filteredAttendance = attendance.filter(a => {
+          const d = dayjs(a.date || a.check_in);
+          if (filterRange.type === 'All Time') return true;
+          return (d.isAfter(start) || d.isSame(start)) && (d.isBefore(end) || d.isSame(end));
+        });
 
         const newStats = {
           members: members.length,
-          checkinsToday: 0, 
+          checkinsToday: filteredAttendance.filter(a => a.status.toLowerCase().includes('present')).length,
           activePlans: plans.length,
           pendingPayments: orders.filter(o => o.status === 'pending').length,
           trainers: staff.length,
           equipmentDue: equipment.length,
           totalOrders: orders.length,
           totalProducts: products.length,
-          newMembersToday: (todayMembersRes.data || []).length,
-          lowStockCount: (lowStockRes.data || []).length,
-          expiringCount: (expiringRes.data || []).length,
-          todayOrdersCount: (todayOrdersRes.data || []).length
+          newMembersToday: filteredMembers.length,
+          todayOrdersCount: filteredOrders.length,
+          lowStockCount: products.filter(p => (p.stock || p.quantity || 0) < 5).length,
+          expiringCount: 0 // Logic for expiring plans would go here
         };
 
         setStats(newStats);
-        cache.dashboardStats = newStats;
         
-        // Populate individual caches too since we already fetched them
+        let rangeTotal = 0;
+        const orderRows = filteredOrders.map((order, i) => {
+          const amount = Number(order.total_amount || order.total_price || order.total || 0);
+          rangeTotal += amount;
+          const shipping = typeof order.shipping === 'string' ? JSON.parse(order.shipping || '{}') : (order.shipping || {});
+          
+          return {
+            id: order.id,
+            index: i + 1,
+            customer: shipping.name || "Walk-in",
+            phone: shipping.phone || "-",
+            city: shipping.city || "-",
+            amount,
+            method: order.payment_method || order.paymentMethod || "Cash",
+            status: order.status || "-",
+            time: dayjs(order.created_at || order.createdAt).format("HH:mm")
+          };
+        });
+
+        setTodayOrderAmount(rangeTotal);
+        setTodayOrdersList(orderRows);
+
+        // Update caches
+        cache.dashboardStats = newStats;
         cache.adminMembers = members;
         cache.adminStaff = staffRes.data;
         cache.adminOrders = orders;
         cache.adminProducts = products;
-        cache.adminEquipment = equipment;
 
       } catch (err) {
         console.error('Error fetching stats:', err);
-        if (!cache.dashboardStats) toast.error('Failed to load dashboard stats');
+        toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [filterRange]);
 
   /* ---------- WEEKLY CHECK-IN CHART ---------- */
   const [checkinData, setCheckinData] = useState([]);
@@ -205,7 +244,7 @@ export default function Dashboard() {
               else if (status.toLowerCase().includes('late')) dayData.late++;
               else if (status.toLowerCase().includes('leave')) dayData.leave++;
             });
-          } catch (err) {
+          } catch {
             console.log("No attendance data for:", dateStr);
           }
           return dayData;
@@ -258,8 +297,8 @@ export default function Dashboard() {
 
         setRevenueData(months);
         setMonthlyTotal(currentMonthTotal);
-      } catch (err) {
-        console.error('Error fetching revenue:', err);
+      } catch {
+        console.error('Error fetching revenue');
       }
     };
 
@@ -268,63 +307,9 @@ export default function Dashboard() {
 
 
 
-  const [todayOrders, setTodayOrders] = useState(0);
+  // Today's orders unified above in fetchStats
   const [todayOrderAmount, setTodayOrderAmount] = useState(0);
   const [todayOrdersList, setTodayOrdersList] = useState([]);
-
-  useEffect(() => {
-    const fetchTodayOrders = async () => {
-      try {
-        const res = await api.get('/orders');
-        const allOrders = res.data || [];
-
-        const today = dayjs().format("YYYY-MM-DD");
-        const todayStart = new Date(today);
-        const todayEnd = new Date(today);
-        todayEnd.setHours(23, 59, 59, 999);
-
-        let total = 0;
-
-        const rows = allOrders
-          .filter(order => {
-            const orderDate = new Date(order.created_at || order.createdAt || '');
-            return orderDate >= todayStart && orderDate <= todayEnd;
-          })
-          .slice(0, 10)
-          .map((order, i) => {
-            const amount = Number(order.total_amount || order.total_price || order.total || 0);
-            total += amount;
-
-            const shipping = typeof order.shipping === 'string' 
-              ? JSON.parse(order.shipping || '{}')
-              : (order.shipping || {});
-
-            return {
-              id: order.id,
-              index: i + 1,
-              customer: shipping.name || "Walk-in",
-              phone: shipping.phone || "-",
-              city: shipping.city || "-",
-              amount,
-              method: order.payment_method || order.paymentMethod || "Cash",
-              status: order.status || "-",
-              time: new Date(order.created_at || order.createdAt || '').toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }) || "-",
-            };
-          });
-
-        setTodayOrders(rows.length);
-        setTodayOrderAmount(total);
-        setTodayOrdersList(rows);
-      } catch (err) {
-        console.error('Error fetching today\'s orders:', err);
-      }
-    };
-
-    fetchTodayOrders();
-  }, []);
 
 
 
@@ -344,10 +329,19 @@ export default function Dashboard() {
 
   return (
     <div className="p-0 space-y-8 relative min-h-[80vh]">
+      {/* HEADER WITH FILTER */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 p-6 rounded-3xl border border-white/10">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-gray-400 text-sm">Overview of your gym's performance</p>
+        </div>
+        <DateRangeFilter onRangeChange={handleRangeChange} />
+      </div>
+
       {/* STAT CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard title="Total Members" value={loading ? "..." : stats.members} icon={<FaUsers />} color="from-blue-500 to-cyan-500" />
-        <StatCard title="Today's Check-ins" value={loading ? "..." : stats.checkinsToday} icon={<FaCalendarCheck />} color="from-emerald-500 to-teal-500" />
+        <StatCard title={`${filterRange.type} Check-ins`} value={loading ? "..." : stats.checkinsToday} icon={<FaCalendarCheck />} color="from-emerald-500 to-teal-500" />
         <StatCard title="Active Plans" value={loading ? "..." : stats.activePlans} icon={<FaDumbbell />} color="from-purple-500 to-pink-500" />
         <StatCard title="Pending Payments" value={loading ? "..." : stats.pendingPayments} icon={<FaFileInvoiceDollar />} color="from-amber-500 to-orange-500" />
         <StatCard title="Available Trainers" value={loading ? "..." : stats.trainers} icon={<FaUserTie />} color="from-indigo-500 to-violet-500" />
@@ -355,7 +349,8 @@ export default function Dashboard() {
         <StatCard title="Total Products" value={loading ? "..." : stats.totalProducts} icon={<FaBox />} color="from-green-500 to-emerald-500" />
         <StatCard title="Low Stock Alert" value={loading ? "..." : stats.lowStockCount} icon={<FaBox />} color="from-orange-500 to-red-500" />
         <StatCard title="Expiring Plans" value={loading ? "..." : stats.expiringCount} icon={<FaCalendarCheck />} color="from-red-500 to-rose-700" />
-        <StatCard title="Today's Orders" value={loading ? "..." : stats.todayOrdersCount} icon={<FaTools />} color="from-emerald-500 to-green-600" />
+        <StatCard title={`${filterRange.type} Orders`} value={loading ? "..." : stats.todayOrdersCount} icon={<FaTools />} color="from-emerald-500 to-green-600" />
+        <StatCard title="New Members" value={loading ? "..." : stats.newMembersToday} icon={<FaUsers />} color="from-blue-400 to-indigo-500" />
       </div>
 
 
@@ -435,9 +430,15 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-        <h3 className="text-sm uppercase tracking-widest text-gray-200 mb-4">
-          Today Orders
-        </h3>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-sm uppercase tracking-widest text-gray-200">
+            {filterRange.type} Orders
+          </h3>
+          <div className="text-right">
+            <p className="text-xs text-gray-400 uppercase tracking-widest">Total Amount</p>
+            <p className="text-xl font-bold text-emerald-400">₹ {todayOrderAmount.toLocaleString("en-IN")}</p>
+          </div>
+        </div>
 
         <div>
           {/* Desktop / Tablet: table */}
