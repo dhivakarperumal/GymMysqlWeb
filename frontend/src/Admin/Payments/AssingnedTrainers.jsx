@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../../api"; // backend HTTP client
 import cache from "../../cache";
-import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search, LayoutGrid, List } from "lucide-react";
+import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
 
 const AssingnedTrainers = () => {
   const [members, setMembers] = useState([]);
@@ -15,6 +15,8 @@ const AssingnedTrainers = () => {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, assigned, unassigned
   const [viewMode, setViewMode] = useState("card"); // card, table
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   /* ================= FETCH MEMBERSHIPS ================= */
   useEffect(() => {
@@ -203,6 +205,21 @@ const AssingnedTrainers = () => {
     return true; // all
   });
 
+  // 📄 PAGINATION LOGIC
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredMembers.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleSearch = (value) => {
+    setSearch(value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (type) => {
+    setFilterType(type);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 text-white" dir="ltr">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
@@ -239,7 +256,7 @@ const AssingnedTrainers = () => {
     {/* 🎛 Filter Buttons — Right */}
     <div className="flex flex-wrap gap-3 justify-start md:justify-end">
       <button
-        onClick={() => setFilterType("all")}
+        onClick={() => handleFilterChange("all")}
         className={`px-4 py-2 rounded-lg font-medium transition ${
           filterType === "all"
             ? "bg-orange-500 text-white"
@@ -250,7 +267,7 @@ const AssingnedTrainers = () => {
       </button>
 
       <button
-        onClick={() => setFilterType("assigned")}
+        onClick={() => handleFilterChange("assigned")}
         className={`px-4 py-2 rounded-lg font-medium transition ${
           filterType === "assigned"
             ? "bg-green-500 text-white"
@@ -261,7 +278,7 @@ const AssingnedTrainers = () => {
       </button>
 
       <button
-        onClick={() => setFilterType("unassigned")}
+        onClick={() => handleFilterChange("unassigned")}
         className={`px-4 py-2 rounded-lg font-medium transition ${
           filterType === "unassigned"
             ? "bg-red-500 text-white"
@@ -316,10 +333,9 @@ const AssingnedTrainers = () => {
           <div className="text-center py-12 text-gray-400">
             No matching members found
           </div>
-        ) : (
-        {viewMode === "card" ? (
-          <div className="grid gap-6">
-            {filteredMembers.map((m) => (
+        ) : viewMode === "card" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {paginatedData.map((m) => (
               <div
                 key={m.uid}
                 className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-6 hover:border-white/40 transition backdrop-blur-lg"
@@ -409,7 +425,7 @@ const AssingnedTrainers = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredMembers.map((m) => {
+                {paginatedData.map((m) => {
                   const assigned = assignments[m.uid] || [];
                   return (
                     <tr key={m.uid} className="hover:bg-white/5 transition">
@@ -458,6 +474,77 @@ const AssingnedTrainers = () => {
             </table>
           </div>
         )}
+
+        {/* 📄 PAGINATION UI */}
+        {filteredMembers.length > 0 && (
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 py-4 border-t border-white/10">
+            <div className="text-sm text-gray-400">
+              Showing <span className="text-white font-medium">{startIndex + 1}</span> to{" "}
+              <span className="text-white font-medium">
+                {Math.min(startIndex + itemsPerPage, filteredMembers.length)}
+              </span>{" "}
+              of <span className="text-white font-medium">{filteredMembers.length}</span> members
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (currentPage <= 3) pageNum = i + 1;
+                  else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = currentPage - 2 + i;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                        currentPage === pageNum
+                          ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                          : "bg-white/10 text-gray-400 border border-white/20 hover:bg-white/20"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span>Show</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
         )}
       </div>
 
