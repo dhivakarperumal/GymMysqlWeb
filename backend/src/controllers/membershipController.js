@@ -184,11 +184,59 @@ async function updateMembership(req, res) {
   }
 }
 
+/* ================= GET EXPIRING SOON ================= */
+async function getExpiringSoon(req, res) {
+  try {
+    const { trainerUserId } = req.query;
+    let staffId = null;
+
+    if (trainerUserId) {
+      const [userRows] = await db.query(
+        'SELECT email, username FROM users WHERE id = ?',
+        [trainerUserId]
+      );
+      if (userRows.length > 0) {
+        const u = userRows[0];
+        const [staffRows] = await db.query(
+          'SELECT id FROM staff WHERE email = ? OR username = ? LIMIT 1',
+          [u.email, u.username]
+        );
+        if (staffRows.length > 0) staffId = staffRows[0].id;
+      }
+    }
+
+    let sql = `
+      SELECT m.*, 
+             COALESCE(m.userName, u.username) as username, 
+             COALESCE(m.userEmail, u.email) as email
+      FROM memberships m
+      LEFT JOIN users u ON m.userId = u.id
+    `;
+    
+    if (staffId) {
+      sql += ` INNER JOIN trainer_assignments ta ON ta.user_id = m.userId AND ta.trainer_id = ? `;
+    }
+
+    // Add filter: expiring in next 5 days
+    sql += ` WHERE m.status = 'active' 
+             AND m.endDate >= CURDATE() 
+             AND m.endDate <= DATE_ADD(CURDATE(), INTERVAL 5 DAY)
+             ORDER BY m.endDate ASC `;
+
+    const [rows] = await db.query(sql, staffId ? [staffId] : []);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching expiring memberships:", error);
+    res.status(500).json({ error: "Failed to fetch alerts" });
+  }
+}
+
 module.exports = {
   createMembership,
   getUserMemberships,
   getMembershipById,
   getAllMemberships,
+  getExpiringSoon, // Added
   updateMembership,
   deleteMembership,
 };
