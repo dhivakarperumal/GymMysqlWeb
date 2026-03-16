@@ -132,7 +132,7 @@ export default function Dashboard() {
   useEffect(() => {
     const loadWeeklyAttendance = async () => {
       try {
-        const res = await api.get('/dashboard/weekly-attendance');
+        const res = await api.get('/dashboard/attendance');
         setCheckinData(res.data || []);
       } catch (err) {
         console.error("Error loading weekly attendance:", err);
