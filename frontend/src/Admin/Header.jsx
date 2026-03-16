@@ -88,8 +88,8 @@ const Header = ({ onMenuClick }) => {
         setLoadingAlerts(true);
         const [orders, lowStock, expiring, regs] = await Promise.all([
           api.get('/orders/today'),
-          api.get('/products/alerts/low-stock'),
-          api.get('/memberships/alerts/expiring-soon'),
+          api.get('/products/low-stock'), // Changed from /products/alerts/low-stock
+          api.get('/memberships/expiring-soon'), // Changed from /memberships/alerts/expiring-soon
           api.get('/memberships/today')
         ]);
 
@@ -145,8 +145,9 @@ const Header = ({ onMenuClick }) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    let target = "/admin/products";
-    if (location.pathname.includes("orders")) target = "/admin/orders";
+    let target = "/admin/members"; // Default to members if on dashboard
+    if (location.pathname.includes("products")) target = "/admin/products";
+    else if (location.pathname.includes("orders")) target = "/admin/orders";
     else if (location.pathname.includes("members")) target = "/admin/members";
     else if (location.pathname.includes("staff") || location.pathname.includes("trainer")) target = "/admin/staff";
     

@@ -1,3 +1,4 @@
+```javascript
 import React, { useEffect, useState } from "react";
 import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight, LayoutGrid, List, Search, Users, Mail, Phone, Calendar } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -11,13 +12,12 @@ const Members = () => {
   const [searchParams] = useSearchParams();
   const querySearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(querySearch);
+  const [members, setMembers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   useEffect(() => {
-    if (querySearch) {
-      setSearch(querySearch);
-    }
+    setSearch(querySearch);
   }, [querySearch]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table, card
@@ -47,12 +47,17 @@ const Members = () => {
     fetchMembers();
   }, []);
 
-  // 🔎 SEARCH
-  const filtered = members.filter(
-    (m) =>
-      m.name?.toLowerCase().includes(search.toLowerCase()) ||
-      m.phone?.includes(search)
-  );
+  // 🔎 SEARCH - Robust filtering
+  const filtered = (members || []).filter((m) => {
+    const s = search.toLowerCase();
+    return (
+      m.name?.toLowerCase().includes(s) ||
+      m.username?.toLowerCase().includes(s) ||
+      m.phone?.includes(s) ||
+      m.email?.toLowerCase().includes(s) ||
+      m.user_email?.toLowerCase().includes(s)
+    );
+  });
 
   // 📄 PAGINATION
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -325,8 +330,8 @@ const Members = () => {
                     </td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${m.source === "users"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : "bg-purple-500/20 text-purple-400"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-purple-500/20 text-purple-400"
                         }`}>
                         {m.source === "users" ? "User" : "Gym Member"}
                       </span>
@@ -418,8 +423,8 @@ const Members = () => {
                         {m.plan || m.role || "Member"}
                       </span>
                       <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold ring-1 ${m.source === "users"
-                          ? "bg-blue-500/20 text-blue-400 ring-blue-500/30"
-                          : "bg-purple-500/20 text-purple-400 ring-purple-500/30"
+                        ? "bg-blue-500/20 text-blue-400 ring-blue-500/30"
+                        : "bg-purple-500/20 text-purple-400 ring-purple-500/30"
                         }`}>
                         {m.source === "users" ? "User" : "Gym Member"}
                       </span>
@@ -480,8 +485,8 @@ const Members = () => {
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${currentPage === pageNum
-                        ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110 z-10"
-                        : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
+                      ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-110 z-10"
+                      : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
                       }`}
                   >
                     {pageNum}
