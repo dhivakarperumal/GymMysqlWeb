@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Filter, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import api from "../../api";
-import DateRangeFilter from "../../Components/DateRangeFilter";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-
-dayjs.extend(isBetween);
 
 const Enquiry = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -15,7 +10,6 @@ const Enquiry = () => {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [showForm, setShowForm] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [dateRange, setDateRange] = useState({ range: "all", start: null, end: null });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -148,17 +142,9 @@ const Enquiry = () => {
                          enquiry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          enquiry.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          enquiry.location?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+                         enquiry.location?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || enquiry.status === statusFilter;
-
-    // Date filter
-    let matchesDate = true;
-    if (dateRange.range !== "all" && dateRange.start && dateRange.end) {
-      const createdDate = dayjs(enquiry.created_at);
-      matchesDate = createdDate.isBetween(dateRange.start, dateRange.end, null, "[]");
-    }
-
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus;
   });
 
   const getStatusIcon = (status) => {
@@ -243,7 +229,6 @@ const Enquiry = () => {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <DateRangeFilter onFilterChange={setDateRange} />
         </div>
       </div>
 

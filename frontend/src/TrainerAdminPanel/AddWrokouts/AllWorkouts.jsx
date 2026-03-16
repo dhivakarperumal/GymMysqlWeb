@@ -358,20 +358,9 @@ const AllWorkouts = () => {
                           >
                             {timeIndex === 0 && exercises ? (
                               <div className="bg-orange-500 text-black rounded-xl p-4 w-full">
-                                <ul className="text-xs text-left space-y-2">
+                                <ul className="text-xs text-left space-y-1">
                                   {exercises.map((ex, i) => (
-                                    <li key={i} className="border-b border-black/10 last:border-0 pb-1">
-                                      <p className="font-bold">• {ex.name || 'Unnamed Exercise'}</p>
-                                      <p className="text-[10px] opacity-70">
-                                        {ex.type} • {ex.sets} Sets • {ex.count}
-                                      </p>
-                                      {(ex.image || ex.video) && (
-                                        <div className="flex gap-1 mt-1">
-                                          {ex.image && <span className="bg-black/20 px-1 rounded-[2px] text-[8px] uppercase">Image</span>}
-                                          {ex.video && <span className="bg-black/20 px-1 rounded-[2px] text-[8px] uppercase">Video</span>}
-                                        </div>
-                                      )}
-                                    </li>
+                                    <li key={i}>• {ex}</li>
                                   ))}
                                 </ul>
                               </div>

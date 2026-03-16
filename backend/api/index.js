@@ -35,7 +35,6 @@ const cartRoutes = require("../src/routes/cartRoutes");
 const attendanceRoutes = require("../src/routes/attendanceRoutes");
 const checkinRoutes = require("../src/routes/checkinRoutes");
 const membershipRoutes = require("../src/routes/membershipRoutes");
-const dashboardRoutes = require("../src/routes/dashboardRoutes");
 
 // other routes can be added later
 
@@ -78,8 +77,7 @@ app.use(
 );
 
 // allow large payloads (images encoded as base64 can be big)
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -121,7 +119,6 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/send-message", messageRoutes);
 
 app.use("/api/memberships", membershipRoutes);
-app.use("/api/dashboard", dashboardRoutes);
 
 // Export for Vercel
 module.exports = app;

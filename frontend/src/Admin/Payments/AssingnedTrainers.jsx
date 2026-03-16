@@ -2,11 +2,6 @@ import { useEffect, useState } from "react";
 import api from "../../api"; // backend HTTP client
 import cache from "../../cache";
 import { Users, Dumbbell, Mail, Phone, Calendar, AlertCircle, Search, LayoutGrid, List, ChevronLeft, ChevronRight } from "lucide-react";
-import DateRangeFilter from "../../Components/DateRangeFilter";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-
-dayjs.extend(isBetween);
 
 const AssingnedTrainers = () => {
   const [members, setMembers] = useState([]);
@@ -22,7 +17,6 @@ const AssingnedTrainers = () => {
   const [viewMode, setViewMode] = useState("card"); // card, table
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [dateRange, setDateRange] = useState({ range: "all", start: null, end: null });
 
   /* ================= FETCH MEMBERSHIPS ================= */
   useEffect(() => {
@@ -199,25 +193,16 @@ const AssingnedTrainers = () => {
     if (!matchesSearch) return false;
 
     // Filter type
-    let matchesType = true;
     if (filterType === "assigned") {
-      matchesType = assignments[m.uid] && assignments[m.uid].length > 0;
-    } else if (filterType === "unassigned") {
-      matchesType = !assignments[m.uid] || assignments[m.uid].length === 0;
+      return assignments[m.uid] && assignments[m.uid].length > 0;
     }
-    
-    if (!matchesType) return false;
-
-    // Date Filter (checks if any of the member's plans started in range)
-    let matchesDate = true;
-    if (dateRange.range !== "all" && dateRange.start && dateRange.end) {
-      matchesDate = m.plans.some(p => {
-        const pStart = dayjs(p.startDate);
-        return pStart.isBetween(dateRange.start, dateRange.end, null, "[]");
-      });
+    if (filterType === "unassigned") {
+      // Check if this specific membership is unassigned
+      // Since we map memberships 1:1 to members in this view, we check if the user has ANY assignment
+      // Or more precisely if there's an assignment matching this membershipId if we had it
+      return !assignments[m.uid] || assignments[m.uid].length === 0;
     }
-
-    return matchesSearch && matchesDate;
+    return true; // all
   });
 
   // 📄 PAGINATION LOGIC
@@ -324,7 +309,6 @@ const AssingnedTrainers = () => {
           <List size={20} />
         </button>
       </div>
-      <DateRangeFilter onFilterChange={setDateRange} />
     </div>
 
   </div>

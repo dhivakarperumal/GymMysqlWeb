@@ -8,10 +8,6 @@ import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import DateRangeFilter from "../../Components/DateRangeFilter";
-import isBetween from "dayjs/plugin/isBetween";
-
-dayjs.extend(isBetween);
 
 /* ========================
    STAT CARD
@@ -70,7 +66,6 @@ const Reports = () => {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("members");
-  const [dateRange, setDateRange] = useState({ range: "all", start: null, end: null });
   const [preview, setPreview] = useState(null);
 
   /* ========================
@@ -101,35 +96,15 @@ const Reports = () => {
   /* ========================
      TABLE CONFIGS
   ======================== */
-  const filteredMembers = members.filter(m => {
-    if (dateRange.range === "all" || !dateRange.start || !dateRange.end) return true;
-    return dayjs(m.join_date || m.createdAt).isBetween(dateRange.start, dateRange.end, null, "[]");
-  });
-
-  const filteredOrders = orders.filter(o => {
-    if (dateRange.range === "all" || !dateRange.start || !dateRange.end) return true;
-    return dayjs(o.created_at || o.createdAt).isBetween(dateRange.start, dateRange.end, null, "[]");
-  });
-
-  const filteredMemberships = memberships.filter(p => {
-    if (dateRange.range === "all" || !dateRange.start || !dateRange.end) return true;
-    return dayjs(p.startDate || p.created_at).isBetween(dateRange.start, dateRange.end, null, "[]");
-  });
-
-  const filteredEnquiries = enquiries.filter(e => {
-    if (dateRange.range === "all" || !dateRange.start || !dateRange.end) return true;
-    return dayjs(e.created_at || e.createdAt).isBetween(dateRange.start, dateRange.end, null, "[]");
-  });
-
   const tabs = [
     {
       key: "members",
       label: "Members",
       icon: Users,
       color: "bg-blue-500/20 text-blue-400",
-      data: filteredMembers,
+      data: members,
       headers: ["#", "Name", "Email", "Phone", "Plan", "Status", "Join Date"],
-      rows: filteredMembers.map((m, i) => [
+      rows: members.map((m, i) => [
         i + 1,
         m.name || "N/A",
         m.email || m.user_email || "-",
@@ -144,9 +119,9 @@ const Reports = () => {
       label: "Orders",
       icon: ShoppingCart,
       color: "bg-orange-500/20 text-orange-400",
-      data: filteredOrders,
+      data: orders,
       headers: ["#", "Order ID", "Customer", "Total", "Status", "Date"],
-      rows: filteredOrders.map((o, i) => [
+      rows: orders.map((o, i) => [
         i + 1,
         o.id || o.order_id || "-",
         o.name || o.user_name || o.customer_name || "-",
@@ -160,9 +135,9 @@ const Reports = () => {
       label: "Plans / Payments",
       icon: CreditCard,
       color: "bg-green-500/20 text-green-400",
-      data: filteredMemberships,
+      data: memberships,
       headers: ["#", "Member", "Email", "Plan", "Amount", "Mode", "Status", "Start", "End"],
-      rows: filteredMemberships.map((p, i) => [
+      rows: memberships.map((p, i) => [
         i + 1,
         p.userName || p.username || "-",
         p.userEmail || p.email || "-",
@@ -179,9 +154,9 @@ const Reports = () => {
       label: "Enquiries",
       icon: MessageSquare,
       color: "bg-purple-500/20 text-purple-400",
-      data: filteredEnquiries,
+      data: enquiries,
       headers: ["#", "Name", "Email", "Phone", "Subject", "Status", "Date"],
-      rows: filteredEnquiries.map((e, i) => [
+      rows: enquiries.map((e, i) => [
         i + 1,
         e.name || "-",
         e.email || "-",
@@ -211,9 +186,6 @@ const Reports = () => {
             <p className="text-white/50 text-sm">Download and view gym data reports</p>
           </div>
         </div>
-
-        <DateRangeFilter onFilterChange={setDateRange} />
-
         <div className="flex gap-2">
           <button
             onClick={() => downloadPDF(currentTab.label, currentTab.headers, currentTab.rows)}
@@ -232,10 +204,10 @@ const Reports = () => {
 
       {/* STAT CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat title="Total Members" value={filteredMembers.length} icon={Users} color="bg-blue-500/20 text-blue-400" />
-        <Stat title="Total Orders" value={filteredOrders.length} icon={ShoppingCart} color="bg-orange-500/20 text-orange-400" />
-        <Stat title="Plan Purchases" value={filteredMemberships.length} icon={CreditCard} color="bg-green-500/20 text-green-400" />
-        <Stat title="Enquiries" value={filteredEnquiries.length} icon={MessageSquare} color="bg-purple-500/20 text-purple-400" />
+        <Stat title="Total Members" value={members.length} icon={Users} color="bg-blue-500/20 text-blue-400" />
+        <Stat title="Total Orders" value={orders.length} icon={ShoppingCart} color="bg-orange-500/20 text-orange-400" />
+        <Stat title="Plan Purchases" value={memberships.length} icon={CreditCard} color="bg-green-500/20 text-green-400" />
+        <Stat title="Enquiries" value={enquiries.length} icon={MessageSquare} color="bg-purple-500/20 text-purple-400" />
       </div>
 
       {/* TABS */}
