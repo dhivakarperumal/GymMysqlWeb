@@ -121,16 +121,16 @@ export default function Dashboard() {
           expiringRes,
           todayMembersRes
         ] = await Promise.all([
-          api.get('/members'),
-          api.get('/plans'),
-          api.get('/orders'),
-          api.get('/staff'),
-          api.get('/equipment'),
-          api.get('/products'),
-          api.get('/orders/today'),
-          api.get('/products/alerts/low-stock'),
-          api.get('/memberships/alerts/expiring-soon'),
-          api.get('/memberships/today')
+          api.get('/members').catch(() => ({ data: [] })),
+          api.get('/plans').catch(() => ({ data: [] })),
+          api.get('/orders').catch(() => ({ data: [] })),
+          api.get('/staff').catch(() => ({ data: [] })),
+          api.get('/equipment').catch(() => ({ data: [] })),
+          api.get('/products').catch(() => ({ data: [] })),
+          api.get('/orders/today').catch(() => ({ data: [] })),
+          api.get('/products/alerts/low-stock').catch(() => ({ data: [] })),
+          api.get('/memberships/alerts/expiring-soon').catch(() => ({ data: [] })),
+          api.get('/memberships/today').catch(() => ({ data: [] }))
         ]);
 
         const members = membersRes.data || [];

@@ -134,12 +134,12 @@ async function getLowStockAlerts(req, res) {
     const [rows] = await db.query('SELECT * FROM products');
     const parsed = rows.map(parseProduct);
     
-    // Logic: if total sum of all stock variants < 5 or any variant is 0
+    // Logic: if total sum of all stock variants < 5 or any variant < 5
     const lowStock = parsed.filter(p => {
-      if (typeof p.stock === 'object' && !Array.isArray(p.stock)) {
-        const values = Object.values(p.stock);
-        const total = values.reduce((acc, val) => acc + (parseInt(val) || 0), 0);
-        return total < 5 || values.some(v => (parseInt(v) || 0) === 0);
+      if (typeof p.stock === 'object' && !Array.isArray(p.stock) && Object.keys(p.stock).length > 0) {
+        const values = Object.values(p.stock).map(v => parseInt(v) || 0);
+        const total = values.reduce((acc, val) => acc + val, 0);
+        return total < 5 || values.some(v => v < 5);
       }
       return false;
     });

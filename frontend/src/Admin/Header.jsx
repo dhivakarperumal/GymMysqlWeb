@@ -86,39 +86,18 @@ const Header = ({ onMenuClick }) => {
       try {
         setLoadingAlerts(true);
 
-        const [ordersRes, productsRes, membershipsRes] = await Promise.all([
-          api.get("/orders"),
-          api.get("/products"),
-          api.get("/memberships"),
+        const [ordersRes, lowStockRes, expiringRes, regsRes] = await Promise.all([
+          api.get('/orders/today').catch(() => ({ data: [] })),
+          api.get('/products/alerts/low-stock').catch(() => ({ data: [] })),
+          api.get('/memberships/alerts/expiring-soon').catch(() => ({ data: [] })),
+          api.get('/memberships/today').catch(() => ({ data: [] }))
         ]);
 
-        const today = dayjs().format("YYYY-MM-DD");
-
-        // Orders created today
-        const todayOrders = (ordersRes.data || []).filter(
-          (o) => dayjs(o.createdAt).format("YYYY-MM-DD") === today
-        );
-
-        // Low stock products
-        const lowStockProducts = (productsRes.data || []).filter(
-          (p) => p.stock <= 5
-        );
-
-        // Expiring memberships (next 7 days)
-        const expiringSoon = (membershipsRes.data || []).filter((m) =>
-          dayjs(m.expiryDate).diff(dayjs(), "day") <= 7
-        );
-
-        // New registrations today
-        const todayRegistrations = (membershipsRes.data || []).filter(
-          (m) => dayjs(m.createdAt).format("YYYY-MM-DD") === today
-        );
-
         setAlerts({
-          orders: todayOrders,
-          lowStock: lowStockProducts,
-          expiring: expiringSoon,
-          registrations: todayRegistrations,
+          orders: ordersRes.data || [],
+          lowStock: lowStockRes.data || [],
+          expiring: expiringRes.data || [],
+          registrations: regsRes.data || [],
         });
       } catch (err) {
         console.error("Dashboard alerts error:", err);
@@ -480,7 +459,7 @@ const AlertDropdown = ({ title, items, icon, type, onClose, badgeColor }) => (
                 content = (
                   <>
                     <p className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors uppercase">{item.name || item.username || "New Member"}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Joined at: {new Date(item.created_at).toLocaleTimeString()}</p>
+                     <p className="text-[10px] text-gray-500 mt-0.5">Joined at: {new Date(item.createdAt || item.created_at).toLocaleTimeString()}</p>
                     <span className="inline-block mt-2 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px] font-black uppercase">New Registration</span>
                   </>
                 );

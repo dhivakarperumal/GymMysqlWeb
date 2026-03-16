@@ -291,8 +291,6 @@ const Members = () => {
                 <th className="p-4 text-left font-medium">Height</th>
                 <th className="p-4 text-left font-medium">Weight</th>
                 <th className="p-4 text-left font-medium">BMI</th>
-                <th className="p-4 text-left font-medium">Join Date</th>
-                <th className="p-4 text-left font-medium">Expiry Date</th>
                 <th className="p-4 text-left font-medium">Plan</th>
                 <th className="p-4 text-left font-medium">Type</th>
                 <th className="p-4 text-left font-medium">Actions</th>
@@ -319,12 +317,7 @@ const Members = () => {
                         {m.bmi || "-"}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-gray-400">
-                      {m.joinDate || m.join_date ? new Date(m.joinDate || m.join_date).toLocaleDateString() : "-"}
-                    </td>
-                    <td className="p-4 text-xs text-gray-400">
-                      {m.expiryDate || m.expiry_date ? new Date(m.expiryDate || m.expiry_date).toLocaleDateString() : "-"}
-                    </td>
+                   
                     <td className="p-4">
                       <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-orange-500/20 text-orange-400">
                         {m.plan || m.role || "Member"}
