@@ -231,12 +231,32 @@ async function getExpiringSoon(req, res) {
   }
 }
 
+/* ================= GET TODAY REGISTRATIONS ================= */
+async function getTodayRegistrations(req, res) {
+  try {
+    const [rows] = await db.query(`
+      SELECT m.*, 
+             COALESCE(m.userName, u.username) as username, 
+             COALESCE(m.userEmail, u.email) as email
+      FROM memberships m
+      LEFT JOIN users u ON m.userId = u.id
+      WHERE DATE(m.createdAt) = CURDATE()
+      ORDER BY m.createdAt DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching today's registrations:", error);
+    res.status(500).json({ error: "Failed to fetch registrations" });
+  }
+}
+
 module.exports = {
   createMembership,
   getUserMemberships,
   getMembershipById,
   getAllMemberships,
-  getExpiringSoon, // Added
+  getExpiringSoon,
+  getTodayRegistrations, // Added
   updateMembership,
   deleteMembership,
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Pencil,
@@ -45,13 +45,22 @@ const getOfferPrice = (product) => {
 
 const AllProducts = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(querySearch);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("table");
+
+  // Update search state if URL search param changes
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [querySearch]);
 
   const itemsPerPage = 10;
 

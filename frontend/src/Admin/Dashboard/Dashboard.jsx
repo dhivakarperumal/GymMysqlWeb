@@ -89,6 +89,10 @@ export default function Dashboard() {
     equipmentDue: 0,
     totalOrders: 0,
     totalProducts: 0,
+    newMembersToday: 0,
+    lowStockCount: 0,
+    expiringCount: 0,
+    todayOrdersCount: 0
   });
 
   /* ---------- LOADING STATE ---------- */
@@ -105,13 +109,28 @@ export default function Dashboard() {
       }
 
       try {
-        const [membersRes, plansRes, ordersRes, staffRes, equipmentRes, productsRes] = await Promise.all([
+        const [
+          membersRes, 
+          plansRes, 
+          ordersRes, 
+          staffRes, 
+          equipmentRes, 
+          productsRes,
+          todayOrdersRes,
+          lowStockRes,
+          expiringRes,
+          todayMembersRes
+        ] = await Promise.all([
           api.get('/members'),
           api.get('/plans'),
           api.get('/orders'),
           api.get('/staff'),
           api.get('/equipment'),
           api.get('/products'),
+          api.get('/orders/today'),
+          api.get('/products/alerts/low-stock'),
+          api.get('/memberships/alerts/expiring-soon'),
+          api.get('/memberships/today')
         ]);
 
         const members = membersRes.data || [];
@@ -130,6 +149,10 @@ export default function Dashboard() {
           equipmentDue: equipment.length,
           totalOrders: orders.length,
           totalProducts: products.length,
+          newMembersToday: (todayMembersRes.data || []).length,
+          lowStockCount: (lowStockRes.data || []).length,
+          expiringCount: (expiringRes.data || []).length,
+          todayOrdersCount: (todayOrdersRes.data || []).length
         };
 
         setStats(newStats);
@@ -330,7 +353,9 @@ export default function Dashboard() {
         <StatCard title="Available Trainers" value={loading ? "..." : stats.trainers} icon={<FaUserTie />} color="from-indigo-500 to-violet-500" />
         <StatCard title="Equipment Due" value={loading ? "..." : stats.equipmentDue} icon={<FaBox />} color="from-green-500 to-emerald-500" />
         <StatCard title="Total Products" value={loading ? "..." : stats.totalProducts} icon={<FaBox />} color="from-green-500 to-emerald-500" />
-        <StatCard title="Total Orders" value={loading ? "..." : stats.totalOrders} icon={<FaTools />} color="from-red-500 to-rose-500" />
+        <StatCard title="Low Stock Alert" value={loading ? "..." : stats.lowStockCount} icon={<FaBox />} color="from-orange-500 to-red-500" />
+        <StatCard title="Expiring Plans" value={loading ? "..." : stats.expiringCount} icon={<FaCalendarCheck />} color="from-red-500 to-rose-700" />
+        <StatCard title="Today's Orders" value={loading ? "..." : stats.todayOrdersCount} icon={<FaTools />} color="from-emerald-500 to-green-600" />
       </div>
 
 

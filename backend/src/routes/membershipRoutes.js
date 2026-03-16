@@ -8,10 +8,18 @@ const {
   deleteMembership,
   getAllMemberships,
   updateMembership,
+  getExpiringSoon,
+  getTodayRegistrations
 } = require("../controllers/membershipController");
 
 /* GET ALL MEMBERSHIPS */
 router.get("/", getAllMemberships);
+
+/* GET TODAY NEW MEMBERS */
+router.get("/today", getTodayRegistrations);
+
+/* GET EXPIRING SOON ALERTS */
+router.get("/alerts/expiring-soon", getExpiringSoon);
 
 /* CREATE MEMBERSHIP */
 router.post("/", createMembership);

@@ -194,6 +194,8 @@ const TrainerDashboard = () => {
                     <th className="px-4 py-4 text-left">Email</th>
                     <th className="px-4 py-4 text-left">Mobile</th>
                     <th className="px-4 py-4 text-left">Plan</th>
+                    <th className="px-4 py-4 text-left">Start Date</th>
+                    <th className="px-4 py-4 text-left">End Date</th>
                     <th className="px-4 py-4 text-left">Status</th>
                   </tr>
                 </thead>
@@ -201,7 +203,7 @@ const TrainerDashboard = () => {
                 <tbody>
                   {assignedMembers.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-6 text-gray-400">
+                      <td colSpan="8" className="text-center py-6 text-gray-400">
                         No members assigned
                       </td>
                     </tr>
@@ -227,7 +229,17 @@ const TrainerDashboard = () => {
                         </td>
 
                         <td className="px-4 py-4">
-                          {m.planName || m.plan_name || "-"}
+                          <span className="text-orange-400 font-medium">
+                            {m.planName || m.plan_name || "-"}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4 text-gray-400">
+                          {m.planStartDate ? new Date(m.planStartDate).toLocaleDateString() : "-"}
+                        </td>
+
+                        <td className="px-4 py-4 text-gray-400">
+                          {m.planEndDate ? new Date(m.planEndDate).toLocaleDateString() : "-"}
                         </td>
 
                         <td className="px-4 py-4">
@@ -275,8 +287,19 @@ const TrainerDashboard = () => {
                         </p>
 
                         <p className="text-xs text-gray-400 mt-1">
-                          Plan: {m.planName || m.plan_name || "-"}
+                          Plan: <span className="text-orange-400">{m.planName || m.plan_name || "-"}</span>
                         </p>
+                        
+                        <div className="flex gap-4 mt-2">
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase">Starts</p>
+                            <p className="text-[11px] text-gray-300">{m.planStartDate ? new Date(m.planStartDate).toLocaleDateString() : "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase">Ends</p>
+                            <p className="text-[11px] text-gray-300">{m.planEndDate ? new Date(m.planEndDate).toLocaleDateString() : "-"}</p>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="text-right">

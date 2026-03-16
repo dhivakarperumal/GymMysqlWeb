@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight, LayoutGrid, List, Search, Users, Mail, Phone, Calendar } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../api"
 import cache from "../../cache";
@@ -8,10 +8,17 @@ import * as XLSX from "xlsx";
 
 
 const Members = () => {
-  const [members, setMembers] = useState([]);
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
+  const [search, setSearch] = useState(querySearch);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [querySearch]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // table, card
   const navigate = useNavigate();
@@ -277,7 +284,9 @@ const Members = () => {
                 <th className="p-4 text-left font-medium">Height</th>
                 <th className="p-4 text-left font-medium">Weight</th>
                 <th className="p-4 text-left font-medium">BMI</th>
-                <th className="p-4 text-left font-medium">Role</th>
+                <th className="p-4 text-left font-medium">Join Date</th>
+                <th className="p-4 text-left font-medium">Expiry Date</th>
+                <th className="p-4 text-left font-medium">Plan</th>
                 <th className="p-4 text-left font-medium">Type</th>
                 <th className="p-4 text-left font-medium">Actions</th>
               </tr>
@@ -302,6 +311,12 @@ const Members = () => {
                       <span className="px-2 py-1 rounded bg-white/10 text-orange-400 font-bold text-xs">
                         {m.bmi || "-"}
                       </span>
+                    </td>
+                    <td className="p-4 text-xs text-gray-400">
+                      {m.joinDate || m.join_date ? new Date(m.joinDate || m.join_date).toLocaleDateString() : "-"}
+                    </td>
+                    <td className="p-4 text-xs text-gray-400">
+                      {m.expiryDate || m.expiry_date ? new Date(m.expiryDate || m.expiry_date).toLocaleDateString() : "-"}
                     </td>
                     <td className="p-4">
                       <span className="px-3 py-1 rounded-lg text-xs font-semibold bg-orange-500/20 text-orange-400">

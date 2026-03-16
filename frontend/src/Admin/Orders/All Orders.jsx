@@ -12,7 +12,7 @@ import {
   FaThLarge,
   FaList,
 } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 /* ================= HELPERS ================= */
 
@@ -113,7 +113,15 @@ const AllOrders = () => {
   const [view, setView] = useState("table");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
+  const [search, setSearch] = useState(querySearch);
+
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+    }
+  }, [querySearch]);
 
   /* MODALS */
   const [showStatusModal, setShowStatusModal] = useState(false);
