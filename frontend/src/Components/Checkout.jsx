@@ -187,10 +187,10 @@ export default function Checkout() {
         pickup:
           orderType === "PICKUP"
             ? {
-                name: shipping.name,
-                phone: shipping.phone,
-                email: shipping.email,
-              }
+              name: shipping.name,
+              phone: shipping.phone,
+              email: shipping.email,
+            }
             : null,
         subtotal,
         total,
@@ -217,6 +217,47 @@ export default function Checkout() {
       // 🧾 Save order via API
       console.log("Sending order to backend...");
       console.log("Order payload:", JSON.stringify(orderData, null, 2));
+
+      /* 1️⃣ REDUCE PRODUCT STOCK */
+      for (const item of items) {
+
+        const productId = item.productId || item.id;
+
+        const productRes = await api.get(`/products/${productId}`);
+        const product = productRes.data;
+
+        if (!product) {
+          throw new Error(`Product ${productId} not found`);
+        }
+
+        const variantKey =
+          item.variant ||
+          item.weight ||
+          item.size ||
+          `${item.size}-${item.color}`;
+
+        const updatedStock = { ...(product.stock || {}) };
+
+        if (!updatedStock[variantKey]) {
+          throw new Error(`Variant not found for ${product.name}`);
+        }
+
+        const newQty = updatedStock[variantKey].qty - item.quantity;
+
+        if (newQty < 0) {
+          throw new Error(`Insufficient stock for ${product.name}`);
+        }
+
+        updatedStock[variantKey] = {
+          ...updatedStock[variantKey],
+          qty: newQty,
+        };
+
+        await api.put(`/products/${productId}`, {
+          stock: updatedStock,
+        });
+      }
+      
       const orderResponse = await api.post("/orders", orderData);
       console.log("Order created successfully:", orderResponse.data);
 
@@ -353,11 +394,10 @@ export default function Checkout() {
                     className={`
       relative cursor-pointer rounded-xl p-4 border
       transition
-      ${
-        selectedAddressId === addr.id
-          ? "border-red-500 bg-red-500/10"
-          : "border-red-500/30 hover:border-red-500"
-      }
+      ${selectedAddressId === addr.id
+                        ? "border-red-500 bg-red-500/10"
+                        : "border-red-500/30 hover:border-red-500"
+                      }
     `}
                   >
                     {/* DELIVERY / PICKUP LABEL */}
@@ -405,11 +445,10 @@ export default function Checkout() {
               <button
                 onClick={() => setOrderType("DELIVERY")}
                 className={`flex-1 py-3 rounded-xl border transition
-      ${
-        orderType === "DELIVERY"
-          ? "bg-red-600 border-red-600"
-          : "border-red-500/40 hover:border-red-500"
-      }
+      ${orderType === "DELIVERY"
+                    ? "bg-red-600 border-red-600"
+                    : "border-red-500/40 hover:border-red-500"
+                  }
     `}
               >
                 Delivery
@@ -418,11 +457,10 @@ export default function Checkout() {
               <button
                 onClick={() => setOrderType("PICKUP")}
                 className={`flex-1 py-3 rounded-xl border transition
-      ${
-        orderType === "PICKUP"
-          ? "bg-red-600 border-red-600"
-          : "border-red-500/40 hover:border-red-500"
-      }
+      ${orderType === "PICKUP"
+                    ? "bg-red-600 border-red-600"
+                    : "border-red-500/40 hover:border-red-500"
+                  }
     `}
               >
                 Shop
@@ -610,10 +648,9 @@ h-[100vh] flex flex-col
               className={`
                 w-full mt-6 py-3 rounded-full
                 tracking-widest transition
-                ${
-                  placing || !areDeliveryFieldsFilled()
-                    ? "bg-gray-600 cursor-not-allowed opacity-50"
-                    : "bg-gradient-to-r from-[#eb613e] to-red-700 shadow-[0_0_40px_rgba(255,0,0,0.6)] hover:scale-105 cursor-pointer"
+                ${placing || !areDeliveryFieldsFilled()
+                  ? "bg-gray-600 cursor-not-allowed opacity-50"
+                  : "bg-gradient-to-r from-[#eb613e] to-red-700 shadow-[0_0_40px_rgba(255,0,0,0.6)] hover:scale-105 cursor-pointer"
                 }
               `}
             >

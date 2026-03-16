@@ -424,11 +424,9 @@ export default function ProductDetails() {
                     productId: product.id ?? product.product_id,
                     variant: variantKey,
                     quantity,
-                    price: Number(
-                      pricing?.offerPrice ?? pricing?.mrp ?? 0
-                    ) || 0,
-                    productName: product.name,
-                    productImage: product.images?.[0] || "",
+                    price: Number(pricing?.offerPrice ?? pricing?.mrp ?? 0) || 0,
+                    name: product.name,
+                    image: product.images?.[0] || "",
                   };
 
                   try {

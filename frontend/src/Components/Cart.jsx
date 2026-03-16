@@ -9,15 +9,15 @@ import { useAuth } from "../PrivateRouter/AuthContext";
 
 // helper to normalise image URLs (same logic as Admin components)
 const makeImageUrl = (img) => {
-    if (!img) return "";
-    if (img.startsWith("http") || img.startsWith("data:")) return img;
-    const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
-    if (maybeBase64 && img.length > 50) {
-      return `data:image/webp;base64,${img}`;
-    }
-    const base = import.meta.env.VITE_API_URL || "";
-    return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
-  };
+  if (!img) return "";
+  if (img.startsWith("http") || img.startsWith("data:")) return img;
+  const maybeBase64 = /^[A-Za-z0-9+/=]+$/.test(img);
+  if (maybeBase64 && img.length > 50) {
+    return `data:image/webp;base64,${img}`;
+  }
+  const base = import.meta.env.VITE_API_URL || "";
+  return `${base.replace(/\/$/, "")}/${img.replace(/^\/+/, "")}`;
+};
 export default function Cart() {
   const { user } = useAuth();
   const userId = user?.id;
@@ -46,12 +46,19 @@ export default function Cart() {
       const res = await api.get(`/products/${item.productId}`);
       const product = res.data;
       if (!product) return 0;
+
       if (item.weight) {
-        return product.stock?.[item.weight] || 0;
+        return product.stock?.[item.weight]?.qty || 0;
       }
+
       if (item.size && item.gender) {
-        return product.stock?.[`${item.size}-${item.gender}`] || 0;
+        return product.stock?.[`${item.size}-${item.gender}`]?.qty || 0;
       }
+
+      if (item.variant) {
+        return product.stock?.[item.variant]?.qty || 0;
+      }
+
       return 0;
     } catch (err) {
       console.error("stock lookup failed", err);
@@ -267,9 +274,7 @@ export default function Cart() {
 
             <button
               onClick={() =>
-                navigate("/checkout", {
-                  state: { items, total },
-                })
+                navigate("/checkout")
               }
               className="
         mt-6 w-full py-4 rounded-xl
