@@ -1,4 +1,3 @@
-```javascript
 import React, { useEffect, useState } from "react";
 import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight, LayoutGrid, List, Search, Users, Mail, Phone, Calendar } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";

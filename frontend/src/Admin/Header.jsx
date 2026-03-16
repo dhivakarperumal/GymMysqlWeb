@@ -87,10 +87,10 @@ const Header = ({ onMenuClick }) => {
       try {
         setLoadingAlerts(true);
         const [orders, lowStock, expiring, regs] = await Promise.all([
-          api.get('/orders/today'),
-          api.get('/products/low-stock'), // Changed from /products/alerts/low-stock
-          api.get('/memberships/expiring-soon'), // Changed from /memberships/alerts/expiring-soon
-          api.get('/memberships/today')
+          api.get('/orders/alerts/today'),
+          api.get('/products/alerts/low-stock'),
+          api.get('/memberships/alerts/expiring-soon'),
+          api.get('/memberships/alerts/today')
         ]);
 
         setAlerts({
