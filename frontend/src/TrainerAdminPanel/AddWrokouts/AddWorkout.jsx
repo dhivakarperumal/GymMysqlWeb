@@ -44,7 +44,7 @@ const AddWorkout = () => {
   });
 
   const [days, setDays] = useState({
-    Day1: [{ time: "", type: "Weight Training", name: "", sets: "", count: "", media: "", mediaType: "url" }],
+    Day1: [{ time: "", type: "Weight Training", name: "", sets: "", count: "", image: "", imageType: "url", video: "", videoType: "url" }],
   });
   
   // For debugging - show all assignments
@@ -108,7 +108,7 @@ const AddWorkout = () => {
           level: data.level,
           durationWeeks: data.duration_weeks,
         });
-        setDays(data.days || { Day1: [{ time: "", name: "" }] });
+        setDays(data.days || { Day1: [{ time: "", type: "Weight Training", name: "", sets: "", count: "", image: "", imageType: "url", video: "", videoType: "url" }] });
       } catch (err) {
         console.error(err);
         toast.error("Failed to load workout");
@@ -124,7 +124,7 @@ const AddWorkout = () => {
     const nextDay = `Day${Object.keys(days).length + 1}`;
     setDays({
       ...days,
-      [nextDay]: [{ time: "", type: "Weight Training", name: "", sets: "", count: "", media: "", mediaType: "url" }],
+      [nextDay]: [{ time: "", type: "Weight Training", name: "", sets: "", count: "", image: "", imageType: "url", video: "", videoType: "url" }],
     });
   };
 
@@ -132,7 +132,7 @@ const AddWorkout = () => {
   const addExercise = (dayKey) => {
     setDays({
       ...days,
-      [dayKey]: [...days[dayKey], { time: "", type: "Weight Training", name: "", sets: "", count: "", media: "", mediaType: "url" }],
+      [dayKey]: [...days[dayKey], { time: "", type: "Weight Training", name: "", sets: "", count: "", image: "", imageType: "url", video: "", videoType: "url" }],
     });
   };
 
@@ -155,7 +155,7 @@ const AddWorkout = () => {
     setDays({
       ...days,
       [dayKey]:
-        updated.length > 0 ? updated : [{ time: "", type: "Weight Training", name: "", sets: "", count: "", media: "", mediaType: "url" }],
+        updated.length > 0 ? updated : [{ time: "", type: "Weight Training", name: "", sets: "", count: "", image: "", imageType: "url", video: "", videoType: "url" }],
     });
   };
 
@@ -266,7 +266,7 @@ const AddWorkout = () => {
   const allSelected = filteredMembers.length > 0 && selected.size === filteredMembers.length;
 
   /* ---------------- FILE UPLOAD HANDLER ---------------- */
-  const handleFileUpload = async (dayKey, index, e) => {
+  const handleFileUpload = async (dayKey, index, mediaField, e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -293,8 +293,8 @@ const AddWorkout = () => {
         return;
       }
 
-      updateExercise(dayKey, index, "media", result);
-      toast.success("File uploaded successfully");
+      updateExercise(dayKey, index, mediaField, result);
+      toast.success(`${mediaField.charAt(0).toUpperCase() + mediaField.slice(1)} uploaded successfully`);
     } catch (err) {
       console.error(err);
       toast.error("Upload failed");
@@ -533,85 +533,131 @@ const AddWorkout = () => {
                       />
                     </div>
 
-                    {/* Media Type & Input */}
-                    <div className="space-y-1 lg:col-span-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Exercise Media (Image/Video)</label>
-                        <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
-                          <button
-                            type="button"
-                            onClick={() => updateExercise(dayKey, index, "mediaType", "url")}
-                            className={`px-3 py-1 text-[10px] rounded-md transition ${item.mediaType === 'url' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
-                          >
-                            URL
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateExercise(dayKey, index, "mediaType", "upload")}
-                            className={`px-3 py-1 text-[10px] rounded-md transition ${item.mediaType === 'upload' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
-                          >
-                            Upload
-                          </button>
-                        </div>
-                      </div>
-
-                      {item.mediaType === 'url' ? (
-                        <input
-                          className={inputClass}
-                          placeholder="Paste image or video URL (YouTube, MP4, JPG, etc.)"
-                          value={item.media}
-                          onChange={(e) =>
-                            updateExercise(dayKey, index, "media", e.target.value)
-                          }
-                        />
-                      ) : (
-                        <div className="relative group">
-                          <input
-                            type="file"
-                            accept="image/*,video/*"
-                            onChange={(e) => handleFileUpload(dayKey, index, e)}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                          />
-                          <div className={inputClass + " flex items-center justify-center border-dashed border-2 hover:border-orange-500/50 transition"}>
-                             <span className="text-white/40 text-xs">Click to upload Image or Video (Max 20MB for video)</span>
+                    {/* Media Inputs (Image and Video separately) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:col-span-3">
+                      
+                      {/* IMAGE SECTION */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Exercise Image</label>
+                          <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "imageType", "url")}
+                              className={`px-3 py-1 text-[10px] rounded-md transition ${item.imageType === 'url' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
+                            >
+                              URL
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "imageType", "upload")}
+                              className={`px-3 py-1 text-[10px] rounded-md transition ${item.imageType === 'upload' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
+                            >
+                              Upload
+                            </button>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Media Preview if content exists */}
-                  {item.media && (
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center justify-between">
-                         <div className="text-[10px] text-orange-400 flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                          Media attached
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => updateExercise(dayKey, index, "media", "")}
-                          className="text-[10px] text-red-400 hover:underline"
-                        >
-                          Clear Media
-                        </button>
-                      </div>
-                      
-                      <div className="relative w-full aspect-video max-w-sm overflow-hidden rounded-lg border border-white/10 bg-black/20">
-                        {item.media.startsWith('data:video') || item.media.match(/\.(mp4|webm|ogg)$/i) || item.media.includes('youtube.com') || item.media.includes('youtu.be') ? (
-                          item.media.includes('youtube.com') || item.media.includes('youtu.be') ? (
-                            <div className="absolute inset-0 flex items-center justify-center text-[10px] text-white/40">
-                              YouTube Preview Disabled in Editor
-                            </div>
-                          ) : (
-                            <video src={item.media} className="w-full h-full object-cover" controls />
-                          )
+                        {item.imageType === 'url' ? (
+                          <input
+                            className={inputClass}
+                            placeholder="Paste Image URL (JPG, PNG, etc.)"
+                            value={item.image}
+                            onChange={(e) => updateExercise(dayKey, index, "image", e.target.value)}
+                          />
                         ) : (
-                          <img src={item.media} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="relative h-[46px]">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleFileUpload(dayKey, index, "image", e)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            />
+                            <div className={inputClass + " h-full flex items-center justify-center border-dashed border-2 hover:border-orange-500/50 transition truncate"}>
+                               <span className="text-white/40 text-[10px]">{item.image ? "Image Selected" : "Click to upload Image"}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Image Preview */}
+                        {item.image && (
+                          <div className="mt-2 relative w-full aspect-video h-32 overflow-hidden rounded-lg border border-white/10 bg-black/20 group">
+                            <img src={item.image} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "image", "")}
+                              className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
                         )}
                       </div>
+
+                      {/* VIDEO SECTION */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] uppercase tracking-wider font-bold text-white/40 ml-1">Exercise Video</label>
+                          <div className="flex bg-black/40 rounded-lg p-0.5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "videoType", "url")}
+                              className={`px-3 py-1 text-[10px] rounded-md transition ${item.videoType === 'url' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
+                            >
+                              URL
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "videoType", "upload")}
+                              className={`px-3 py-1 text-[10px] rounded-md transition ${item.videoType === 'upload' ? 'bg-orange-500 text-white' : 'text-white/40'}`}
+                            >
+                              Upload
+                            </button>
+                          </div>
+                        </div>
+
+                        {item.videoType === 'url' ? (
+                          <input
+                            className={inputClass}
+                            placeholder="Video URL (YouTube, MP4, etc.)"
+                            value={item.video}
+                            onChange={(e) => updateExercise(dayKey, index, "video", e.target.value)}
+                          />
+                        ) : (
+                          <div className="relative h-[46px]">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              onChange={(e) => handleFileUpload(dayKey, index, "video", e)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            />
+                            <div className={inputClass + " h-full flex items-center justify-center border-dashed border-2 hover:border-orange-500/50 transition truncate"}>
+                               <span className="text-white/40 text-[10px]">{item.video ? "Video Selected" : "Click to upload Video"}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Video Preview */}
+                        {item.video && (
+                          <div className="mt-2 relative w-full aspect-video h-32 overflow-hidden rounded-lg border border-white/10 bg-black/20 group">
+                            {item.video.includes('youtube.com') || item.video.includes('youtu.be') ? (
+                              <div className="absolute inset-0 flex items-center justify-center text-[8px] text-white/40 uppercase">YouTube Link Attached</div>
+                            ) : (
+                              <video src={item.video} controls className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => updateExercise(dayKey, index, "video", "")}
+                              className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
-                  )}
+                  </div>
 
                   <div className="flex justify-end pt-2 border-t border-white/5">
                     <button

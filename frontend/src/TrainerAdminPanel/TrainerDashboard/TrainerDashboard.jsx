@@ -51,78 +51,25 @@ const TrainerDashboard = () => {
       try {
         setLoading(true);
 
-        /* FETCH ASSIGNMENTS — server filters by this trainer's user ID */
-        const memberRes = await api.get(`/assignments?trainerUserId=${trainerId}`);
-        const membersRaw = Array.isArray(memberRes.data)
-          ? memberRes.data
-          : memberRes.data?.data || memberRes.data?.assignments || [];
+        const [assignRes, statsRes] = await Promise.all([
+          api.get(`/assignments?trainerUserId=${trainerId}`),
+          api.get(`/dashboard/trainer-stats?trainerUserId=${trainerId}`)
+        ]);
 
-        console.log("📊 Assignments from server:", membersRaw.length);
+        const membersRaw = Array.isArray(assignRes.data)
+          ? assignRes.data
+          : assignRes.data?.data || assignRes.data?.assignments || [];
 
-        /* show only ACTIVE members */
+        /* show only ACTIVE members and move unique logic */
         const activeMembers = membersRaw.filter(
           (m) => !m.status || (m.status || "").toLowerCase() === "active"
         );
-
-        /* remove duplicates by userId */
         const uniqueMembers = Array.from(
-          new Map(
-            activeMembers.map((m) => [m.userId || m.user_id, m])
-          ).values()
+          new Map(activeMembers.map((m) => [m.userId || m.user_id, m])).values()
         );
 
         setAssignedMembers(uniqueMembers);
-
-        const assignedMemberIds = uniqueMembers.map(m => String(m.userId || m.user_id));
-        console.log("👥 Assigned members:", assignedMemberIds.length);
-
-        let workoutCount = 0;
-        let dietCount = 0;
-        let checkinCount = 0;
-
-        try {
-          /* WORKOUT PLANS for assigned members only */
-          const workoutRes = await api.get("/workouts");
-          const workoutData = workoutRes.data;
-          const workoutsRaw = Array.isArray(workoutData) ? workoutData : workoutData?.data || [];
-          const userWorkouts = assignedMemberIds.length > 0
-            ? workoutsRaw.filter(w => assignedMemberIds.includes(String(w.member_id || w.memberId)))
-            : workoutsRaw;
-          workoutCount = userWorkouts.length;
-          console.log("💪 Workouts:", workoutCount);
-        } catch (e) {
-          console.error("Workout fetch error:", e);
-        }
-
-        try {
-          /* DIET PLANS for assigned members only */
-          const dietRes = await api.get("/diet-plans");
-          const dietData = dietRes.data;
-          const dietsRaw = Array.isArray(dietData) ? dietData : dietData?.data || [];
-          const userDiets = assignedMemberIds.length > 0
-            ? dietsRaw.filter(d => assignedMemberIds.includes(String(d.member_id || d.memberId)))
-            : dietsRaw;
-          dietCount = userDiets.length;
-          console.log("🥗 Diets:", dietCount);
-        } catch (e) {
-          console.error("Diet fetch error:", e);
-        }
-
-        try {
-          /* TODAY CHECKINS */
-          const checkinRes = await api.get(`/checkins/today?trainerId=${trainerId}`);
-          checkinCount = checkinRes.data?.count || checkinRes.data?.length || 0;
-          console.log("📅 Checkins:", checkinCount);
-        } catch (e) {
-          console.error("Checkin fetch error:", e);
-        }
-
-        setStats({
-          members: uniqueMembers.length,
-          todayCheckins: checkinCount,
-          workoutPlans: workoutCount,
-          dietPlans: dietCount,
-        });
+        setStats(statsRes.data);
 
       } catch (err) {
         console.error("Dashboard error:", err);

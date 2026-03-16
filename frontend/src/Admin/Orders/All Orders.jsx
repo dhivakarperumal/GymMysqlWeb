@@ -12,6 +12,11 @@ import {
   FaThLarge,
   FaList,
 } from "react-icons/fa";
+import DateRangeFilter from "../../Components/DateRangeFilter";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+
+dayjs.extend(isBetween);
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 /* ================= HELPERS ================= */
@@ -116,6 +121,7 @@ const AllOrders = () => {
   const [searchParams] = useSearchParams();
   const querySearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(querySearch);
+  const [dateRange, setDateRange] = useState({ range: "all", start: null, end: null });
 
   useEffect(() => {
     if (querySearch) {
@@ -169,24 +175,6 @@ const AllOrders = () => {
   }, []);
 
   /* ================= STATS ================= */
-  const stats = useMemo(() => {
-    const total = orders.length;
-    const delivered = orders.filter(
-      (o) => normalizeKey(o.status) === "delivered"
-    ).length;
-    const cancelled = orders.filter(
-      (o) => normalizeKey(o.status) === "cancelled"
-    ).length;
-    const paid = orders.filter(
-      (o) => normalizeKey(o.paymentStatus) === "paid"
-    ).length;
-
-    const revenue = orders
-      .filter((o) => normalizeKey(o.status) !== "cancelled")
-      .reduce((sum, o) => sum + Number(o.total || 0), 0);
-
-    return { total, delivered, cancelled, paid, revenue };
-  }, [orders]);
 
   /* ================= FILTER ================= */
   const filteredOrders = orders.filter((o) => {
@@ -203,14 +191,41 @@ const AllOrders = () => {
     const matchPayment =
       paymentFilter === "all" ||
       normalizeKey(o.paymentStatus) === normalizeKey(paymentFilter);
+    
     // DELIVERY ONLY → SHOW DELIVERED ORDERS ONLY
     if (deliveryOnly) {
       if (!normalizeKey(o.status).includes("delivered")) return false;
     }
 
+    // Date filter
+    let matchesDate = true;
+    if (dateRange.range !== "all" && dateRange.start && dateRange.end) {
+      const orderDate = dayjs(o.createdAt || o.created_at);
+      matchesDate = orderDate.isBetween(dateRange.start, dateRange.end, null, "[]");
+    }
 
-    return matchSearch && matchStatus && matchPayment;
+    return matchSearch && matchStatus && matchPayment && matchesDate;
   });
+
+  /* ================= STATS ================= */
+  const stats = useMemo(() => {
+    const total = filteredOrders.length;
+    const delivered = filteredOrders.filter(
+      (o) => normalizeKey(o.status) === "delivered"
+    ).length;
+    const cancelled = filteredOrders.filter(
+      (o) => normalizeKey(o.status) === "cancelled"
+    ).length;
+    const paid = filteredOrders.filter(
+      (o) => normalizeKey(o.paymentStatus) === "paid"
+    ).length;
+
+    const revenue = filteredOrders
+      .filter((o) => normalizeKey(o.status) !== "cancelled")
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+    return { total, delivered, cancelled, paid, revenue };
+  }, [filteredOrders]);
 
   /* ================= PAGINATION LOGIC ================= */
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
@@ -617,6 +632,8 @@ ${items
           >
             <FaTruck /> Delivery Only
           </button>
+
+          <DateRangeFilter onFilterChange={setDateRange} />
 
           {/* VIEW TOGGLE */}
           <div className="flex border border-white/20 rounded-xl overflow-hidden">

@@ -5,6 +5,11 @@ import toast from "react-hot-toast";
 import api from "../../api"
 import cache from "../../cache";
 import * as XLSX from "xlsx";
+import DateRangeFilter from "../../Components/DateRangeFilter";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+
+dayjs.extend(isBetween);
 
 
 const Members = () => {
@@ -14,6 +19,7 @@ const Members = () => {
   const [members, setMembers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [dateRange, setDateRange] = useState({ range: "all", start: null, end: null });
 
   useEffect(() => {
     setSearch(querySearch);
@@ -48,17 +54,25 @@ const Members = () => {
 
   // 🔎 SEARCH - Robust filtering
   const filtered = (members || []).filter((m) => {
-    if (!search) return true;
+    // Search filter
     const s = search.toLowerCase();
-    return (
+    const matchesSearch = !search || 
       String(m.name || "").toLowerCase().includes(s) ||
       String(m.username || "").toLowerCase().includes(s) ||
       String(m.phone || "").includes(s) ||
       String(m.mobile || "").includes(s) ||
       String(m.email || "").toLowerCase().includes(s) ||
       String(m.user_email || "").toLowerCase().includes(s) ||
-      String(m.plan || "").toLowerCase().includes(s)
-    );
+      String(m.plan || "").toLowerCase().includes(s);
+
+    // Date filter
+    let matchesDate = true;
+    if (dateRange.range !== "all" && dateRange.start && dateRange.end) {
+      const joinDate = dayjs(m.join_date || m.createdAt);
+      matchesDate = joinDate.isBetween(dateRange.start, dateRange.end, null, "[]");
+    }
+
+    return matchesSearch && matchesDate;
   });
 
   // 📄 PAGINATION
@@ -228,6 +242,8 @@ const Members = () => {
             className="w-full pl-4 pr-4 py-2 rounded-lg bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
+
+        <DateRangeFilter onFilterChange={setDateRange} />
 
         {/* ➕ ADD MEMBER + IMPORT/EXPORT */}
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">

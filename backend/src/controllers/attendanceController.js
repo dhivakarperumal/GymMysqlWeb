@@ -25,6 +25,9 @@ async function getAttendance(req, res) {
     if (date) {
       sql += " AND (a.`date` = ? OR DATE(a.check_in) = ?)";
       params.push(date, date);
+    } else if (req.query.startDate && req.query.endDate) {
+      sql += " AND (a.`date` BETWEEN ? AND ? OR DATE(a.check_in) BETWEEN ? AND ?)";
+      params.push(req.query.startDate, req.query.endDate, req.query.startDate, req.query.endDate);
     }
 
     if (trainerId) {

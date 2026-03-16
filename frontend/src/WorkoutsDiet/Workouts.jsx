@@ -173,12 +173,47 @@ export default function Workouts() {
                                   {exercises.map((ex, j) => (
                                     <div
                                       key={j}
-                                      className="flex justify-between text-sm border-b border-red-500/30 py-2"
+                                      className="border-b border-red-500/10 py-4 last:border-0"
                                     >
-                                      <span>{ex.name}</span>
-                                      <span className="text-gray-400">
-                                        {ex.time}
-                                      </span>
+                                      <div className="flex justify-between items-start mb-3">
+                                        <div className="flex flex-col">
+                                          <span className="font-bold text-white text-base">{ex.name}</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">{ex.type} • {ex.sets} Sets • {ex.count}</span>
+                                        </div>
+                                        <span className="text-red-500 font-mono text-xs bg-red-500/10 px-2 py-1 rounded">
+                                          {ex.time}
+                                        </span>
+                                      </div>
+
+                                      {/* MEDIA CONTENT */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                                        {/* IMAGE */}
+                                        {ex.image && (
+                                          <div className="relative rounded-xl overflow-hidden border border-white/5 bg-zinc-900 group aspect-video">
+                                            <img src={ex.image} alt={ex.name} className="w-full h-full object-cover" />
+                                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[8px] uppercase font-bold text-white">Image</div>
+                                          </div>
+                                        )}
+
+                                        {/* VIDEO */}
+                                        {ex.video && (
+                                          <div className="relative rounded-xl overflow-hidden border border-white/5 bg-zinc-900 aspect-video">
+                                            {ex.video.includes('youtube.com') || ex.video.includes('youtu.be') ? (
+                                              <iframe
+                                                className="w-full h-full"
+                                                src={`https://www.youtube.com/embed/${ex.video.split('v=')[1] || ex.video.split('/').pop()}`}
+                                                title="YouTube video player"
+                                                frameBorder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                              ></iframe>
+                                            ) : (
+                                              <video src={ex.video} controls className="w-full h-full object-cover" />
+                                            )}
+                                            <div className="absolute top-2 left-2 px-2 py-0.5 bg-red-600 rounded text-[8px] uppercase font-bold text-white">Video</div>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>

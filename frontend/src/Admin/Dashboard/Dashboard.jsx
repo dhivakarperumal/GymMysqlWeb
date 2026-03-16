@@ -27,6 +27,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
 import cache from "../../cache";
+
 // import AddressForm from "../Address";
 
 
@@ -109,62 +110,11 @@ export default function Dashboard() {
       }
 
       try {
-        const [
-          membersRes, 
-          plansRes, 
-          ordersRes, 
-          staffRes, 
-          equipmentRes, 
-          productsRes,
-          todayOrdersRes,
-          lowStockRes,
-          expiringRes,
-          todayMembersRes
-        ] = await Promise.all([
-          api.get('/members').catch(() => ({ data: [] })),
-          api.get('/plans').catch(() => ({ data: [] })),
-          api.get('/orders').catch(() => ({ data: [] })),
-          api.get('/staff').catch(() => ({ data: [] })),
-          api.get('/equipment').catch(() => ({ data: [] })),
-          api.get('/products').catch(() => ({ data: [] })),
-          api.get('/orders/today').catch(() => ({ data: [] })),
-          api.get('/products/alerts/low-stock').catch(() => ({ data: [] })),
-          api.get('/memberships/alerts/expiring-soon').catch(() => ({ data: [] })),
-          api.get('/memberships/today').catch(() => ({ data: [] }))
-        ]);
-
-        const members = membersRes.data || [];
-        const plans = (plansRes.data || []).filter(p => p.active);
-        const orders = ordersRes.data || [];
-        const staff = (staffRes.data || []).filter(s => s.status === 'active');
-        const equipment = equipmentRes.data || [];
-        const products = productsRes.data || [];
-
-        const newStats = {
-          members: members.length,
-          checkinsToday: 0, 
-          activePlans: plans.length,
-          pendingPayments: orders.filter(o => o.status === 'pending').length,
-          trainers: staff.length,
-          equipmentDue: equipment.length,
-          totalOrders: orders.length,
-          totalProducts: products.length,
-          newMembersToday: (todayMembersRes.data || []).length,
-          lowStockCount: (lowStockRes.data || []).length,
-          expiringCount: (expiringRes.data || []).length,
-          todayOrdersCount: (todayOrdersRes.data || []).length
-        };
+        const res = await api.get('/dashboard/stats');
+        const newStats = res.data;
 
         setStats(newStats);
         cache.dashboardStats = newStats;
-        
-        // Populate individual caches too since we already fetched them
-        cache.adminMembers = members;
-        cache.adminStaff = staffRes.data;
-        cache.adminOrders = orders;
-        cache.adminProducts = products;
-        cache.adminEquipment = equipment;
-
       } catch (err) {
         console.error('Error fetching stats:', err);
         if (!cache.dashboardStats) toast.error('Failed to load dashboard stats');
@@ -181,38 +131,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadWeeklyAttendance = async () => {
-      const daysToFetch = Array.from({ length: 7 }, (_, i) => 6 - i);
-      
       try {
-        const attendancePromises = daysToFetch.map(async (i) => {
-          const date = dayjs().subtract(i, "day");
-          const dateStr = date.format("YYYY-MM-DD");
-          const dayData = {
-            day: date.format("ddd"),
-            present: 0,
-            absent: 0,
-            late: 0,
-            leave: 0,
-          };
-
-          try {
-            const res = await api.get('/attendance', { params: { date: dateStr } });
-            const records = res.data || [];
-            records.forEach((record) => {
-              const status = record.status || '';
-              if (status.toLowerCase().includes('present')) dayData.present++;
-              else if (status.toLowerCase().includes('absent')) dayData.absent++;
-              else if (status.toLowerCase().includes('late')) dayData.late++;
-              else if (status.toLowerCase().includes('leave')) dayData.leave++;
-            });
-          } catch (err) {
-            console.log("No attendance data for:", dateStr);
-          }
-          return dayData;
-        });
-
-        const results = await Promise.all(attendancePromises);
-        setCheckinData(results);
+        const res = await api.get('/dashboard/weekly-attendance');
+        setCheckinData(res.data || []);
       } catch (err) {
         console.error("Error loading weekly attendance:", err);
       }
