@@ -7,7 +7,8 @@ function normalizeAssignment(row) {
     username: row.member_name || row.username,
     userEmail: row.member_email || row.user_email,
     userMobile: row.member_mobile || row.user_mobile,
-    userWeight: row.member_weight || null,
+    userWeight: (row.member_weight !== null && row.member_weight !== undefined) ? row.member_weight : null,
+    gymMemberId: row.member_db_id || null,
     planId: row.plan_id,
     planName: row.plan_name,
     planDuration: row.plan_duration,
@@ -63,6 +64,7 @@ async function getAllAssignments(req, res) {
 
     let sql = `
       SELECT a.*,
+             m.id as member_db_id,
              m.name as member_name,
              m.email as member_email,
              m.phone as member_mobile,
@@ -71,7 +73,8 @@ async function getAllAssignments(req, res) {
              s.role as trainer_source
       FROM trainer_assignments a
       LEFT JOIN users u ON u.id = a.user_id
-      LEFT JOIN gym_members m ON (m.id = a.user_id OR m.email = u.email OR m.phone = u.mobile)
+      LEFT JOIN gym_members m ON (m.email = u.email AND m.email IS NOT NULL AND m.email != '') 
+                              OR (m.phone = u.mobile AND m.phone IS NOT NULL AND m.phone != '')
       LEFT JOIN staff s ON s.id = a.trainer_id
     `;
     const params = [];
