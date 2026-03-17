@@ -171,6 +171,28 @@ const Payments = () => {
     }
   };
 
+
+
+  const getRemainingDays = (endDate) => {
+
+    if (!endDate) return "-";
+
+    const end = new Date(endDate);
+    const today = new Date();
+
+    end.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+
+    const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+
+    if (diff < 0) return "Expired";
+    if (diff === 0) return "Last Day";
+
+    return `${diff} days`;
+
+  };
+
+
   /* ================= PRINT RECEIPT ================= */
   const handlePrintReceipt = (member, plan) => {
     const receiptContent = `
@@ -635,6 +657,23 @@ const Payments = () => {
                 </div>
 
                 <div>
+                  <p className="text-gray-400">Remaining Days</p>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      getRemainingDays(plan.endDate) === "Expired"
+                        ? "bg-red-500/20 text-red-400"
+                        : isExpiringPlan(plan.endDate)
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-green-500/20 text-green-400"
+                    }`}
+                  >
+
+                    {getRemainingDays(plan.endDate)}
+
+                  </span>
+                </div>
+
+                <div>
                   <p className="text-gray-400">End Date</p>
                   <p className="whitespace-nowrap">{formatDate(plan.endDate)}</p>
                 </div>
@@ -689,6 +728,7 @@ const Payments = () => {
                 <th className="px-4 py-4">Amount</th>
                 <th className="px-4 py-4">Start Date</th>
                 <th className="px-4 py-4">End Date</th>
+                <th className="px-4 py-3">Days Left</th>
                 <th className="px-4 py-4">Status</th>
                 <th className="px-4 py-4">Action</th>
                 <th className="px-4 py-4">Printer</th>
@@ -714,6 +754,23 @@ const Payments = () => {
                   <td className="px-4 py-4">₹ {plan.pricePaid}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.startDate)}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.endDate)}</td>
+                   <td className="px-4 py-3">
+
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      getRemainingDays(plan.endDate) === "Expired"
+                        ? "bg-red-500/20 text-red-400"
+                        : isExpiringPlan(plan.endDate)
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-green-500/20 text-green-400"
+                    }`}
+                  >
+
+                    {getRemainingDays(plan.endDate)}
+
+                  </span>
+
+                </td>
                   <td className="px-4 py-4">
                     {plan.status === "active"
                       ? "Active"
