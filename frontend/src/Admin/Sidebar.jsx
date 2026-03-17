@@ -94,7 +94,9 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
     "/admin/plansall": ["/admin/plansall", "/admin/addplan"],
     "/admin/fecilities": ["/admin/fecilities", "/admin/addfecilities"],
     "/admin/stockdetails": ["/admin/stockdetails", "/admin/add-stock"],
-    "/admin/overall-attendance": ["/admin/overall-attendance", "/admin/member-attendance"],
+    // Each attendance route is only active for its own exact path
+    "/admin/overall-attendance": ["/admin/overall-attendance"],
+    "/admin/member-attendance": ["/admin/member-attendance"],
   };
 
   /* ================= HELPERS ================= */
