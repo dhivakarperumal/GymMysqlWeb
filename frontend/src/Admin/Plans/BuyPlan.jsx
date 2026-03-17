@@ -83,6 +83,16 @@ const BuyPlanadmin = () => {
     fetchTrainers();
   }, []);
 
+  // ================= CALCULATE BMI =================
+  useEffect(() => {
+    const h = parseFloat(form.height);
+    const w = parseFloat(form.weight);
+    if (h > 0 && w > 0) {
+      const bmiVal = (w / ((h / 100) * (h / 100))).toFixed(2);
+      setForm(prev => ({ ...prev, bmi: bmiVal }));
+    }
+  }, [form.height, form.weight]);
+
   // ================= CALCULATE END DATE =================
   useEffect(() => {
     if (!selectedPlan) return;
@@ -210,9 +220,14 @@ Thank you for joining 💪
         await api.post("/assignments", { assignments: [assignPayload] });
       }
 
-      // update member with assigned plan
+      // create or update member with assigned plan
       try {
-        await api.put(`${MEMBERS_API}/${selectedUser.id}`, updatedMember);
+        if (selectedUser.id) {
+          await api.put(`${MEMBERS_API}/${selectedUser.id}`, updatedMember);
+        } else {
+          // If no gym_member record exists, we create one
+          await api.post(MEMBERS_API, updatedMember);
+        }
       } catch (error) {
         const errMsg =
           error?.response?.data?.message || error?.message || "Plan assign failed";
@@ -242,11 +257,18 @@ Thank you for joining 💪
 
           {/* SELECT MEMBER */}
           <select
-            className="w-full p-3 mb-4 bg-gray-900 rounded-lg"
-            defaultValue=""
+            className="w-full p-3 mb-4 bg-gray-900 rounded-lg border border-white/10"
+            value={selectedUser ? `${selectedUser.source}-${selectedUser.id || selectedUser.u_id}` : ""}
             onChange={(e) => {
+              const val = e.target.value;
+              if (!val) {
+                setSelectedUser(null);
+                return;
+              }
+              const [source, idStr] = val.split('-');
+              const id = Number(idStr);
               const user = members.find(
-                (m) => m.id === Number(e.target.value)
+                (m) => m.source === source && (m.id === id || m.u_id === id)
               );
 
               setSelectedUser(user);
@@ -266,11 +288,29 @@ Thank you for joining 💪
           >
             <option value="">Select Member</option>
 
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.phone})
-              </option>
-            ))}
+            {(() => {
+              const seenPhones = new Set();
+              return members
+                .filter((m) => {
+                  // 1. Skip if already has active plan
+                  const hasPlan = m.status === "active" && m.plan;
+                  if (hasPlan) return false;
+                  
+                  // 2. Skip duplicates by phone
+                  if (seenPhones.has(m.phone)) return false;
+                  seenPhones.add(m.phone);
+                  
+                  return true;
+                })
+                .map((m) => {
+                  const uniqueKey = `${m.source}-${m.id || m.u_id}`;
+                  return (
+                    <option key={uniqueKey} value={uniqueKey}>
+                      {m.name || "Unknown"} ({m.phone})
+                    </option>
+                  );
+                });
+            })()}
           </select>
 
           {/* PHONE */}

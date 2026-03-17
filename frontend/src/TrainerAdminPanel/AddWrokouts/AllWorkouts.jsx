@@ -180,9 +180,9 @@ const AllWorkouts = () => {
               <tr>
                 <th className="px-4 py-4">S No</th>
                 <th className="px-4 py-4">Member</th>
-                <th className="px-4 py-4">Category</th>
+              
                 <th className="px-4 py-4">Level</th>
-                <th className="px-4 py-4">Goal</th>
+                
                 <th className="px-4 py-4">Duration</th>
                 <th className="px-4 py-4 text-center">Action</th>
               </tr>
@@ -203,9 +203,9 @@ const AllWorkouts = () => {
                   >
                     <td className="px-4 py-4">{index + 1}</td>
                     <td className="px-4 py-4">{w.memberName}</td>
-                    <td className="px-4 py-4">{w.category}</td>
+                   
                     <td className="px-4 py-4">{w.level}</td>
-                    <td className="px-4 py-4">{w.goal}</td>
+               
                     <td className="px-4 py-4">
                       {w.durationWeeks} weeks
                     </td>

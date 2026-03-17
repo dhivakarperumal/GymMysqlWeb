@@ -2,15 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   Menu,
-  Search,
   Bell,
-  Settings,
   User,
   LogOut,
   ChevronDown,
   MapPin,
   CheckCircle,
-  RefreshCcw
+  RefreshCcw,
+  Clock
 } from "lucide-react";
 import { useAuth } from "../PrivateRouter/AuthContext";
 import { signOut } from "firebase/auth";
@@ -18,6 +17,9 @@ import { auth } from "../firebase";
 import api from "../api";
 import toast from "react-hot-toast";
 import { getDistance, GYM_LOCATION } from "../utils/locationUtils";
+
+const CHECKIN_KEY = "trainer_checkin_data"; // localStorage key
+const COOLDOWN_HOURS = 24;
 
 const pageTitles = {
   "/trainer": "Dashboard",
@@ -30,32 +32,106 @@ const pageTitles = {
   "/trainer/settings/profile": "Profile",
 };
 
+/* ------------------------------------------------------------------ */
+/* Helper: read check-in data from localStorage for a specific userId  */
+/* ------------------------------------------------------------------ */
+const getStoredCheckin = (userId) => {
+  try {
+    const raw = localStorage.getItem(CHECKIN_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.userId !== String(userId)) return null; // different trainer
+    return data; // { userId, checkinTime, locationName }
+  } catch {
+    return null;
+  }
+};
+
+const saveCheckin = (userId, locationName) => {
+  const data = {
+    userId: String(userId),
+    checkinTime: Date.now(),
+    locationName,
+  };
+  localStorage.setItem(CHECKIN_KEY, JSON.stringify(data));
+};
+
+const clearCheckin = () => localStorage.removeItem(CHECKIN_KEY);
+
+/* ------------------------------------------------------------------ */
+
 const Header = ({ onMenuClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [fetchingAlerts, setFetchingAlerts] = useState(false);
+
+  // Check-in state
   const [markingAttendance, setMarkingAttendance] = useState(false);
-  const [attendanceStatus, setAttendanceStatus] = useState("idle"); // idle, success, error
+  const [checkedIn, setCheckedIn] = useState(false);          // button disabled
+  const [checkinLocation, setCheckinLocation] = useState(""); // shown on button
+  const [timeLeft, setTimeLeft] = useState("");               // countdown HH:MM
 
   const searchInputRef = useRef(null);
+  const countdownRef = useRef(null);
 
-  // ✅ CORRECT VALUES FROM AUTH CONTEXT
   const { user, role, profileName, email, logout } = useAuth();
-
-  // fallback email from user object if context email missing
-
-
   const navigate = useNavigate();
   const location = useLocation();
 
+  /* ---- On mount: restore check-in state from localStorage ---------- */
   useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
+    if (!user?.id) return;
+    const stored = getStoredCheckin(user.id);
+    if (!stored) return;
 
+    const elapsedMs = Date.now() - stored.checkinTime;
+    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+    if (elapsedMs < cooldownMs) {
+      // Still within cooldown — keep button disabled
+      setCheckedIn(true);
+      setCheckinLocation(stored.locationName || GYM_LOCATION.name);
+      startCountdown(stored.checkinTime);
+    } else {
+      // Cooldown expired — clear and allow next check-in
+      clearCheckin();
+    }
+  }, [user?.id]);
+
+  /* ---- Countdown timer -------------------------------------------- */
+  const startCountdown = (checkinTimestamp) => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
+    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
+
+    const tick = () => {
+      const remaining = cooldownMs - (Date.now() - checkinTimestamp);
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current);
+        clearCheckin();
+        setCheckedIn(false);
+        setCheckinLocation("");
+        setTimeLeft("");
+        toast("Check-in is now available again!", { icon: "🟢" });
+        return;
+      }
+      const hrs = Math.floor(remaining / 3600000);
+      const mins = Math.floor((remaining % 3600000) / 60000);
+      setTimeLeft(`${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`);
+    };
+
+    tick(); // immediate first tick
+    countdownRef.current = setInterval(tick, 60000); // update every minute
+  };
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  /* ---- Alerts ------------------------------------------------------- */
   useEffect(() => {
     const fetchAlerts = async () => {
       if (!user?.id) return;
@@ -71,11 +147,11 @@ const Header = ({ onMenuClick }) => {
     };
 
     fetchAlerts();
-    // Refresh alerts every 30 minutes
     const interval = setInterval(fetchAlerts, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user?.id]);
 
+  /* ---- Page title --------------------------------------------------- */
   const getPageTitle = () => {
     if (pageTitles[location.pathname]) return pageTitles[location.pathname];
     for (const [path, title] of Object.entries(pageTitles)) {
@@ -84,27 +160,24 @@ const Header = ({ onMenuClick }) => {
     return "Dashboard";
   };
 
+  /* ---- Logout ------------------------------------------------------- */
   const handleLogout = async () => {
     try {
-      // Clear AuthContext first
       logout();
-      // Then sign out from Firebase
       await signOut(auth);
-      // Navigate to login
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
-      // Still navigate even if Firebase signout fails
       logout();
       navigate("/login", { replace: true });
     }
   };
 
+  /* ---- Check-in ----------------------------------------------------- */
   const handleCheckIn = async () => {
-    if (!user?.id) return;
-    
+    if (!user?.id || checkedIn) return;
+
     setMarkingAttendance(true);
-    setAttendanceStatus("idle");
 
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser");
@@ -115,8 +188,7 @@ const Header = ({ onMenuClick }) => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        
-        // Verify distance
+
         const distance = getDistance(latitude, longitude, GYM_LOCATION.lat, GYM_LOCATION.lng);
         const isAtGym = distance <= GYM_LOCATION.radius;
 
@@ -127,11 +199,11 @@ const Header = ({ onMenuClick }) => {
         }
 
         try {
-          // Fetch location name first (optional but good)
+          // Fetch location name
           let locationName = GYM_LOCATION.name;
           try {
             const geoRes = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
-            if (geoRes.data && geoRes.data.display_name) {
+            if (geoRes.data?.display_name) {
               locationName = geoRes.data.display_name;
             }
           } catch (e) {
@@ -140,18 +212,24 @@ const Header = ({ onMenuClick }) => {
 
           // Mark attendance
           const payload = {
-            memberId: user.id, // Trainer marking their own attendance
+            memberId: user.id,
             trainerId: user.id,
             status: "Present",
-            date: new Date().toISOString().split('T')[0],
+            date: new Date().toISOString().split("T")[0],
             lat: latitude,
             lng: longitude,
-            locationName: locationName
+            locationName,
           };
 
           await api.post("/attendance", payload);
-          toast.success("Attendance marked successfully! Have a great session.");
-          setAttendanceStatus("success");
+
+          // ✅ Persist to localStorage and lock button
+          saveCheckin(user.id, locationName);
+          setCheckinLocation(locationName);
+          setCheckedIn(true);
+          startCountdown(Date.now());
+
+          toast.success("✅ Attendance marked! Have a great session.");
         } catch (err) {
           console.error("Failed to mark attendance:", err);
           toast.error(err.response?.data?.message || "Failed to mark attendance");
@@ -169,66 +247,83 @@ const Header = ({ onMenuClick }) => {
   };
 
   // ✅ Safe values with fallbacks
-  const userName =
-    profileName || user?.username || user?.name || "User";
-
+  const userName = profileName || user?.username || user?.name || "User";
   const userEmail = email || user?.email || "";
+  const userRole = role ? role.charAt(0).toUpperCase() + role.slice(1) : "User";
 
-  const userRole =
-    role
-      ? role.charAt(0).toUpperCase() + role.slice(1)
-      : "User";
-
+  /* ---- Render ------------------------------------------------------- */
   return (
-       <header className="sticky top-0 z-30 
-  bg-white/10 backdrop-blur-xl 
-  border-b border-white/20
-  shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-
+    <header className="sticky top-0 z-30 bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
       <div className="flex items-center justify-between px-4 py-3 sm:px-6">
 
         {/* LEFT */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-xl 
-            bg-white/10 hover:bg-white/20 
-            text-white transition"
+            className="lg:hidden p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
           >
             <Menu className="w-6 h-6" />
           </button>
 
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold 
-            text-white tracking-wide truncate leading-tight">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white tracking-wide truncate leading-tight">
             {getPageTitle()}
           </h1>
         </div>
 
         {/* RIGHT */}
         <div className="flex items-center gap-3">
-          {/* QUICK CHECK-IN BUTTON */}
-          <button
-            onClick={handleCheckIn}
-            disabled={markingAttendance}
-            className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase transition-all shadow-lg active:scale-95 ${
-              markingAttendance 
-                ? "bg-white/10 text-white/50 cursor-not-allowed" 
-                : "bg-gradient-to-r from-orange-600 to-orange-400 text-white hover:shadow-orange-500/30"
-            }`}
-          >
-            {markingAttendance ? (
-              <RefreshCcw className="w-4 h-4 animate-spin text-white" />
-            ) : (
-              <MapPin className="w-4 h-4 text-white" />
-            )}
-            {markingAttendance ? "Verifying..." : "Check-in"}
-          </button>
+
+          {/* ===== QUICK CHECK-IN BUTTON ===== */}
+          {checkedIn ? (
+            /* ---- DISABLED: Already checked in — show location + countdown ---- */
+            <div className="hidden sm:flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 min-w-[140px] max-w-[220px]">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Checked In</span>
+              </div>
+              <p
+                className="text-[9px] text-white/50 truncate w-full"
+                title={checkinLocation}
+              >
+                <MapPin className="w-2.5 h-2.5 inline mr-0.5 text-orange-400" />
+                {checkinLocation
+                  ? checkinLocation.length > 28
+                    ? checkinLocation.substring(0, 28) + "…"
+                    : checkinLocation
+                  : GYM_LOCATION.name}
+              </p>
+              {timeLeft && (
+                <p className="text-[9px] text-white/30 flex items-center gap-1">
+                  <Clock className="w-2.5 h-2.5" />
+                  Enables in {timeLeft}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* ---- ACTIVE: Ready to check in ---- */
+            <button
+              onClick={handleCheckIn}
+              disabled={markingAttendance}
+              className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase transition-all shadow-lg active:scale-95 ${
+                markingAttendance
+                  ? "bg-white/10 text-white/50 cursor-not-allowed"
+                  : "bg-gradient-to-r from-orange-600 to-orange-400 text-white hover:shadow-orange-500/30 hover:scale-105"
+              }`}
+            >
+              {markingAttendance ? (
+                <RefreshCcw className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <MapPin className="w-4 h-4 text-white" />
+              )}
+              {markingAttendance ? "Verifying..." : "Check-in"}
+            </button>
+          )}
 
           {/* EXPIRING PLANS ICON */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(p => !p)}
-              className={`p-2 rounded-xl transition relative ${showNotifications ? 'bg-orange-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              className={`p-2 rounded-xl transition relative ${showNotifications ? "bg-orange-500 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
               title="Expiring Memberships"
             >
               <Bell className="w-5 h-5" />
@@ -245,13 +340,13 @@ const Header = ({ onMenuClick }) => {
                 <div className="absolute right-0 mt-4 w-80 max-h-[450px] bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
                   <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                       <Bell className="w-4 h-4 text-orange-500" /> Member Expirations
+                      <Bell className="w-4 h-4 text-orange-500" /> Member Expirations
                     </h3>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold uppercase tracking-wider">
                       {alerts.length} Records
                     </span>
                   </div>
-                  
+
                   <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {fetchingAlerts ? (
                       <div className="p-10 text-center">
@@ -262,7 +357,12 @@ const Header = ({ onMenuClick }) => {
                         {alerts.map((alert, idx) => {
                           const daysLeft = Math.ceil((new Date(alert.endDate) - new Date()) / (1000 * 60 * 60 * 24));
                           return (
-                            <Link key={idx} to="/trainer" onClick={() => setShowNotifications(false)} className="p-4 block border-b border-white/5 hover:bg-white/5 transition group">
+                            <Link
+                              key={idx}
+                              to="/trainer"
+                              onClick={() => setShowNotifications(false)}
+                              className="p-4 block border-b border-white/5 hover:bg-white/5 transition group"
+                            >
                               <div className="flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
                                   <Bell className="w-4 h-4" />
@@ -276,9 +376,9 @@ const Header = ({ onMenuClick }) => {
                                   </p>
                                   <div className="mt-2 flex items-center justify-between">
                                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${
-                                      daysLeft <= 1 ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'
+                                      daysLeft <= 1 ? "bg-red-500/20 text-red-400" : "bg-orange-500/20 text-orange-400"
                                     }`}>
-                                      {daysLeft <= 0 ? 'Expiring Today' : `In ${daysLeft} days`}
+                                      {daysLeft <= 0 ? "Expiring Today" : `In ${daysLeft} days`}
                                     </span>
                                     <span className="text-[9px] text-gray-600">
                                       {new Date(alert.endDate).toLocaleDateString()}
@@ -287,7 +387,7 @@ const Header = ({ onMenuClick }) => {
                                 </div>
                               </div>
                             </Link>
-                          )
+                          );
                         })}
                       </div>
                     ) : (
@@ -299,9 +399,9 @@ const Header = ({ onMenuClick }) => {
                   </div>
 
                   <div className="p-3 bg-white/5 border-t border-white/10 text-center">
-                     <Link to="/trainer" onClick={() => setShowNotifications(false)} className="text-[10px] font-bold text-orange-500 hover:text-orange-400 transition uppercase tracking-widest">
-                       View My Assignments
-                     </Link>
+                    <Link to="/trainer" onClick={() => setShowNotifications(false)} className="text-[10px] font-bold text-orange-500 hover:text-orange-400 transition uppercase tracking-widest">
+                      View My Assignments
+                    </Link>
                   </div>
                 </div>
               </>
@@ -312,75 +412,39 @@ const Header = ({ onMenuClick }) => {
           <div className="relative">
             <button
               onClick={() => setShowDropdown(p => !p)}
-              className="flex items-center gap-3 px-3 py-1.5 
-              rounded-2xl bg-white/10 hover:bg-white/20 
-              transition"
+              className="flex items-center gap-3 px-3 py-1.5 rounded-2xl bg-white/10 hover:bg-white/20 transition"
             >
-              <div className="w-9 h-9 rounded-full 
-                bg-gradient-to-br from-cyan-500 to-sky-600
-                flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center text-white font-semibold text-sm">
                 {userName.charAt(0).toUpperCase()}
               </div>
 
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-semibold text-white">
-                  {userName}
-                </p>
-                <p className="text-xs text-white/60">
-                  {userRole}
-                </p>
+                <p className="text-sm font-semibold text-white">{userName}</p>
+                <p className="text-xs text-white/60">{userRole}</p>
               </div>
 
-              <ChevronDown
-                className={`hidden sm:block w-4 h-4 text-white/70 transition 
-                ${showDropdown ? "rotate-180" : ""}`}
-              />
+              <ChevronDown className={`hidden sm:block w-4 h-4 text-white/70 transition ${showDropdown ? "rotate-180" : ""}`} />
             </button>
 
             {showDropdown && (
               <>
-                <div
-                  onClick={() => setShowDropdown(false)}
-                  className="fixed inset-0 z-40"
-                />
-
-                <div className="absolute right-0 mt-4 w-56
-                  bg-slate-800/90 backdrop-blur-xl
-                  border border-white/10
-                  rounded-2xl shadow-2xl z-50 p-2">
-
+                <div onClick={() => setShowDropdown(false)} className="fixed inset-0 z-40" />
+                <div className="absolute right-0 mt-4 w-56 bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-2">
                   <div className="px-3 py-2 border-b border-white/10">
-                    <p className="text-sm font-semibold text-white">
-                      {userName}
-                    </p>
-                    <p className="text-xs text-white/60">
-                      {userEmail}
-                    </p>
+                    <p className="text-sm font-semibold text-white">{userName}</p>
+                    <p className="text-xs text-white/60">{userEmail}</p>
                   </div>
 
                   <Link
                     to="/trainer/settings/profile"
-                    className="flex items-center gap-3 px-3 py-2 
-                    rounded-xl hover:bg-white/10 
-                    text-sm text-white transition"
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/10 text-sm text-white transition"
                   >
                     <User className="w-4 h-4" /> Profile
                   </Link>
 
-                  {/* <Link
-                    to="/trainer/settings"
-                    className="flex items-center gap-3 px-3 py-2 
-                    rounded-xl hover:bg-white/10 
-                    text-sm text-white transition"
-                  >
-                    <Settings className="w-4 h-4" /> Settings
-                  </Link> */}
-
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-3 px-3 py-2 
-                    rounded-xl hover:bg-red-500/20 
-                    text-sm text-red-400 w-full transition"
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-red-500/20 text-sm text-red-400 w-full transition"
                   >
                     <LogOut className="w-4 h-4" /> Logout
                   </button>

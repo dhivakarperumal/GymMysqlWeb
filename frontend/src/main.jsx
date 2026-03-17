@@ -404,6 +404,7 @@ const router = createBrowserRouter([
       { path: "reports", element: <Reports /> },
       { path: "enquiry", element: <Enquiry /> },
       { path: "overall-attendance", element: <OverallAttendance /> },
+      { path: "member-attendance", element: <MemberAttendance /> },
       { path: "users", element: <Users /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/profile", element: <ProfileSettings /> },

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Users, CheckCircle, XCircle, AlertTriangle, Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
+import { FaPrint } from "react-icons/fa";
 
 // backend API
 import api from "../../api";
@@ -169,6 +170,28 @@ const Payments = () => {
       alert("Update failed");
     }
   };
+
+
+
+  const getRemainingDays = (endDate) => {
+
+    if (!endDate) return "-";
+
+    const end = new Date(endDate);
+    const today = new Date();
+
+    end.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+
+    const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+
+    if (diff < 0) return "Expired";
+    if (diff === 0) return "Last Day";
+
+    return `${diff} days`;
+
+  };
+
 
   /* ================= PRINT RECEIPT ================= */
   const handlePrintReceipt = (member, plan) => {
@@ -634,6 +657,23 @@ const Payments = () => {
                 </div>
 
                 <div>
+                  <p className="text-gray-400">Remaining Days</p>
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      getRemainingDays(plan.endDate) === "Expired"
+                        ? "bg-red-500/20 text-red-400"
+                        : isExpiringPlan(plan.endDate)
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-green-500/20 text-green-400"
+                    }`}
+                  >
+
+                    {getRemainingDays(plan.endDate)}
+
+                  </span>
+                </div>
+
+                <div>
                   <p className="text-gray-400">End Date</p>
                   <p className="whitespace-nowrap">{formatDate(plan.endDate)}</p>
                 </div>
@@ -644,7 +684,7 @@ const Payments = () => {
                   onClick={() => handlePrintReceipt(member, plan)}
                   className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm transition"
                 >
-                  Print Receipt
+                  <FaPrint/>
                 </button>
                 {plan.status === "active" ? (
                   <button
@@ -684,11 +724,11 @@ const Payments = () => {
                 </th>
                 <th className="px-4 py-4">S.No</th>
                 <th className="px-4 py-4">Name</th>
-                <th className="px-4 py-4">Email</th>
                 <th className="px-4 py-4">Plan</th>
                 <th className="px-4 py-4">Amount</th>
                 <th className="px-4 py-4">Start Date</th>
                 <th className="px-4 py-4">End Date</th>
+                <th className="px-4 py-3">Days Left</th>
                 <th className="px-4 py-4">Status</th>
                 <th className="px-4 py-4">Action</th>
                 <th className="px-4 py-4">Printer</th>
@@ -709,11 +749,28 @@ const Payments = () => {
                   </td>
                   <td className="px-4 py-4">{getSerialNumber(index)}</td>
                   <td className="px-4 py-4">{member.username}</td>
-                  <td className="px-4 py-4">{member.email}</td>
+                 
                   <td className="px-4 py-4">{plan.planName}</td>
                   <td className="px-4 py-4">₹ {plan.pricePaid}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.startDate)}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.endDate)}</td>
+                   <td className="px-4 py-3">
+
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      getRemainingDays(plan.endDate) === "Expired"
+                        ? "bg-red-500/20 text-red-400"
+                        : isExpiringPlan(plan.endDate)
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : "bg-green-500/20 text-green-400"
+                    }`}
+                  >
+
+                    {getRemainingDays(plan.endDate)}
+
+                  </span>
+
+                </td>
                   <td className="px-4 py-4">
                     {plan.status === "active"
                       ? "Active"
@@ -743,7 +800,7 @@ const Payments = () => {
                       onClick={() => handlePrintReceipt(member, plan)}
                       className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition whitespace-nowrap"
                     >
-                      Print Receipt
+                      <FaPrint/>
                     </button>
                   </td>
                 </tr>
