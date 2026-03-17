@@ -18,13 +18,20 @@ hover:-translate-y-2
     >
       {/* Image */}
       <img
-        src={trainer.photo}
+        src={
+          trainer.photo && trainer.photo.length > 10
+            ? trainer.photo
+            : "https://images.unsplash.com/photo-1597347343908-2937e7dcc560?auto=format&fit=crop&w=800&q=80"
+        }
         alt={trainer.name}
         className="
 w-full h-[430px] object-cover
 transition-all duration-700
 group-hover:scale-110
 "
+        onError={(e) => {
+          e.target.src = "https://images.unsplash.com/photo-1597347343908-2937e7dcc560?auto=format&fit=crop&w=800&q=80";
+        }}
       />
 
       {/* Gradient Overlay */}
