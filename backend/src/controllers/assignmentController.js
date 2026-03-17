@@ -1,6 +1,5 @@
 const db = require('../config/db');
 
-// simple helper to convert sql row into the shape frontend was using
 function normalizeAssignment(row) {
   return {
     id: row.id,
@@ -8,6 +7,7 @@ function normalizeAssignment(row) {
     username: row.member_name || row.username,
     userEmail: row.member_email || row.user_email,
     userMobile: row.member_mobile || row.user_mobile,
+    userWeight: row.member_weight || null,
     planId: row.plan_id,
     planName: row.plan_name,
     planDuration: row.plan_duration,
@@ -66,6 +66,7 @@ async function getAllAssignments(req, res) {
              m.name as member_name,
              m.email as member_email,
              m.phone as member_mobile,
+             m.weight as member_weight,
              s.name as current_trainer_name,
              s.role as trainer_source
       FROM trainer_assignments a

@@ -19,7 +19,7 @@ import toast from "react-hot-toast";
 import { getDistance, GYM_LOCATION } from "../utils/locationUtils";
 
 const CHECKIN_KEY = "trainer_checkin_data"; // localStorage key
-const COOLDOWN_HOURS = 12;
+const COOLDOWN_HOURS = 24;
 
 const pageTitles = {
   "/trainer": "Dashboard",

@@ -64,7 +64,14 @@ const navItems = [
   },
 
   { path: "/admin/equipment", label: "Gym Equipment", icon: Activity },
-  { path: "/admin/overall-attendance", label: "Attendance", icon: CalendarCheck },
+  {
+    label: "Attendance",
+    icon: CalendarCheck,
+    children: [
+      { path: "/admin/overall-attendance", label: "Staff Attendance", icon: UserCheck },
+      { path: "/admin/member-attendance", label: "Members Attendance", icon: Users },
+    ],
+  },
   { path: "/admin/commenworkoutdiet", label: "Workout & Diet", icon: HeartPulse },
   { path: "/admin/reports", label: "Reports & Analytics", icon: BarChart3 },
   
@@ -87,6 +94,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
     "/admin/plansall": ["/admin/plansall", "/admin/addplan"],
     "/admin/fecilities": ["/admin/fecilities", "/admin/addfecilities"],
     "/admin/stockdetails": ["/admin/stockdetails", "/admin/add-stock"],
+    "/admin/overall-attendance": ["/admin/overall-attendance", "/admin/member-attendance"],
   };
 
   /* ================= HELPERS ================= */

@@ -52,15 +52,11 @@ const AddDietPlans = () => {
     memberMobile: "",
     title: "",
     totalCalories: "",
-    duration: 7,
+    duration: 1,
     days: {
       Day1: generateSingleDay(),
       Day2: generateSingleDay(),
-      Day3: generateSingleDay(),
-      Day4: generateSingleDay(),
-      Day5: generateSingleDay(),
-      Day6: generateSingleDay(),
-      Day7: generateSingleDay(),
+      
     },
   });
 
@@ -85,6 +81,7 @@ const AddDietPlans = () => {
           name: d.username || d.user_name || "Member",
           email: d.userEmail || d.user_email || "",
           mobile: d.userMobile || d.user_mobile || "",
+          weight: d.userWeight || d.member_weight || "",
           planName: d.planName || d.plan_name || "Plan",
         }));
 
@@ -230,6 +227,28 @@ const AddDietPlans = () => {
       duration: count - 1,
       days: updated,
     }));
+  };
+
+  /* ================= COPY DAY 1 TO ALL ================= */
+  const handleCopyDay1ToAll = () => {
+    if (Object.keys(form.days).length <= 1) {
+      toast.error("Add more days first");
+      return;
+    }
+
+    const day1Data = form.days["Day1"];
+    const getDeepCopy = () => JSON.parse(JSON.stringify(day1Data));
+
+    setForm((prev) => {
+      const updatedDays = { ...prev.days };
+      Object.keys(updatedDays).forEach((dayKey) => {
+        if (dayKey !== "Day1") {
+          updatedDays[dayKey] = getDeepCopy();
+        }
+      });
+      return { ...prev, days: updatedDays };
+    });
+    toast.success("Day 1 copied to all days");
   };
 
   /* ================= SUBMIT ================= */
@@ -446,7 +465,10 @@ const AddDietPlans = () => {
                           <Square size={18} className="text-white/20 shrink-0" />
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{m.name}</p>
+                          <p className="text-sm font-medium truncate flex items-center gap-2">
+                            {m.name} 
+                            {m.weight && <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">({m.weight}kg)</span>}
+                          </p>
                           <p className="text-[10px] text-white/40 truncate">
                             {[m.email, m.planName].filter(Boolean).join(" • ")}
                           </p>
@@ -477,14 +499,22 @@ const AddDietPlans = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1 sm:col-span-2 lg:col-span-1">
               <label className="text-xs font-medium text-white/50 ml-1">Diet Plan Title</label>
-              <input
-                className={inputClass}
-                placeholder="e.g. High Protein Bulk, Weight Loss Strategy..."
+              <select
+                className={`${inputClass} [&>option]:text-black`}
                 value={form.title}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, title: e.target.value }))
                 }
-              />
+              >
+                <option value="" disabled>Select Diet Plan Title...</option>
+                <option value="Weight Loss Strategy">Weight Loss Strategy</option>
+                <option value="High Protein Bulk">High Protein Bulk</option>
+                <option value="Keto Diet Plan">Keto Diet Plan</option>
+                <option value="Lean Muscle Building">Lean Muscle Building</option>
+                <option value="General Fitness">General Fitness</option>
+                <option value="Endurance & Stamina">Endurance & Stamina</option>
+                <option value="Vegan Plan">Vegan Plan</option>
+              </select>
             </div>
 
             <div className="space-y-1">
@@ -520,7 +550,18 @@ const AddDietPlans = () => {
                   key={day}
                   className="bg-black/30 border border-white/10 rounded-lg p-4 space-y-4"
                 >
-                  <h3 className="font-semibold text-emerald-400">{day}</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-emerald-400">{day}</h3>
+                    {day === "Day1" && Object.keys(form.days).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={handleCopyDay1ToAll}
+                        className="text-xs font-semibold bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/30 transition flex items-center gap-1"
+                      >
+                        Copy to All Days
+                      </button>
+                    )}
+                  </div>
 
                   {meals.map((meal) => (
                     <div key={meal} className="grid grid-cols-1 md:grid-cols-6 items-center gap-3">
