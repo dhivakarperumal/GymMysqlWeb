@@ -53,6 +53,7 @@ async function createDiet(req, res) {
       memberName,
       memberEmail,
       memberMobile,
+      memberWeight,
       title,
       totalCalories,
       duration,
@@ -63,9 +64,9 @@ async function createDiet(req, res) {
     const [result] = await db.query(
       `INSERT INTO diet_plans
       (trainer_id, trainer_name, trainer_source,
-       member_id, member_name, member_email, member_mobile,
+       member_id, member_name, member_email, member_mobile, member_weight,
        title, total_calories, duration, days, status, user_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         trainerId,
         trainerName || null,
@@ -74,6 +75,7 @@ async function createDiet(req, res) {
         memberName || null,
         memberEmail || null,
         memberMobile || null,
+        memberWeight || null,
         title || null,
         totalCalories ? Number(totalCalories) : null,
         duration ? Number(duration) : null,
@@ -102,6 +104,7 @@ async function updateDiet(req, res) {
       memberName,
       memberEmail,
       memberMobile,
+      memberWeight,
       title,
       totalCalories,
       duration,
@@ -112,7 +115,7 @@ async function updateDiet(req, res) {
     const [result] = await db.query(
       `UPDATE diet_plans SET
         trainer_id=?, trainer_name=?, trainer_source=?,
-        member_id=?, member_name=?, member_email=?, member_mobile=?,
+        member_id=?, member_name=?, member_email=?, member_mobile=?, member_weight=?,
         title=?, total_calories=?, duration=?, days=?, status=?, user_id=?,
         updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
@@ -124,6 +127,7 @@ async function updateDiet(req, res) {
         memberName || null,
         memberEmail || null,
         memberMobile || null,
+        memberWeight || null,
         title || null,
         totalCalories ? Number(totalCalories) : null,
         duration ? Number(duration) : null,

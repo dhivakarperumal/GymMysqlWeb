@@ -50,13 +50,13 @@ const AddDietPlans = () => {
     memberName: "",
     memberEmail: "",
     memberMobile: "",
+    memberWeight: "",
     title: "",
     totalCalories: "",
     duration: 1,
     days: {
       Day1: generateSingleDay(),
       Day2: generateSingleDay(),
-      
     },
   });
 
@@ -156,6 +156,7 @@ const AddDietPlans = () => {
           memberName,
           memberEmail: data.memberEmail || data.member_email || "",
           memberMobile: data.memberMobile || data.member_mobile || "",
+          memberWeight: data.memberWeight || data.member_weight || "",
           title: data.title || "",
           totalCalories: data.totalCalories || data.total_calories || "",
           duration: data.duration || 1,
@@ -288,6 +289,7 @@ const AddDietPlans = () => {
           memberName: form.memberName,
           memberEmail: form.memberEmail,
           memberMobile: form.memberMobile,
+          memberWeight: form.memberWeight,
           title: form.title,
           totalCalories: Number(form.totalCalories) || 0,
           duration: form.duration,
@@ -313,6 +315,7 @@ const AddDietPlans = () => {
               memberName: m.name,
               memberEmail: m.email,
               memberMobile: m.mobile,
+              memberWeight: form.memberWeight,
               title: form.title,
               totalCalories: Number(form.totalCalories) || 0,
               duration: form.duration,
@@ -359,8 +362,21 @@ const AddDietPlans = () => {
   const toggleOne = (mId) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(mId)) next.delete(mId);
-      else next.add(mId);
+      if (next.has(mId)) {
+        next.delete(mId);
+        // If no one is left, clear weight. Otherwise, if many selected, keep as is or clear if needed.
+        // For simplicity: if 0 selected -> clear. If some left -> potentially keep or set to first one.
+        if (next.size === 0) {
+          setForm(p => ({ ...p, memberWeight: "" }));
+        }
+      } else {
+        next.add(mId);
+        // Find member in state
+        const member = members.find(m => String(m.id) === String(mId));
+        if (member && member.weight) {
+          setForm(p => ({ ...p, memberWeight: member.weight }));
+        }
+      }
       return next;
     });
   };
@@ -485,7 +501,10 @@ const AddDietPlans = () => {
               <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-lg opacity-80">
                 <Users size={18} className="text-white/40" />
                 <div>
-                  <p className="text-sm font-medium">{form.memberName || "Selected Member"}</p>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    {form.memberName || "Selected Member"}
+                    {form.memberWeight && <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">({form.memberWeight}kg)</span>}
+                  </p>
                   <p className="text-xs text-white/40">{form.memberEmail || "No Email"}</p>
                 </div>
               </div>
@@ -525,6 +544,18 @@ const AddDietPlans = () => {
                 placeholder="Total Calories"
                 value={form.totalCalories}
                 readOnly
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-white/50 ml-1">Member Weight (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                className={inputClass}
+                placeholder="Weight"
+                value={form.memberWeight}
+                onChange={(e) => setForm(p => ({ ...p, memberWeight: e.target.value }))}
               />
             </div>
 
