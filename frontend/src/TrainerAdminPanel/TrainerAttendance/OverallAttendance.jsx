@@ -5,13 +5,13 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Filter,
   Users,
-  AlertCircle,
   MapPin,
   Save,
   RefreshCcw,
-  Check
+  Check,
+  Edit2,
+  X
 } from "lucide-react";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import dayjs from "dayjs";
@@ -47,13 +47,19 @@ const OverallAttendance = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showMarkModal, setShowMarkModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false); // true = editing existing attendance
 
   // States for marking attendance (Checklist)
   const [savingMulti, setSavingMulti] = useState(false);
   const [attendanceStates, setAttendanceStates] = useState({}); // { memberId: boolean }
-  const [locationStatus, setLocationStatus] = useState("idle"); 
+  const [locationStatus, setLocationStatus] = useState("idle");
   const [trainerCoords, setTrainerCoords] = useState(null);
   const [locationName, setLocationName] = useState("");
+
+  // Edit single member modal
+  const [editMember, setEditMember] = useState(null); // { id, name, status, recordId }
+  const [editStatus, setEditStatus] = useState("Present");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   /* ---------------- LOAD ASSIGNMENTS (SQL) ---------------- */
   const loadAssignedMembers = async () => {
@@ -111,6 +117,39 @@ const OverallAttendance = () => {
     }
   }, [trainerUserId, date]);
 
+  /* ---------------- CHECK IF TODAY'S ATTENDANCE EXISTS ---------------- */
+  const memberOnlyData = useMemo(() => {
+    return attendanceData.filter(r => String(r.member_id) !== String(trainerUserId));
+  }, [attendanceData, trainerUserId]);
+
+  const todayAttendanceMarked = memberOnlyData.length > 0;
+
+  /* ---------------- OPEN MODAL ---------------- */
+  const openMarkModal = (editExisting = false) => {
+    setIsEditMode(editExisting);
+    setLocationStatus("idle");
+    setLocationName("");
+    setTrainerCoords(null);
+
+    if (editExisting) {
+      // Pre-fill states from existing attendance records
+      const states = {};
+      memberOnlyData.forEach(r => {
+        states[r.member_id] = r.status === "Present";
+      });
+      setAttendanceStates(states);
+    } else {
+      // Fresh mark — reset all to absent
+      const states = {};
+      assignedMembers.forEach(m => {
+        states[m.id] = false;
+      });
+      setAttendanceStates(states);
+    }
+
+    setShowMarkModal(true);
+  };
+
   /* ---------------- GEOLOCATION LOGIC ---------------- */
   const verifyLocation = () => {
     setLocationStatus("checking");
@@ -125,16 +164,19 @@ const OverallAttendance = () => {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setTrainerCoords({ lat: latitude, lng: longitude });
-        
+
         // Auto-mark based on distance
         const dist = getDistance(latitude, longitude, GYM_LOCATION.lat, GYM_LOCATION.lng);
         const isAtGym = dist <= GYM_LOCATION.radius;
 
-        const newStates = {};
-        assignedMembers.forEach(m => {
-          newStates[m.id] = isAtGym;
-        });
-        setAttendanceStates(newStates);
+        if (!isEditMode) {
+          // Only auto-toggle when doing a fresh mark
+          const newStates = {};
+          assignedMembers.forEach(m => {
+            newStates[m.id] = isAtGym;
+          });
+          setAttendanceStates(newStates);
+        }
 
         try {
           const response = await api.get(`/attendance/reverse-geocode?lat=${latitude}&lng=${longitude}`);
@@ -143,9 +185,9 @@ const OverallAttendance = () => {
           setLocationName(address);
           setLocationStatus("verified");
           if (isAtGym) {
-            toast.success("Verified at Gym Location! Members auto-marked as Present.");
+            toast.success("Verified at Gym Location!");
           } else {
-            toast.warning(`Outside Gym Area (${Math.round(dist)}m away). Members auto-marked as Absent.`);
+            toast.warning(`Outside Gym Area (${Math.round(dist)}m away).`);
           }
         } catch (err) {
           console.error("Reverse geocoding error:", err);
@@ -182,15 +224,15 @@ const OverallAttendance = () => {
 
   const handleSaveAll = async () => {
     if (locationStatus !== "verified") {
-      return toast.error("Please fetch current location first!");
+      return toast.error("Please verify current location first!");
     }
-    
+
     setSavingMulti(true);
     try {
       const promises = assignedMembers.map(member => {
         const isPresent = attendanceStates[member.id] || false;
         const statusText = isPresent ? "Present" : "Absent";
-        
+
         const payload = {
           memberId: member.id,
           trainerId: trainerUserId,
@@ -204,21 +246,56 @@ const OverallAttendance = () => {
       });
 
       await Promise.all(promises);
-      toast.success("Attendance updated for all assigned members");
+      toast.success(isEditMode ? "Attendance updated successfully!" : "Attendance saved for all members!");
       setShowMarkModal(false);
       loadAttendanceData(date);
     } catch (err) {
       console.error(err);
-      toast.error("Error saving attendance checklist");
+      toast.error("Error saving attendance");
     } finally {
       setSavingMulti(false);
+    }
+  };
+
+  /* ---------------- EDIT SINGLE MEMBER ---------------- */
+  const openEditMember = (record) => {
+    setEditMember({
+      id: record.member_id,
+      name: record.name || record.member_id,
+      status: record.status,
+      recordId: record.id,
+    });
+    setEditStatus(record.status);
+  };
+
+  const handleSaveEditMember = async () => {
+    if (!editMember) return;
+    setSavingEdit(true);
+    try {
+      const payload = {
+        memberId: editMember.id,
+        trainerId: trainerUserId,
+        status: editStatus,
+        date: date,
+        lat: null,
+        lng: null,
+        locationName: null,
+      };
+      await api.post('/attendance', payload);
+      toast.success(`${editMember.name}'s attendance updated to ${editStatus}`);
+      setEditMember(null);
+      loadAttendanceData(date);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update attendance");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
   /* ---------------- FILTERING & STATS ---------------- */
   const filteredRecords = useMemo(() => {
     return attendanceData.filter(r => {
-      // Exclude the trainer's own attendance if present in the data
       const isNotTrainer = String(r.member_id) !== String(trainerUserId);
       const matchesSearch = r.name?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "All" || r.status === statusFilter;
@@ -227,16 +304,15 @@ const OverallAttendance = () => {
   }, [attendanceData, searchTerm, statusFilter, trainerUserId]);
 
   const stats = useMemo(() => {
-    const memberOnlyData = attendanceData.filter(r => String(r.member_id) !== String(trainerUserId));
     const present = memberOnlyData.filter(r => r.status === "Present").length;
     const absent = memberOnlyData.filter(r => r.status === "Absent").length;
     return { present, absent, total: memberOnlyData.length };
-  }, [attendanceData, trainerUserId]);
+  }, [memberOnlyData]);
 
   /* ---------------- UI ---------------- */
   return (
     <div className="min-h-screen p-4 sm:p-6 text-white space-y-8 bg-transparent">
-      
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-xl shadow-2xl">
         <div>
@@ -255,13 +331,24 @@ const OverallAttendance = () => {
               {dayjs().format("DD MMM YYYY")}
             </span>
           </div>
-          
-          <button
-            onClick={() => { setShowMarkModal(true); setLocationStatus("idle"); }}
-            className="px-8 py-3.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
-          >
-            <CheckCircle className="w-5 h-5" /> Mark Today
-          </button>
+
+          {todayAttendanceMarked ? (
+            /* Already marked — show "Edit Attendance" button */
+            <button
+              onClick={() => openMarkModal(true)}
+              className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+            >
+              <Edit2 className="w-5 h-5" /> Edit Attendance
+            </button>
+          ) : (
+            /* Not yet marked — show "Mark Today" button */
+            <button
+              onClick={() => openMarkModal(false)}
+              className="px-8 py-3.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" /> Mark Today
+            </button>
+          )}
         </div>
       </div>
 
@@ -289,29 +376,29 @@ const OverallAttendance = () => {
 
       {/* SEARCH & FILTER */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-         <div className="relative w-full sm:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              placeholder="Filter logged names..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 w-full outline-none focus:ring-2 focus:ring-orange-500"
-            />
-         </div>
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            placeholder="Filter logged names..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 w-full outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
 
-         <div className="flex gap-2">
-            {["All", "Present", "Absent"].map(f => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                  statusFilter === f ? "bg-orange-600 text-white" : "bg-white/10 text-gray-400 hover:bg-white/20"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-         </div>
+        <div className="flex gap-2">
+          {["All", "Present", "Absent"].map(f => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                statusFilter === f ? "bg-orange-600 text-white" : "bg-white/10 text-gray-400 hover:bg-white/20"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* RECORDS TABLE */}
@@ -324,34 +411,47 @@ const OverallAttendance = () => {
                 <th className="px-8 py-5 text-center">Status</th>
                 <th className="px-8 py-5">Log Time</th>
                 <th className="px-8 py-5">Trace</th>
+                <th className="px-8 py-5 text-center">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan="4" className="text-center py-20 text-gray-500">Loading records...</td></tr>
+                <tr><td colSpan="5" className="text-center py-20 text-gray-500">Loading records...</td></tr>
               ) : filteredRecords.length === 0 ? (
-                <tr><td colSpan="4" className="text-center py-20 text-gray-500">No attendance data found for this date.</td></tr>
+                <tr><td colSpan="5" className="text-center py-20 text-gray-500">No attendance data found for this date.</td></tr>
               ) : (
                 filteredRecords.map(r => (
                   <tr key={r.id} className="hover:bg-white/5 transition group">
                     <td className="px-8 py-5 font-bold group-hover:text-orange-400">{r.name || r.member_id}</td>
-                    <td className="px-8 py-5 text-center"><StatusBadge status={r.status} /></td>
+                    <td className="px-8 py-5 text-center">
+                      <div className="flex justify-center">
+                        <StatusBadge status={r.status} />
+                      </div>
+                    </td>
                     <td className="px-8 py-5 text-sm text-gray-400">
-                       <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
-                       </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
+                      </div>
                     </td>
                     <td className="px-8 py-5">
-                        <div className="flex items-center gap-3">
-                           <MapPin className={`w-4 h-4 ${r.lat ? 'text-green-500' : 'text-white/10'}`} />
-                           <div>
-                              <p className="text-[10px] font-black text-gray-400 uppercase leading-none">{r.location_name || (r.lat ? 'Verified Location' : 'No GPS')}</p>
-                              <p className="text-[10px] font-bold text-gray-600 mt-1 flex items-center gap-1">
-                                <Clock className="w-3 h-3"/> {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
-                              </p>
-                           </div>
+                      <div className="flex items-center gap-3">
+                        <MapPin className={`w-4 h-4 ${r.lat ? 'text-green-500' : 'text-white/10'}`} />
+                        <div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase leading-none">{r.location_name || (r.lat ? 'Verified Location' : 'No GPS')}</p>
+                          <p className="text-[10px] font-bold text-gray-600 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3"/> {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
+                          </p>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <button
+                        onClick={() => openEditMember(r)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 hover:scale-105 transition-all"
+                      >
+                        <Edit2 className="w-3 h-3" /> Edit
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -361,155 +461,239 @@ const OverallAttendance = () => {
         </div>
       </div>
 
-      {/* CHECKLIST MODAL */}
+      {/* ===== CHECKLIST MODAL (Mark / Edit All) ===== */}
       {showMarkModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowMarkModal(false)} />
           <div className="relative w-full max-w-2xl bg-[#0b0c10] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-             <div className="bg-gradient-to-r from-red-600 to-orange-500 p-8 flex justify-between items-center">
-                <div>
-                   <h3 className="text-2xl font-black text-white">Attendance Checklist</h3>
-                   <p className="text-white/80 mt-1 uppercase text-xs tracking-widest">{dayjs(date).format("DD MMMM YYYY")}</p>
-                </div>
-                <button onClick={() => setShowMarkModal(false)} className="text-white/50 hover:text-white">
-                   <XCircle className="w-6 h-6" />
-                </button>
-             </div>
+            <div className={`bg-gradient-to-r ${isEditMode ? "from-blue-600 to-indigo-500" : "from-red-600 to-orange-500"} p-8 flex justify-between items-center`}>
+              <div>
+                <h3 className="text-2xl font-black text-white">
+                  {isEditMode ? "Edit Attendance" : "Attendance Checklist"}
+                </h3>
+                <p className="text-white/80 mt-1 uppercase text-xs tracking-widest">{dayjs(date).format("DD MMMM YYYY")}</p>
+              </div>
+              <button onClick={() => setShowMarkModal(false)} className="text-white/50 hover:text-white">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
 
-             <div className="flex-1 overflow-y-auto p-8 space-y-6 hide-scrollbar">
-                
-                {/* SELECT ALL & LOCATION FETCH */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-6 bg-white/5 rounded-3xl border border-white/10">
-                   <div className="flex items-center gap-3">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
-                        <div className="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-                        <span className="ml-3 text-xs font-bold text-gray-300 uppercase">Select All</span>
-                      </label>
-                   </div>
-                   
-                   <div className="flex flex-col gap-3">
-                       <button 
-                        onClick={verifyLocation}
-                        className={`px-6 py-4 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg ${
-                          locationStatus === "verified" 
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30" 
-                            : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-xl shadow-orange-500/20"
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 hide-scrollbar">
+
+              {/* SELECT ALL & LOCATION FETCH */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-6 bg-white/5 rounded-3xl border border-white/10">
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={isAllSelected} onChange={(e) => handleSelectAll(e.target.checked)} />
+                    <div className="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                    <span className="ml-3 text-xs font-bold text-gray-300 uppercase">Select All</span>
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={verifyLocation}
+                    className={`px-6 py-4 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg ${
+                      locationStatus === "verified"
+                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                        : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-xl shadow-orange-500/20"
+                    }`}
+                  >
+                    {locationStatus === "checking" ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                    {locationStatus === "verified" ? "Location Verified" : "Verify My Location"}
+                  </button>
+
+                  <div className="flex flex-col gap-3 p-4 bg-black/40 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-gray-500 uppercase">Trainer Current Location</p>
+                        <p className="text-xs font-bold text-white truncate max-w-[200px]">
+                          {locationStatus === "verified" ? locationName : (locationStatus === "checking" ? "Fetching..." : "Not Verified")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-white/5 w-full" />
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                        <Check className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-gray-500 uppercase">Gym Office Location</p>
+                        <p className="text-xs font-bold text-white uppercase italic">{GYM_LOCATION.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-2">Member List</p>
+                {assignedMembers.length === 0 ? (
+                  <div className="text-center py-10 text-gray-600 italic font-medium">No members assigned.</div>
+                ) : (
+                  assignedMembers.map(member => {
+                    const isChecked = attendanceStates[member.id] || false;
+                    return (
+                      <div
+                        key={member.id}
+                        onClick={() => toggleMemberStatus(member.id)}
+                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                          isChecked
+                            ? "bg-green-500/10 border-green-500/30"
+                            : "bg-white/5 border-white/10 hover:border-white/20"
                         }`}
-                       >
-                         {locationStatus === "checking" ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                         {locationStatus === "verified" ? "Location Verified" : "Verify My Location"}
-                       </button>
-
-                       <div className="flex flex-col gap-3 p-4 bg-black/40 rounded-2xl border border-white/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
-                               <MapPin className="w-4 h-4" />
-                            </div>
-                            <div>
-                               <p className="text-[9px] font-black text-gray-500 uppercase">Trainer Current Location</p>
-                               <p className="text-xs font-bold text-white truncate max-w-[200px]">
-                                 {locationStatus === "verified" ? locationName : (locationStatus === "checking" ? "Fetching..." : "Not Verified")}
-                               </p>
-                            </div>
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${isChecked ? "bg-green-500 text-white" : "bg-white/10 text-gray-400"}`}>
+                            {member.name.charAt(0)}
                           </div>
-
-                          <div className="h-px bg-white/5 w-full" />
-
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                               <Check className="w-4 h-4" />
-                            </div>
-                            <div>
-                               <p className="text-[9px] font-black text-gray-500 uppercase">Gym Office Location</p>
-                               <p className="text-xs font-bold text-white uppercase italic">{GYM_LOCATION.name}</p>
-                            </div>
+                          <div>
+                            <p className={`font-bold transition-colors ${isChecked ? "text-green-400" : "text-white"}`}>{member.name}</p>
+                            <p className="text-[10px] text-gray-500 uppercase">{member.email || "No Email"}</p>
                           </div>
-                       </div>
-                   </div>
-                </div>
+                        </div>
 
-                <div className="space-y-2">
-                   <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] px-2 mb-2">Member List</p>
-                   {assignedMembers.length === 0 ? (
-                     <div className="text-center py-10 text-gray-600 italic font-medium">No members assigned.</div>
-                   ) : (
-                     assignedMembers.map(member => {
-                       const isChecked = attendanceStates[member.id] || false;
-                       return (
-                         <div 
-                           key={member.id} 
-                           onClick={() => toggleMemberStatus(member.id)}
-                           className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                             isChecked 
-                               ? "bg-green-500/10 border-green-500/30" 
-                               : "bg-white/5 border-white/10 hover:border-white/20"
-                           }`}
-                         >
-                            <div className="flex items-center gap-4">
-                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${isChecked ? "bg-green-500 text-white" : "bg-white/10 text-gray-400"}`}>
-                                  {member.name.charAt(0)}
-                               </div>
-                               <div>
-                                  <p className={`font-bold transition-colors ${isChecked ? "text-green-400" : "text-white"}`}>{member.name}</p>
-                                  <p className="text-[10px] text-gray-500 uppercase">{member.email || "No Email"}</p>
-                               </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-3">
-                               <span className={`text-[10px] font-black uppercase tracking-tighter ${isChecked ? "text-green-500" : "text-gray-600"}`}>
-                                  {isChecked ? "Present" : "Absent"}
-                               </span>
-                               <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${
-                                 isChecked ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-500/20" : "bg-transparent border-white/20"
-                               }`}>
-                                  {isChecked && <Check className="w-4 h-4 text-white" />}
-                               </div>
-                            </div>
-                         </div>
-                       );
-                     })
-                   )}
-                </div>
-             </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[10px] font-black uppercase tracking-tighter ${isChecked ? "text-green-500" : "text-gray-600"}`}>
+                            {isChecked ? "Present" : "Absent"}
+                          </span>
+                          <div className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all ${
+                            isChecked ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-500/20" : "bg-transparent border-white/20"
+                          }`}>
+                            {isChecked && <Check className="w-4 h-4 text-white" />}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
 
-             <div className="p-8 bg-white/5 border-t border-white/10 flex gap-4">
-                <button 
-                  type="button" 
-                  onClick={() => setShowMarkModal(false)} 
-                  className="px-6 py-4 text-gray-400 font-bold uppercase text-[10px] tracking-widest hover:text-white transition"
+            <div className="p-8 bg-white/5 border-t border-white/10 flex gap-4">
+              <button
+                type="button"
+                onClick={() => setShowMarkModal(false)}
+                className="px-6 py-4 text-gray-400 font-bold uppercase text-[10px] tracking-widest hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingMulti || assignedMembers.length === 0 || locationStatus !== "verified"}
+                onClick={handleSaveAll}
+                className={`flex-1 py-4 rounded-2xl text-white font-black shadow-xl active:scale-95 transition-all text-sm uppercase flex items-center justify-center gap-2 ${
+                  locationStatus === "verified"
+                    ? isEditMode
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-500 shadow-blue-600/20"
+                      : "bg-gradient-to-r from-red-600 to-orange-500 shadow-red-600/20"
+                    : "bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5"
+                }`}
+              >
+                {savingMulti ? (
+                  <>
+                    <RefreshCcw className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {isEditMode ? "Update Attendance" : "Save Attendance"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT SINGLE MEMBER MODAL ===== */}
+      {editMember && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setEditMember(null)} />
+          <div className="relative w-full max-w-sm bg-[#0b0c10] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-500 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black text-white">Edit Status</h3>
+                <p className="text-white/70 text-xs mt-1 uppercase tracking-widest">{dayjs(date).format("DD MMMM YYYY")}</p>
+              </div>
+              <button onClick={() => setEditMember(null)} className="text-white/50 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Member Info */}
+              <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center font-black text-white text-lg">
+                  {editMember.name.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold text-white">{editMember.name}</p>
+                  <p className="text-xs text-gray-400">Current: <span className={editMember.status === "Present" ? "text-green-400" : "text-red-400"}>{editMember.status}</span></p>
+                </div>
+              </div>
+
+              {/* Status Selector */}
+              <div className="space-y-2">
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">New Status</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setEditStatus("Present")}
+                    className={`py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${
+                      editStatus === "Present"
+                        ? "bg-green-500/20 border-green-500/50 text-green-400 scale-[1.02] shadow-lg shadow-green-500/10"
+                        : "bg-white/5 border-white/10 text-gray-400 hover:border-green-500/20"
+                    }`}
+                  >
+                    <CheckCircle className="w-4 h-4" /> Present
+                  </button>
+                  <button
+                    onClick={() => setEditStatus("Absent")}
+                    className={`py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${
+                      editStatus === "Absent"
+                        ? "bg-red-500/20 border-red-500/50 text-red-400 scale-[1.02] shadow-lg shadow-red-500/10"
+                        : "bg-white/5 border-white/10 text-gray-400 hover:border-red-500/20"
+                    }`}
+                  >
+                    <XCircle className="w-4 h-4" /> Absent
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditMember(null)}
+                  className="flex-1 py-3 rounded-xl text-gray-400 font-bold text-sm border border-white/10 hover:text-white hover:border-white/20 transition"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  disabled={savingMulti || assignedMembers.length === 0 || locationStatus !== "verified"}
-                  onClick={handleSaveAll}
-                  className={`flex-1 py-4 rounded-2xl text-white font-black shadow-xl active:scale-95 transition-all text-sm uppercase flex items-center justify-center gap-2 ${
-                    locationStatus === "verified" 
-                      ? "bg-gradient-to-r from-red-600 to-orange-500 shadow-red-600/20" 
-                      : "bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5"
+                <button
+                  onClick={handleSaveEditMember}
+                  disabled={savingEdit}
+                  className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                    editStatus === "Present"
+                      ? "bg-gradient-to-r from-green-600 to-emerald-500 text-white shadow-lg shadow-green-500/20"
+                      : "bg-gradient-to-r from-red-600 to-rose-500 text-white shadow-lg shadow-red-500/20"
                   }`}
                 >
-                  {savingMulti ? (
-                    <>
-                      <RefreshCcw className="w-4 h-4 animate-spin" />
-                      Saving Checklist...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Attendance
-                    </>
-                  )}
+                  {savingEdit ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {savingEdit ? "Saving..." : "Update"}
                 </button>
-             </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 };
-;
 
 export default OverallAttendance;
