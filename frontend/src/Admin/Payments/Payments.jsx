@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Users, CheckCircle, XCircle, AlertTriangle, Calendar } from "lucide-react";
 import * as XLSX from "xlsx";
+import { FaPrint } from "react-icons/fa";
 
 // backend API
 import api from "../../api";
@@ -644,7 +645,7 @@ const Payments = () => {
                   onClick={() => handlePrintReceipt(member, plan)}
                   className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm transition"
                 >
-                  Print Receipt
+                  <FaPrint/>
                 </button>
                 {plan.status === "active" ? (
                   <button
@@ -684,7 +685,6 @@ const Payments = () => {
                 </th>
                 <th className="px-4 py-4">S.No</th>
                 <th className="px-4 py-4">Name</th>
-                <th className="px-4 py-4">Email</th>
                 <th className="px-4 py-4">Plan</th>
                 <th className="px-4 py-4">Amount</th>
                 <th className="px-4 py-4">Start Date</th>
@@ -709,7 +709,7 @@ const Payments = () => {
                   </td>
                   <td className="px-4 py-4">{getSerialNumber(index)}</td>
                   <td className="px-4 py-4">{member.username}</td>
-                  <td className="px-4 py-4">{member.email}</td>
+                 
                   <td className="px-4 py-4">{plan.planName}</td>
                   <td className="px-4 py-4">₹ {plan.pricePaid}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(plan.startDate)}</td>
@@ -743,7 +743,7 @@ const Payments = () => {
                       onClick={() => handlePrintReceipt(member, plan)}
                       className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition whitespace-nowrap"
                     >
-                      Print Receipt
+                      <FaPrint/>
                     </button>
                   </td>
                 </tr>

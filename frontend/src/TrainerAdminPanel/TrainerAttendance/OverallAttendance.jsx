@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Calendar,
   Search,
@@ -11,7 +11,9 @@ import {
   RefreshCcw,
   Check,
   Edit2,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import dayjs from "dayjs";
@@ -41,6 +43,9 @@ const OverallAttendance = () => {
   const trainerUserId = user?.id;
 
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [dateFilterLabel, setDateFilterLabel] = useState("Today");
+  const [showDateMenu, setShowDateMenu] = useState(false);
+  const dateMenuRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [attendanceData, setAttendanceData] = useState([]);
   const [assignedMembers, setAssignedMembers] = useState([]);
@@ -116,6 +121,17 @@ const OverallAttendance = () => {
       loadAttendanceData(date);
     }
   }, [trainerUserId, date]);
+
+  // Click outside to close Date Menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dateMenuRef.current && !dateMenuRef.current.contains(e.target)) {
+        setShowDateMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   /* ---------------- CHECK IF TODAY'S ATTENDANCE EXISTS ---------------- */
   const memberOnlyData = useMemo(() => {
@@ -264,6 +280,7 @@ const OverallAttendance = () => {
       name: record.name || record.member_id,
       status: record.status,
       recordId: record.id,
+      recordDate: record.date || record.check_in,
     });
     setEditStatus(record.status);
   };
@@ -276,7 +293,7 @@ const OverallAttendance = () => {
         memberId: editMember.id,
         trainerId: trainerUserId,
         status: editStatus,
-        date: date,
+        date: date === "All" ? dayjs(editMember.recordDate).format("YYYY-MM-DD") : date,
         lat: null,
         lng: null,
         locationName: null,
@@ -320,35 +337,75 @@ const OverallAttendance = () => {
             Trainer Attendance
           </h2>
           <p className="text-gray-400 mt-1 flex items-center gap-2">
-            <Users className="w-4 h-4" /> MySQL Tracking • {assignedMembers.length} Assigned Members
+            <Users className="w-4 h-4" />  {assignedMembers.length} Assigned Members
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative bg-white/10 border border-white/20 rounded-2xl pl-12 pr-6 py-3.5 flex items-center gap-2">
-            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500 w-5 h-5" />
-            <span className="font-bold text-white uppercase tracking-wider">
-              {dayjs().format("DD MMM YYYY")}
-            </span>
+          <div className="relative" ref={dateMenuRef}>
+            <button
+              onClick={() => setShowDateMenu(!showDateMenu)}
+              className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl px-4 py-3.5 flex items-center gap-3 transition-all cursor-pointer"
+            >
+              <Calendar className="text-orange-500 w-5 h-5 pointer-events-none" />
+              <span className="font-bold text-white tracking-wider pointer-events-none pr-2">
+                {dateFilterLabel}
+              </span>
+              {showDateMenu ? (
+                <ChevronUp className="w-4 h-4 text-white/70" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-white/70" />
+              )}
+            </button>
+
+            {showDateMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-[#1e1f2e] border border-white/10 rounded-2xl shadow-xl z-50 overflow-hidden text-sm text-gray-300 font-medium p-2">
+                {[
+                  { label: "All Time", value: "All" },
+                  { label: "Today", value: dayjs().format("YYYY-MM-DD") },
+                  { label: "Yesterday", value: dayjs().subtract(1, 'day').format("YYYY-MM-DD") },
+                ].map((option) => (
+                  <div
+                    key={option.label}
+                    onClick={() => {
+                      setDateFilterLabel(option.label);
+                      setDate(option.value);
+                      setShowDateMenu(false);
+                    }}
+                    className={`px-4 py-2.5 my-0.5 cursor-pointer transition-colors rounded-xl ${
+                      dateFilterLabel === option.label
+                        ? "bg-orange-600 text-white shadow-md shadow-orange-600/20 font-semibold"
+                        : "hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </div>
+                ))}
+                
+                {/* Disabled placeholders for the UI design */}
+                <div onClick={() => {toast("Coming soon", {icon: '🚧'}); setShowDateMenu(false);}} className="px-4 py-2.5 my-0.5 cursor-pointer hover:bg-white/5 hover:text-white transition-colors rounded-xl">This Week</div>
+                <div onClick={() => {toast("Coming soon", {icon: '🚧'}); setShowDateMenu(false);}} className="px-4 py-2.5 my-0.5 cursor-pointer hover:bg-white/5 hover:text-white transition-colors rounded-xl">This Month</div>
+                <div onClick={() => {toast("Coming soon", {icon: '🚧'}); setShowDateMenu(false);}} className="px-4 py-2.5 my-0.5 cursor-pointer hover:bg-white/5 hover:text-white transition-colors rounded-xl">Custom Range</div>
+              </div>
+            )}
           </div>
 
-          {todayAttendanceMarked ? (
-            /* Already marked — show "Edit Attendance" button */
-            <button
-              onClick={() => openMarkModal(true)}
-              className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
-            >
-              <Edit2 className="w-5 h-5" /> Edit Attendance
-            </button>
-          ) : (
-            /* Not yet marked — show "Mark Today" button */
-            <button
-              onClick={() => openMarkModal(false)}
-              className="px-8 py-3.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
-            >
-              <CheckCircle className="w-5 h-5" /> Mark Today
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (date === "All") setDate(dayjs().format("YYYY-MM-DD"));
+              openMarkModal(todayAttendanceMarked && date !== "All");
+            }}
+            className={todayAttendanceMarked && date !== "All"
+              ? "px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+              : "px-8 py-3.5 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+            }
+          >
+            {todayAttendanceMarked && date !== "All" ? (
+              <><Edit2 className="w-5 h-5" /> Edit Attendance</>
+            ) : (
+              <><CheckCircle className="w-5 h-5" /> Mark Today</>
+            )}
+          </button>
         </div>
       </div>
 
@@ -431,7 +488,10 @@ const OverallAttendance = () => {
                     <td className="px-8 py-5 text-sm text-gray-400">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        {r.check_in ? dayjs(r.check_in).format("h:mm A") : "-"}
+                        {date === "All" && r.check_in
+                          ? dayjs(r.check_in).format("MMM DD, h:mm A")
+                          : (r.check_in ? dayjs(r.check_in).format("h:mm A") : "-")
+                        }
                       </div>
                     </td>
                     <td className="px-8 py-5">
