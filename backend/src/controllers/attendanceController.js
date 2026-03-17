@@ -101,14 +101,14 @@ async function markAttendance(req, res) {
       resolvedStaffId = staffRows.length > 0 ? staffRows[0].id : null;
     }
 
-    // Check if record already exists for this member and date
+    // Check if record already exists for this member and date that hasn't been checked out yet
     const [existing] = await db.query(
-      "SELECT id FROM attendance WHERE member_id = ? AND (`date` = ? OR DATE(check_in) = ?)",
+      "SELECT id FROM attendance WHERE member_id = ? AND (`date` = ? OR DATE(check_in) = ?) AND check_out IS NULL",
       [memberId, date, date]
     );
 
     if (existing.length > 0) {
-      // Update existing record
+      // Update existing record only if it's currently "checked in"
       await db.query(
         "UPDATE attendance SET status = ?, trainer_id = ?, lat = ?, lng = ?, location_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         [status, resolvedStaffId || null, lat || null, lng || null, locationName || null, existing[0].id]
@@ -129,8 +129,43 @@ async function markAttendance(req, res) {
   }
 }
 
+/**
+ * POST /api/attendance/checkout
+ * Sets check_out time for an existing attendance record.
+ */
+async function checkOut(req, res) {
+  try {
+    const { memberId, date } = req.body;
+
+    if (!memberId || !date) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Find the current active check-in (where check_out is null)
+    // We prioritize the most recent check-in for this member that hasn't been checked out
+    const [existing] = await db.query(
+      "SELECT id, member_id, check_in, check_out FROM attendance WHERE member_id = ? AND check_out IS NULL ORDER BY check_in DESC LIMIT 1",
+      [memberId]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'No active check-in found. Please check in first.' });
+    }
+    await db.query(
+      "UPDATE attendance SET check_out = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [existing[0].id]
+    );
+
+    res.json({ success: true, message: 'Checked out successfully' });
+  } catch (err) {
+    console.error('checkOut error:', err);
+    res.status(500).json({ error: 'Failed to check out', details: err.message });
+  }
+}
+
 module.exports = {
   getAttendance,
   markAttendance,
-  reverseGeocode
+  reverseGeocode,
+  checkOut
 };

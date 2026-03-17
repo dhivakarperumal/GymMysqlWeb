@@ -19,7 +19,6 @@ import toast from "react-hot-toast";
 import { getDistance, GYM_LOCATION } from "../utils/locationUtils";
 
 const CHECKIN_KEY = "trainer_checkin_data"; // localStorage key
-const COOLDOWN_HOURS = 24;
 
 const pageTitles = {
   "/trainer": "Dashboard",
@@ -86,44 +85,17 @@ const Header = ({ onMenuClick }) => {
     if (!stored) return;
 
     const elapsedMs = Date.now() - stored.checkinTime;
-    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
-
-    if (elapsedMs < cooldownMs) {
-      // Still within cooldown — keep button disabled
+    if (elapsedMs < 24 * 60 * 60 * 1000) {
+      // Within same day/24h period, we show check-out option if they haven't checked out yet
+      // For now, if stored in localStorage, it means they are currently "in"
       setCheckedIn(true);
       setCheckinLocation(stored.locationName || GYM_LOCATION.name);
-      startCountdown(stored.checkinTime);
     } else {
       // Cooldown expired — clear and allow next check-in
       clearCheckin();
     }
   }, [user?.id]);
 
-  /* ---- Countdown timer -------------------------------------------- */
-  const startCountdown = (checkinTimestamp) => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
-
-    const cooldownMs = COOLDOWN_HOURS * 60 * 60 * 1000;
-
-    const tick = () => {
-      const remaining = cooldownMs - (Date.now() - checkinTimestamp);
-      if (remaining <= 0) {
-        clearInterval(countdownRef.current);
-        clearCheckin();
-        setCheckedIn(false);
-        setCheckinLocation("");
-        setTimeLeft("");
-        toast("Check-in is now available again!", { icon: "🟢" });
-        return;
-      }
-      const hrs = Math.floor(remaining / 3600000);
-      const mins = Math.floor((remaining % 3600000) / 60000);
-      setTimeLeft(`${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`);
-    };
-
-    tick(); // immediate first tick
-    countdownRef.current = setInterval(tick, 60000); // update every minute
-  };
 
   useEffect(() => {
     return () => {
@@ -227,7 +199,6 @@ const Header = ({ onMenuClick }) => {
           saveCheckin(user.id, locationName);
           setCheckinLocation(locationName);
           setCheckedIn(true);
-          startCountdown(Date.now());
 
           toast.success("✅ Attendance marked! Have a great session.");
         } catch (err) {
@@ -244,6 +215,38 @@ const Header = ({ onMenuClick }) => {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  const handleCheckOut = async () => {
+    if (!user?.id || !checkedIn) return;
+
+    setMarkingAttendance(true);
+    try {
+      await api.post("/attendance/checkout", {
+        memberId: user.id,
+        date: new Date().toISOString().split("T")[0],
+      });
+
+      clearCheckin();
+      setCheckedIn(false);
+      setCheckinLocation("");
+      toast.success("✅ Checked out successfully!");
+    } catch (err) {
+      console.error("Failed to check out:", err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || "Failed to check out";
+      
+      if (err.response?.status === 404) {
+        // If backend says no active check-in found, our local state is out of sync
+        toast.error(`Sync Error: ${errorMsg}`);
+        clearCheckin();
+        setCheckedIn(false);
+        setCheckinLocation("");
+      } else {
+        toast.error(errorMsg);
+      }
+    } finally {
+      setMarkingAttendance(false);
+    }
   };
 
   // ✅ Safe values with fallbacks
@@ -276,28 +279,33 @@ const Header = ({ onMenuClick }) => {
           {/* ===== QUICK CHECK-IN BUTTON ===== */}
           {checkedIn ? (
             /* ---- DISABLED: Already checked in — show location + countdown ---- */
-            <div className="hidden sm:flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 min-w-[140px] max-w-[220px]">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Checked In</span>
-              </div>
-              <p
-                className="text-[9px] text-white/50 truncate w-full"
-                title={checkinLocation}
-              >
-                <MapPin className="w-2.5 h-2.5 inline mr-0.5 text-orange-400" />
-                {checkinLocation
-                  ? checkinLocation.length > 28
-                    ? checkinLocation.substring(0, 28) + "…"
-                    : checkinLocation
-                  : GYM_LOCATION.name}
-              </p>
-              {timeLeft && (
-                <p className="text-[9px] text-white/30 flex items-center gap-1">
-                  <Clock className="w-2.5 h-2.5" />
-                  Enables in {timeLeft}
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 max-w-[180px]">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                  <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">In Session</span>
+                </div>
+                <p className="text-[9px] text-white/50 truncate w-full" title={checkinLocation}>
+                  <MapPin className="w-2.5 h-2.5 inline mr-0.5 text-orange-400" />
+                  {checkinLocation || GYM_LOCATION.name}
                 </p>
-              )}
+              </div>
+              <button
+                onClick={handleCheckOut}
+                disabled={markingAttendance}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase transition-all shadow-lg active:scale-95 ${
+                  markingAttendance
+                    ? "bg-white/10 text-white/50 cursor-not-allowed"
+                    : "bg-gradient-to-r from-red-600 to-red-400 text-white hover:shadow-red-500/30 hover:scale-105"
+                }`}
+              >
+                {markingAttendance ? (
+                  <RefreshCcw className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <LogOut className="w-4 h-4 text-white" />
+                )}
+                {markingAttendance ? "Processing..." : "Check-out"}
+              </button>
             </div>
           ) : (
             /* ---- ACTIVE: Ready to check in ---- */
