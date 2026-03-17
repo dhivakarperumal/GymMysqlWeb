@@ -157,23 +157,28 @@ const AddEditStaff = () => {
     if (!file) return;
 
     try {
-      // Check if file is an image or document
       const isImage = file.type.startsWith('image/');
       const isPdf = file.type === 'application/pdf';
+      const isDoc = file.type.includes('document') || file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
       if (isImage) {
-        // Compress images
+        // Compress images to ~600KB. 
+        // Note: DB columns MUST be MEDIUMTEXT or LONGTEXT to handle this correctly.
         const compressed = await imageCompression(file, {
-          maxSizeMB: 0.3,
-          maxWidthOrHeight: 800,
+          maxSizeMB: 0.6, 
+          maxWidthOrHeight: 1024,
           useWebWorker: true,
         });
 
         const base64 = await imageCompression.getDataUrlFromFile(compressed);
         setForm((prev) => ({ ...prev, [field]: base64 }));
-        toast.success("Image uploaded");
-      } else if (isPdf || file.type.includes('document') || file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        // Handle PDF and document files
+        toast.success("Image uploaded (compressed)");
+      } else if (isPdf || isDoc) {
+        // For documents, we don't compress but we must limit size to prevent DB truncation
+        if (file.size > 1.5 * 1024 * 1024) { // 1.5MB Limit
+          return toast.error("Document too large. Max 1.5MB allowed.");
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
           const base64 = e.target.result;
@@ -182,9 +187,10 @@ const AddEditStaff = () => {
         };
         reader.readAsDataURL(file);
       } else {
-        toast.error("Only images, PDFs, and documents are allowed");
+        toast.error("Format not supported. Use Image, PDF, or Word.");
       }
-    } catch {
+    } catch (err) {
+      console.error("Upload error:", err);
       toast.error("Upload failed");
     }
   };
@@ -653,8 +659,14 @@ const AddEditStaff = () => {
             onChange={(e) => handleFileUpload(e, "photo")}
             className={inputClass} />
           {form.photo && (
-            <div className="mt-2 flex gap-2">
-              <img src={form.photo} alt="Photo preview" className="h-24 rounded border border-gray-300" />
+            <div className="mt-2 flex gap-2 items-center">
+              {form.photo.startsWith('data:image') ? (
+                <img src={form.photo} alt="Photo preview" className="h-24 rounded border border-gray-300" />
+              ) : (
+                <div className="p-2 bg-white/5 rounded border border-white/10 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                  Invalid Photo Data
+                </div>
+              )}
               <button type="button" onClick={() => openPreview(form.photo, "photo.jpg")}
                 className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
                 Preview
@@ -716,7 +728,9 @@ const AddEditStaff = () => {
               {form.certificateDoc.startsWith('data:image') ? (
                 <img src={form.certificateDoc} alt="Certificate preview" className="h-24 rounded border border-gray-300" />
               ) : (
-                <div className="p-2 bg-gray-100 rounded border border-gray-300 text-sm">📄 Certificate</div>
+                <div className="p-2 bg-white/5 rounded border border-white/10 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                  📄 Certificate Doc
+                </div>
               )}
               <button type="button" onClick={() => openPreview(form.certificateDoc, "certificate")}
                 className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
