@@ -26,7 +26,9 @@ const pageTitles = {
   "/trainer/alladdworkouts": "All Workouts",
   "/trainer/adddietplans": "Add Diet Plans",
   "/trainer/alladddietplans": "All Diet Plans",
+  "/trainer/update-weight": "Update Member Weight",
   "/trainer/overall-attendance": "Attendance",
+  "/trainer/send-message": "Send Message",
   "/trainer/reports": "Reports",
   "/trainer/settings/profile": "Profile",
 };
