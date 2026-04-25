@@ -20,6 +20,7 @@ import dayjs from "dayjs";
 
 const pageTitles = {
   "/admin": "Dashboard",
+  "/admin/enquiry": "Enquiries",
   "/admin/products": "Products",
   "/admin/addproducts": "Add Products",
   "/admin/orders": "Orders",
@@ -51,6 +52,10 @@ const pageTitles = {
   "/admin/settings/reviews": "Review",
   "/admin/settings/servicelist": "Services Lists",
   "/admin/addservice": "Add Services",
+  "/admin/send-message": "Send Message",
+  "/admin/payments": "Payments",
+  "/admin/member-attendance": "Member Attendance",
+  "/admin/commenworkoutdiet": "Workout & Diet",
   "/admin/users": "Users",
 };
 
